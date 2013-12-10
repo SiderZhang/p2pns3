@@ -1,0 +1,63 @@
+# -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+# def options(opt):
+#     pass
+
+# def configure(conf):
+#     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
+
+import os.path
+import os
+
+def build(bld):
+    moduleName = 'libtorrent'
+    module = bld.create_ns3_module('libtorrent', ['core'])
+    curPath = os.path.abspath('.')
+    path = curPath + '/src/' + moduleName + '/'
+    os.chdir(path)
+
+    source = pathFind('model/', ('.cc', '.cpp'), [], 'test/')
+    source = pathFind('helper/', ('.cc', '.cpp'), source, 'test/')
+    header = pathFind('model/', ('.h', '.hpp'), [], 'ww')
+    header = pathFind('helper/', ('.h', '.hpp'), header, 'ww')
+    
+    os.chdir(curPath)
+    #module.source = [
+    #    'model/libtorrent.cc',
+    #    'helper/libtorrent-helper.cc',
+    #    ]
+    module.source = source
+    module.includes = '. ' + path + '/model/'
+
+    module_test = bld.create_ns3_module_test_library('libtorrent')
+    module_test.source = [
+        'test/libtorrent-test-suite.cc',
+        ]
+
+    headers = bld(features='ns3header')
+    headers.module = 'libtorrent'
+    #headers.source = [
+    #    'model/libtorrent.h',
+    #    'helper/libtorrent-helper.h',
+    #    ]
+    headers.source = header
+
+    if bld.env.ENABLE_EXAMPLES:
+        bld.recurse('examples')
+
+    # bld.ns3_python_bindings()
+
+def pathFind(rootDir, endtype, fileEntry, excepPath):
+
+    for lists in os.listdir(rootDir):
+        path = os.path.join(rootDir, lists)
+
+        if path.startswith(excepPath):
+            continue
+
+        if os.path.isdir(path):
+            pathFind(path, endtype, fileEntry, excepPath)
+
+        if path.endswith(endtype):
+            fileEntry.append(path)
+    return fileEntry

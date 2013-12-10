@@ -1,0 +1,297 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+AnnounceRequest	udpTracker.hpp	/^		} AnnounceRequest;$/;"	t	class:UDPT::UDPTracker	typeref:struct:UDPT::UDPTracker::udp_announce_request
+AnnounceResponse	udpTracker.hpp	/^		} AnnounceResponse;$/;"	t	class:UDPT::UDPTracker	typeref:struct:UDPT::UDPTracker::udp_announce_response
+ConnectionRequest	udpTracker.hpp	/^		} ConnectionRequest;$/;"	t	class:UDPT::UDPTracker	typeref:struct:UDPT::UDPTracker::udp_connection_request
+ConnectionResponse	udpTracker.hpp	/^		} ConnectionResponse;$/;"	t	class:UDPT::UDPTracker	typeref:struct:UDPT::UDPTracker::udp_connection_response
+DATABASE_HPP_	db/database.hpp	21;"	d
+DATABASE_H_	db/driver_sqlite.hpp	21;"	d
+DWORD	multiplatform.h	45;"	d
+Data	db/database.cpp	/^	namespace Data$/;"	n	namespace:UDPT	file:
+Data	db/database.hpp	/^	namespace Data$/;"	n	namespace:UDPT
+Data	db/driver_sqlite.cpp	/^	namespace Data$/;"	n	namespace:UDPT	file:
+Data	db/driver_sqlite.hpp	/^	namespace Data$/;"	n	namespace:UDPT
+DatabaseDriver	db/database.cpp	/^		DatabaseDriver::DatabaseDriver(Settings::SettingClass *sc, bool isDynamic)$/;"	f	class:UDPT::Data::DatabaseDriver
+DatabaseDriver	db/database.hpp	/^		class DatabaseDriver$/;"	c	namespace:UDPT::Data
+DatabaseException	db/database.cpp	/^		DatabaseException::DatabaseException()$/;"	f	class:UDPT::Data::DatabaseException
+DatabaseException	db/database.cpp	/^		DatabaseException::DatabaseException(enum EType e)$/;"	f	class:UDPT::Data::DatabaseException
+DatabaseException	db/database.hpp	/^		class DatabaseException$/;"	c	namespace:UDPT::Data
+EMessages	db/database.cpp	/^		static const char *EMessages[] = {$/;"	m	namespace:UDPT::Data	file:
+EType	db/database.hpp	/^			enum EType {$/;"	g	class:UDPT::Data::DatabaseException
+EVENT_COMPLETE	db/database.hpp	/^				EVENT_COMPLETE = 1,$/;"	e	enum:UDPT::Data::DatabaseDriver::TrackerEvents
+EVENT_START	db/database.hpp	/^				EVENT_START = 2,$/;"	e	enum:UDPT::Data::DatabaseDriver::TrackerEvents
+EVENT_STOP	db/database.hpp	/^				EVENT_STOP = 3$/;"	e	enum:UDPT::Data::DatabaseDriver::TrackerEvents
+EVENT_UNSPEC	db/database.hpp	/^				EVENT_UNSPEC = 0,$/;"	e	enum:UDPT::Data::DatabaseDriver::TrackerEvents
+E_CONNECTION_FAILURE	db/database.hpp	/^				E_CONNECTION_FAILURE = 2$/;"	e	enum:UDPT::Data::DatabaseException::EType
+E_NOT_IMPLEMENTED	db/database.hpp	/^				E_NOT_IMPLEMENTED = 1,	\/\/ not implemented$/;"	e	enum:UDPT::Data::DatabaseException::EType
+E_UNKNOWN	db/database.hpp	/^				E_UNKNOWN = 0,			\/\/ Unknown error$/;"	e	enum:UDPT::Data::DatabaseException::EType
+ErrorResponse	udpTracker.hpp	/^		} ErrorResponse;$/;"	t	class:UDPT::UDPTracker	typeref:struct:UDPT::UDPTracker::udp_error_response
+HANDLE	multiplatform.h	/^typedef pthread_t HANDLE;$/;"	t
+HOSTENT	multiplatform.h	/^typedef struct hostent HOSTENT;$/;"	t	typeref:struct:hostent
+HTTPServer	http/httpserver.cpp	/^		HTTPServer::HTTPServer (uint16_t port, int threads)$/;"	f	class:UDPT::Server::HTTPServer
+HTTPServer	http/httpserver.hpp	/^		class HTTPServer$/;"	c	namespace:UDPT::Server
+INVALID_SOCKET	multiplatform.h	43;"	d
+IN_ADDR	multiplatform.h	/^typedef struct in_addr IN_ADDR;$/;"	t	typeref:struct:in_addr
+LPTHREAD_START_ROUTINE	multiplatform.h	/^typedef void (LPTHREAD_START_ROUTINE)(LPVOID);$/;"	t
+LPVOID	multiplatform.h	/^typedef void* LPVOID;$/;"	t
+PeerEntry	db/database.hpp	/^			} PeerEntry;$/;"	t	class:UDPT::Data::DatabaseDriver	typeref:struct:UDPT::Data::DatabaseDriver::__anon4
+REQUEST_BUFFER_SIZE	http/httpserver.hpp	30;"	d
+RM_GET	http/httpserver.hpp	/^					RM_GET = 1,$/;"	e	enum:UDPT::Server::HTTPServer::Request::RequestMethod
+RM_POST	http/httpserver.hpp	/^					RM_POST = 2$/;"	e	enum:UDPT::Server::HTTPServer::Request::RequestMethod
+RM_UNKNOWN	http/httpserver.hpp	/^					RM_UNKNOWN = 0,$/;"	e	enum:UDPT::Server::HTTPServer::Request::RequestMethod
+Request	http/httpserver.cpp	/^		HTTPServer::Request::Request (SOCKET cli, const SOCKADDR_IN *addr)$/;"	f	class:UDPT::Server::HTTPServer::Request
+Request	http/httpserver.hpp	/^			class Request$/;"	c	class:UDPT::Server::HTTPServer
+RequestMethod	http/httpserver.hpp	/^				enum RequestMethod$/;"	g	class:UDPT::Server::HTTPServer::Request
+Response	http/httpserver.cpp	/^		HTTPServer::Response::Response (SOCKET cli)$/;"	f	class:UDPT::Server::HTTPServer::Response
+Response	http/httpserver.hpp	/^			class Response$/;"	c	class:UDPT::Server::HTTPServer
+SOCKADDR	multiplatform.h	/^typedef struct sockaddr SOCKADDR;$/;"	t	typeref:struct:sockaddr
+SOCKADDR_IN	multiplatform.h	/^typedef struct sockaddr_in SOCKADDR_IN;$/;"	t	typeref:struct:sockaddr_in
+SOCKET	multiplatform.h	42;"	d
+SOCKET_ERROR	multiplatform.h	44;"	d
+SQLite3Driver	db/driver_sqlite.cpp	/^		SQLite3Driver::SQLite3Driver (Settings::SettingClass *sc, bool isDyn) : DatabaseDriver(sc, isDyn)$/;"	f	class:UDPT::Data::SQLite3Driver
+SQLite3Driver	db/driver_sqlite.hpp	/^		class SQLite3Driver : public DatabaseDriver$/;"	c	namespace:UDPT::Data
+START_EBIND_FAILED	udpTracker.hpp	/^			START_EBIND_FAILED = 2$/;"	e	enum:UDPT::UDPTracker::StartStatus
+START_ESOCKET_FAILED	udpTracker.hpp	/^			START_ESOCKET_FAILED = 1,$/;"	e	enum:UDPT::UDPTracker::StartStatus
+START_OK	udpTracker.hpp	/^			START_OK = 0,$/;"	e	enum:UDPT::UDPTracker::StartStatus
+ScrapeRequest	udpTracker.hpp	/^		} ScrapeRequest;$/;"	t	class:UDPT::UDPTracker	typeref:struct:UDPT::UDPTracker::udp_scrape_request
+ScrapeResponse	udpTracker.hpp	/^		} ScrapeResponse;$/;"	t	class:UDPT::UDPTracker	typeref:struct:UDPT::UDPTracker::udp_scrape_response
+Server	http/httpserver.cpp	/^	namespace Server$/;"	n	namespace:UDPT	file:
+Server	http/httpserver.hpp	/^	namespace Server$/;"	n	namespace:UDPT
+Server	http/webapp.cpp	/^	namespace Server$/;"	n	namespace:UDPT	file:
+Server	http/webapp.hpp	/^	namespace Server$/;"	n	namespace:UDPT
+ServerException	http/httpserver.hpp	/^			inline ServerException (int ec)$/;"	f	class:UDPT::Server::ServerException
+ServerException	http/httpserver.hpp	/^			inline ServerException (int ec, const char *em)$/;"	f	class:UDPT::Server::ServerException
+ServerException	http/httpserver.hpp	/^		class ServerException$/;"	c	namespace:UDPT::Server
+SettingClass	settings.cpp	/^	Settings::SettingClass::SettingClass(const string cn)$/;"	f	class:UDPT::Settings::SettingClass
+SettingClass	settings.hpp	/^		class SettingClass$/;"	c	class:UDPT::Settings
+Settings	settings.cpp	/^	Settings::Settings (const string filename)$/;"	f	class:UDPT::Settings
+Settings	settings.hpp	/^	class Settings$/;"	c	namespace:UDPT
+StartStatus	udpTracker.hpp	/^		enum StartStatus$/;"	g	class:UDPT::UDPTracker
+TOOLS_H_	tools.h	21;"	d
+TorrentEntry	db/database.hpp	/^			} TorrentEntry;$/;"	t	class:UDPT::Data::DatabaseDriver	typeref:struct:UDPT::Data::DatabaseDriver::__anon3
+TrackerEvents	db/database.hpp	/^			enum TrackerEvents {$/;"	g	class:UDPT::Data::DatabaseDriver
+UDPT	db/database.cpp	/^namespace UDPT$/;"	n	file:
+UDPT	db/database.hpp	/^namespace UDPT$/;"	n
+UDPT	db/driver_sqlite.cpp	/^namespace UDPT$/;"	n	file:
+UDPT	db/driver_sqlite.hpp	/^namespace UDPT$/;"	n
+UDPT	http/httpserver.cpp	/^namespace UDPT$/;"	n	file:
+UDPT	http/httpserver.hpp	/^namespace UDPT$/;"	n
+UDPT	http/webapp.cpp	/^namespace UDPT$/;"	n	file:
+UDPT	http/webapp.hpp	/^namespace UDPT$/;"	n
+UDPT	settings.cpp	/^namespace UDPT$/;"	n	file:
+UDPT	settings.hpp	/^namespace UDPT$/;"	n
+UDPT	udpTracker.cpp	/^namespace UDPT$/;"	n	file:
+UDPT	udpTracker.hpp	/^namespace UDPT$/;"	n
+UDPTRACKER_H_	udpTracker.hpp	21;"	d
+UDPT_ALLOW_IANA_IP	udpTracker.hpp	34;"	d
+UDPT_ALLOW_REMOTE_IP	udpTracker.hpp	33;"	d
+UDPT_DYNAMIC	udpTracker.hpp	32;"	d
+UDPT_VALIDATE_CLIENT	udpTracker.hpp	35;"	d
+UDPTracker	udpTracker.cpp	/^	UDPTracker::UDPTracker (Settings *settings)$/;"	f	class:UDPT::UDPTracker
+UDPTracker	udpTracker.hpp	/^	class UDPTracker$/;"	c	namespace:UDPT
+UDP_BUFFER_SIZE	udpTracker.cpp	31;"	d	file:
+VERSION	multiplatform.h	32;"	d
+VERSION	multiplatform.h	55;"	d
+WIN32	multiplatform.h	26;"	d
+WebApp	http/webapp.cpp	/^		WebApp::WebApp(HTTPServer *srv, DatabaseDriver *db, Settings *settings)$/;"	f	class:UDPT::Server::WebApp
+WebApp	http/webapp.hpp	/^		class WebApp$/;"	c	namespace:UDPT::Server
+_doAPIStart	main.cpp	/^static void _doAPIStart (Settings *settings, WebApp **wa, HTTPServer **srv, DatabaseDriver *drvr)$/;"	f	file:
+_genCiD	db/driver_sqlite.cpp	/^	static uint64_t _genCiD (uint32_t ip, uint16_t port)$/;"	f	namespace:UDPT::Data
+_getNextIPv4	http/webapp.cpp	/^		static uint32_t _getNextIPv4 (string::size_type &i, string &line)$/;"	f	namespace:UDPT::Server
+_hash_to_bin	db/driver_sqlite.cpp	/^		static uint8_t* _hash_to_bin (const char *hash, uint8_t *data)$/;"	f	namespace:UDPT::Data
+_hex2bin	http/webapp.cpp	/^		static bool _hex2bin (uint8_t *data, const string str)$/;"	f	namespace:UDPT::Server
+_isIANA_IP	udpTracker.cpp	/^static int _isIANA_IP (uint32_t ip)$/;"	f	namespace:UDPT
+_isTrue	udpTracker.cpp	/^	inline static int _isTrue (string str)$/;"	f	namespace:UDPT
+_maintainance_start	udpTracker.cpp	/^	DWORD UDPTracker::_maintainance_start (LPVOID arg)$/;"	f	class:UDPT::UDPTracker
+_print_usage	main.cpp	/^static void _print_usage ()$/;"	f	file:
+_settings_clean_string	settings.cpp	/^void _settings_clean_string (char **str)$/;"	f	namespace:UDPT
+_thread_start	http/httpserver.cpp	/^		DWORD HTTPServer::_thread_start (LPVOID arg)$/;"	f	class:UDPT::Server::HTTPServer
+_thread_start	udpTracker.cpp	/^	DWORD UDPTracker::_thread_start (LPVOID arg)$/;"	f	class:UDPT::UDPTracker
+_to_hex_str	db/driver_sqlite.cpp	/^		static char* _to_hex_str (const uint8_t *hash, char *data)$/;"	f	namespace:UDPT::Data
+action	udpTracker.hpp	/^			uint32_t action;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+action	udpTracker.hpp	/^			uint32_t action;$/;"	m	struct:UDPT::UDPTracker::udp_announce_response
+action	udpTracker.hpp	/^			uint32_t action;$/;"	m	struct:UDPT::UDPTracker::udp_connection_request
+action	udpTracker.hpp	/^			uint32_t action;$/;"	m	struct:UDPT::UDPTracker::udp_connection_response
+action	udpTracker.hpp	/^			uint32_t action;$/;"	m	struct:UDPT::UDPTracker::udp_error_response
+action	udpTracker.hpp	/^			uint32_t action;$/;"	m	struct:UDPT::UDPTracker::udp_scrape_request
+action	udpTracker.hpp	/^			uint32_t action;$/;"	m	struct:UDPT::UDPTracker::udp_scrape_response
+addApp	http/httpserver.cpp	/^		void HTTPServer::addApp (list<string> *path, reqCallback *cb)$/;"	f	class:UDPT::Server::HTTPServer
+addHeader	http/httpserver.cpp	/^		void HTTPServer::Response::addHeader (string key, string value)$/;"	f	class:UDPT::Server::HTTPServer::Response
+addTorrent	db/database.cpp	/^		bool DatabaseDriver::addTorrent(uint8_t hash [20])$/;"	f	class:UDPT::Data::DatabaseDriver
+addTorrent	db/driver_sqlite.cpp	/^		bool SQLite3Driver::addTorrent (uint8_t info_hash[20])$/;"	f	class:UDPT::Data::SQLite3Driver
+addr	http/httpserver.hpp	/^				const SOCKADDR_IN *addr;$/;"	m	class:UDPT::Server::HTTPServer::Request
+announce_interval	udpTracker.hpp	/^		uint32_t announce_interval;$/;"	m	class:UDPT::UDPTracker
+appNode	http/httpserver.hpp	/^			typedef struct appNode$/;"	s	class:UDPT::Server::HTTPServer
+appNode	http/httpserver.hpp	/^			} appNode;$/;"	t	class:UDPT::Server::HTTPServer	typeref:struct:UDPT::Server::HTTPServer::appNode
+callback	http/httpserver.hpp	/^				reqCallback *callback;$/;"	m	struct:UDPT::Server::HTTPServer::appNode
+className	settings.hpp	/^			string className;$/;"	m	class:UDPT::Settings::SettingClass
+classes	settings.hpp	/^		map<string, SettingClass*> classes;$/;"	m	class:UDPT::Settings
+cleanup	db/database.cpp	/^		void DatabaseDriver::cleanup()$/;"	f	class:UDPT::Data::DatabaseDriver
+cleanup	db/driver_sqlite.cpp	/^		void SQLite3Driver::cleanup()$/;"	f	class:UDPT::Data::SQLite3Driver
+cleanup_interval	udpTracker.hpp	/^		uint32_t cleanup_interval;$/;"	m	class:UDPT::UDPTracker
+closesocket	multiplatform.h	46;"	d
+completed	db/database.hpp	/^				int32_t completed;$/;"	m	struct:UDPT::Data::DatabaseDriver::__anon3
+conn	http/httpserver.hpp	/^				SOCKET conn;$/;"	m	class:UDPT::Server::HTTPServer::Request
+conn	http/httpserver.hpp	/^				SOCKET conn;$/;"	m	class:UDPT::Server::HTTPServer::Response
+conn	udpTracker.hpp	/^		Data::DatabaseDriver *conn;$/;"	m	class:UDPT::UDPTracker
+connection_id	udpTracker.hpp	/^			uint64_t connection_id;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+connection_id	udpTracker.hpp	/^			uint64_t connection_id;$/;"	m	struct:UDPT::UDPTracker::udp_connection_request
+connection_id	udpTracker.hpp	/^			uint64_t connection_id;$/;"	m	struct:UDPT::UDPTracker::udp_connection_response
+connection_id	udpTracker.hpp	/^			uint64_t connection_id;$/;"	m	struct:UDPT::UDPTracker::udp_scrape_request
+cookies	http/httpserver.hpp	/^				map<string, string> cookies;$/;"	m	class:UDPT::Server::HTTPServer::Request
+customData	http/httpserver.hpp	/^			map<string, void*> customData;$/;"	m	class:UDPT::Server::HTTPServer
+dClass	db/database.hpp	/^			Settings::SettingClass *dClass;$/;"	m	class:UDPT::Data::DatabaseDriver
+data	udpTracker.hpp	/^			uint8_t *data;$/;"	m	struct:UDPT::UDPTracker::udp_scrape_response
+db	db/driver_sqlite.hpp	/^			sqlite3 *db;$/;"	m	class:UDPT::Data::SQLite3Driver
+db	http/webapp.hpp	/^			UDPT::Data::DatabaseDriver *db;$/;"	m	class:UDPT::Server::WebApp
+deploy	http/webapp.cpp	/^		void WebApp::deploy()$/;"	f	class:UDPT::Server::WebApp
+doAddTorrent	http/webapp.cpp	/^		void WebApp::doAddTorrent (HTTPServer::Request *req, HTTPServer::Response *resp)$/;"	f	class:UDPT::Server::WebApp
+doRemoveTorrent	http/webapp.cpp	/^		void WebApp::doRemoveTorrent (HTTPServer::Request *req, HTTPServer::Response *resp)$/;"	f	class:UDPT::Server::WebApp
+doSetup	db/driver_sqlite.cpp	/^		void SQLite3Driver::doSetup()$/;"	f	class:UDPT::Data::SQLite3Driver
+downloaded	udpTracker.hpp	/^			uint64_t downloaded;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+ec	http/httpserver.hpp	/^			int ec;$/;"	m	class:UDPT::Server::ServerException
+em	http/httpserver.hpp	/^			const char *em;$/;"	m	class:UDPT::Server::ServerException
+entries	settings.hpp	/^			map<string, string> entries;$/;"	m	class:UDPT::Settings::SettingClass
+errorNum	db/database.hpp	/^			EType errorNum;$/;"	m	class:UDPT::Data::DatabaseException
+event	udpTracker.hpp	/^			uint32_t event;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+filename	settings.hpp	/^		string filename;$/;"	m	class:UDPT::Settings
+finalize	http/httpserver.cpp	/^		void HTTPServer::Response::finalize ()$/;"	f	class:UDPT::Server::HTTPServer::Response
+genConnectionId	db/database.cpp	/^		bool DatabaseDriver::genConnectionId(uint64_t *cid, uint32_t ip, uint16_t port)$/;"	f	class:UDPT::Data::DatabaseDriver
+genConnectionId	db/driver_sqlite.cpp	/^		bool SQLite3Driver::genConnectionId (uint64_t *connectionId, uint32_t ip, uint16_t port)$/;"	f	class:UDPT::Data::SQLite3Driver
+get	settings.cpp	/^	string Settings::SettingClass::get (const string name)$/;"	f	class:UDPT::Settings::SettingClass
+get	settings.cpp	/^	string Settings::get (const string classN, const string name)$/;"	f	class:UDPT::Settings
+getAddress	http/httpserver.cpp	/^		const SOCKADDR_IN* HTTPServer::Request::getAddress ()$/;"	f	class:UDPT::Server::HTTPServer::Request
+getClass	settings.cpp	/^	Settings::SettingClass* Settings::getClass(const string classname)$/;"	f	class:UDPT::Settings
+getCookie	http/httpserver.cpp	/^		string HTTPServer::Request::getCookie (const string name)$/;"	f	class:UDPT::Server::HTTPServer::Request
+getData	http/httpserver.cpp	/^		void* HTTPServer::getData(string k)$/;"	f	class:UDPT::Server::HTTPServer
+getErrorCode	http/httpserver.hpp	/^			inline int getErrorCode () const$/;"	f	class:UDPT::Server::ServerException
+getErrorMessage	db/database.cpp	/^		const char* DatabaseException::getErrorMessage()$/;"	f	class:UDPT::Data::DatabaseException
+getErrorMsg	http/httpserver.hpp	/^			inline const char *getErrorMsg () const$/;"	f	class:UDPT::Server::ServerException
+getErrorType	db/database.cpp	/^		enum DatabaseException::EType DatabaseException::getErrorType()$/;"	f	class:UDPT::Data::DatabaseException
+getHeader	http/httpserver.cpp	/^		multimap<string, string>::iterator HTTPServer::Request::getHeader (const string name)$/;"	f	class:UDPT::Server::HTTPServer::Request
+getMap	settings.cpp	/^	map<string, string>* Settings::SettingClass::getMap()$/;"	f	class:UDPT::Settings::SettingClass
+getParam	http/httpserver.cpp	/^		string HTTPServer::Request::getParam (const string key)$/;"	f	class:UDPT::Server::HTTPServer::Request
+getPath	http/httpserver.cpp	/^		list<string>* HTTPServer::Request::getPath ()$/;"	f	class:UDPT::Server::HTTPServer::Request
+getPeers	db/database.cpp	/^		bool DatabaseDriver::getPeers (uint8_t info_hash [20], int *max_count, PeerEntry *pe)$/;"	f	class:UDPT::Data::DatabaseDriver
+getPeers	db/driver_sqlite.cpp	/^		bool SQLite3Driver::getPeers (uint8_t info_hash [20], int *max_count, PeerEntry *pe)$/;"	f	class:UDPT::Data::SQLite3Driver
+getRequestHandler	http/httpserver.cpp	/^		HTTPServer::reqCallback* HTTPServer::getRequestHandler (appNode *node, list<string> *path)$/;"	f	class:UDPT::Server::HTTPServer
+getRequestMethod	http/httpserver.cpp	/^		HTTPServer::Request::RequestMethod HTTPServer::Request::getRequestMethod ()$/;"	f	class:UDPT::Server::HTTPServer::Request
+getRequestMethodStr	http/httpserver.cpp	/^		string HTTPServer::Request::getRequestMethodStr ()$/;"	f	class:UDPT::Server::HTTPServer::Request
+getTorrentInfo	db/database.cpp	/^		bool DatabaseDriver::getTorrentInfo (TorrentEntry *e)$/;"	f	class:UDPT::Data::DatabaseDriver
+getTorrentInfo	db/driver_sqlite.cpp	/^		bool SQLite3Driver::getTorrentInfo(TorrentEntry *e)$/;"	f	class:UDPT::Data::SQLite3Driver
+handleAPI	http/webapp.cpp	/^		void WebApp::handleAPI(HTTPServer *srv, HTTPServer::Request *req, HTTPServer::Response *resp)$/;"	f	class:UDPT::Server::WebApp
+handleAnnounce	http/webapp.cpp	/^		void WebApp::handleAnnounce (HTTPServer *srv, HTTPServer::Request *req, HTTPServer::Response *resp)$/;"	f	class:UDPT::Server::WebApp
+handleAnnounce	udpTracker.cpp	/^	int UDPTracker::handleAnnounce (UDPTracker *usi, SOCKADDR_IN *remote, char *data)$/;"	f	class:UDPT::UDPTracker
+handleConnection	udpTracker.cpp	/^	int UDPTracker::handleConnection (UDPTracker *usi, SOCKADDR_IN *remote, char *data)$/;"	f	class:UDPT::UDPTracker
+handleConnections	http/httpserver.cpp	/^		void HTTPServer::handleConnections (HTTPServer *server)$/;"	f	class:UDPT::Server::HTTPServer
+handleRoot	http/webapp.cpp	/^		void WebApp::handleRoot (HTTPServer *srv, HTTPServer::Request *req, HTTPServer::Response *resp)$/;"	f	class:UDPT::Server::WebApp
+handleScrape	udpTracker.cpp	/^	int UDPTracker::handleScrape (UDPTracker *usi, SOCKADDR_IN *remote, char *data, int len)$/;"	f	class:UDPT::UDPTracker
+headers	http/httpserver.hpp	/^				multimap<string, string> headers;$/;"	m	class:UDPT::Server::HTTPServer::Request
+headers	http/httpserver.hpp	/^				multimap<string, string> headers;$/;"	m	class:UDPT::Server::HTTPServer::Response
+hexadecimal	db/driver_sqlite.cpp	/^		static const char hexadecimal[] = "0123456789abcdef";$/;"	m	namespace:UDPT::Data	file:
+hexadecimal	tools.c	/^static const char hexadecimal[] = "0123456789abcdef";$/;"	v	file:
+httpVer	http/httpserver.hpp	/^				} httpVer;$/;"	m	class:UDPT::Server::HTTPServer::Request	typeref:struct:UDPT::Server::HTTPServer::Request::__anon1
+info_hash	db/database.hpp	/^				uint8_t *info_hash;$/;"	m	struct:UDPT::Data::DatabaseDriver::__anon3
+info_hash	udpTracker.hpp	/^			uint8_t info_hash [20];$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+instance	http/webapp.hpp	/^			HTTPServer *instance;$/;"	m	class:UDPT::Server::WebApp
+interval	udpTracker.hpp	/^			uint32_t interval;$/;"	m	struct:UDPT::UDPTracker::udp_announce_response
+ip	db/database.hpp	/^				uint32_t ip;$/;"	m	struct:UDPT::Data::DatabaseDriver::__anon4
+ip_address	udpTracker.hpp	/^			uint32_t ip_address;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+ip_whitelist	http/webapp.hpp	/^			std::map<std::string, list<uint32_t> > ip_whitelist;$/;"	m	class:UDPT::Server::WebApp
+isAllowedIP	http/webapp.cpp	/^		bool WebApp::isAllowedIP (WebApp *app, string key, uint32_t ip)$/;"	f	class:UDPT::Server::WebApp
+isDynamic	db/database.cpp	/^		bool DatabaseDriver::isDynamic()$/;"	f	class:UDPT::Data::DatabaseDriver
+isRunning	http/httpserver.hpp	/^			bool isRunning;$/;"	m	class:UDPT::Server::HTTPServer
+isRunning	udpTracker.hpp	/^		bool isRunning;$/;"	m	class:UDPT::UDPTracker
+isTorrentAllowed	db/database.cpp	/^		bool DatabaseDriver::isTorrentAllowed(uint8_t info_hash[20])$/;"	f	class:UDPT::Data::DatabaseDriver
+isTorrentAllowed	db/driver_sqlite.cpp	/^		bool SQLite3Driver::isTorrentAllowed(uint8_t info_hash[20])$/;"	f	class:UDPT::Data::SQLite3Driver
+is_dynamic	db/database.hpp	/^			bool is_dynamic;$/;"	m	class:UDPT::Data::DatabaseDriver
+key	udpTracker.hpp	/^			uint32_t key;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+leechers	db/database.hpp	/^				int32_t leechers;$/;"	m	struct:UDPT::Data::DatabaseDriver::__anon3
+leechers	udpTracker.hpp	/^			uint32_t leechers;$/;"	m	struct:UDPT::UDPTracker::udp_announce_response
+left	udpTracker.hpp	/^			uint64_t left;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+load	settings.cpp	/^	bool Settings::load()$/;"	f	class:UDPT::Settings
+m_byteswap	tools.c	/^void m_byteswap (void *dest, void *src, int sz)$/;"	f
+m_hton16	tools.c	/^uint16_t m_hton16(uint16_t n)$/;"	f
+m_hton32	tools.c	/^uint32_t m_hton32 (uint32_t n)$/;"	f
+m_hton64	tools.c	/^uint64_t m_hton64 (uint64_t n)$/;"	f
+main	main.cpp	/^int main(int argc, char *argv[])$/;"	f
+major	http/httpserver.hpp	/^					int major;$/;"	m	struct:UDPT::Server::HTTPServer::Request::__anon1
+message	udpTracker.hpp	/^			char *message;$/;"	m	struct:UDPT::UDPTracker::udp_error_response
+minor	http/httpserver.hpp	/^					int minor;$/;"	m	struct:UDPT::Server::HTTPServer::Request::__anon1
+msg	http/httpserver.hpp	/^				stringstream msg;$/;"	m	class:UDPT::Server::HTTPServer::Response
+nextReqLine	http/httpserver.cpp	/^		inline static char* nextReqLine (int &cPos, char *buff, int len)$/;"	f	namespace:UDPT::Server
+nodes	http/httpserver.hpp	/^				map<string, appNode> nodes;$/;"	m	struct:UDPT::Server::HTTPServer::appNode
+num_want	udpTracker.hpp	/^			int32_t num_want;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+o_settings	udpTracker.hpp	/^		Settings *o_settings;$/;"	m	class:UDPT::UDPTracker
+params	http/httpserver.hpp	/^				map<string, string> params;$/;"	m	class:UDPT::Server::HTTPServer::Request
+parseRequest	http/httpserver.cpp	/^		void HTTPServer::Request::parseRequest ()$/;"	f	class:UDPT::Server::HTTPServer::Request
+parseSettings	settings.cpp	/^	void Settings::parseSettings (char *data, int len)$/;"	f	class:UDPT::Settings
+parseURL	http/httpserver.cpp	/^		inline void parseURL (string request, list<string> *path, map<string, string> *params)$/;"	f	namespace:UDPT::Server
+path	http/httpserver.hpp	/^				list<string> path;$/;"	m	class:UDPT::Server::HTTPServer::Request
+peer_id	udpTracker.hpp	/^			uint8_t peer_id [20];$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+peer_list_data	udpTracker.hpp	/^			uint8_t *peer_list_data;$/;"	m	struct:UDPT::UDPTracker::udp_announce_response
+port	db/database.hpp	/^				uint16_t port;$/;"	m	struct:UDPT::Data::DatabaseDriver::__anon4
+port	udpTracker.hpp	/^			uint16_t port;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+port	udpTracker.hpp	/^		uint16_t port;$/;"	m	class:UDPT::UDPTracker
+removePeer	db/database.cpp	/^		bool DatabaseDriver::removePeer (uint8_t peer_id [20], uint8_t info_hash [20], uint32_t ip, uint16_t port)$/;"	f	class:UDPT::Data::DatabaseDriver
+removePeer	db/driver_sqlite.cpp	/^		bool SQLite3Driver::removePeer(uint8_t peer_id [20], uint8_t info_hash [20], uint32_t ip, uint16_t port)$/;"	f	class:UDPT::Data::SQLite3Driver
+removeTorrent	db/database.cpp	/^		bool DatabaseDriver::removeTorrent(uint8_t hash[20])$/;"	f	class:UDPT::Data::DatabaseDriver
+removeTorrent	db/driver_sqlite.cpp	/^		bool SQLite3Driver::removeTorrent(uint8_t info_hash[20])$/;"	f	class:UDPT::Data::SQLite3Driver
+reqCallback	http/httpserver.hpp	/^			typedef void (reqCallback)(HTTPServer*,Request*,Response*);$/;"	t	class:UDPT::Server::HTTPServer
+requestMethod	http/httpserver.hpp	/^				} requestMethod;$/;"	m	class:UDPT::Server::HTTPServer::Request	typeref:struct:UDPT::Server::HTTPServer::Request::__anon2
+resolveRequest	udpTracker.cpp	/^	int UDPTracker::resolveRequest (UDPTracker *usi, SOCKADDR_IN *remote, char *data, int r)$/;"	f	class:UDPT::UDPTracker
+rm	http/httpserver.hpp	/^					RequestMethod rm;$/;"	m	struct:UDPT::Server::HTTPServer::Request::__anon2
+rootNode	http/httpserver.hpp	/^			appNode rootNode;$/;"	m	class:UDPT::Server::HTTPServer
+save	settings.cpp	/^	bool Settings::save ()$/;"	f	class:UDPT::Settings
+sc_api	http/webapp.hpp	/^			Settings::SettingClass *sc_api;$/;"	m	class:UDPT::Server::WebApp
+seeders	db/database.hpp	/^				int32_t seeders;$/;"	m	struct:UDPT::Data::DatabaseDriver::__anon3
+seeders	udpTracker.hpp	/^			uint32_t seeders;$/;"	m	struct:UDPT::UDPTracker::udp_announce_response
+sendError	udpTracker.cpp	/^	int UDPTracker::sendError (UDPTracker *usi, SOCKADDR_IN *remote, uint32_t transactionID, const string &msg)$/;"	f	class:UDPT::UDPTracker
+set	settings.cpp	/^	bool Settings::SettingClass::set (const string name, const string value)$/;"	f	class:UDPT::Settings::SettingClass
+set	settings.cpp	/^	bool Settings::set (const string classN, const string name, const string value)$/;"	f	class:UDPT::Settings
+setCookies	http/httpserver.cpp	/^		inline void setCookies (string &data, map<string, string> *cookies)$/;"	f	namespace:UDPT::Server
+setData	http/httpserver.cpp	/^		void HTTPServer::setData(string k, void *d)$/;"	f	class:UDPT::Server::HTTPServer
+setStatus	http/httpserver.cpp	/^		void HTTPServer::Response::setStatus (int c, const string m)$/;"	f	class:UDPT::Server::HTTPServer::Response
+settings	udpTracker.hpp	/^		uint8_t settings;$/;"	m	class:UDPT::UDPTracker
+sock	udpTracker.hpp	/^		SOCKET sock;$/;"	m	class:UDPT::UDPTracker
+srv	http/httpserver.hpp	/^			SOCKET srv;$/;"	m	class:UDPT::Server::HTTPServer
+start	udpTracker.cpp	/^	enum UDPTracker::StartStatus UDPTracker::start ()$/;"	f	class:UDPT::UDPTracker
+status_code	http/httpserver.hpp	/^				int status_code;$/;"	m	class:UDPT::Server::HTTPServer::Response
+status_msg	http/httpserver.hpp	/^				string status_msg;$/;"	m	class:UDPT::Server::HTTPServer::Response
+str	http/httpserver.hpp	/^					string str;$/;"	m	struct:UDPT::Server::HTTPServer::Request::__anon2
+thread_count	http/httpserver.hpp	/^			int thread_count;$/;"	m	class:UDPT::Server::HTTPServer
+thread_count	udpTracker.hpp	/^		uint8_t thread_count;$/;"	m	class:UDPT::UDPTracker
+threads	http/httpserver.hpp	/^			HANDLE *threads;$/;"	m	class:UDPT::Server::HTTPServer
+threads	udpTracker.hpp	/^		HANDLE *threads;$/;"	m	class:UDPT::UDPTracker
+to_hex_str	tools.c	/^void to_hex_str (const uint8_t *hash, char *data)$/;"	f
+torrent_list_data	udpTracker.hpp	/^			uint8_t *torrent_list_data;$/;"	m	struct:UDPT::UDPTracker::udp_scrape_request
+transaction_id	udpTracker.hpp	/^			uint32_t transaction_id;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+transaction_id	udpTracker.hpp	/^			uint32_t transaction_id;$/;"	m	struct:UDPT::UDPTracker::udp_announce_response
+transaction_id	udpTracker.hpp	/^			uint32_t transaction_id;$/;"	m	struct:UDPT::UDPTracker::udp_connection_request
+transaction_id	udpTracker.hpp	/^			uint32_t transaction_id;$/;"	m	struct:UDPT::UDPTracker::udp_connection_response
+transaction_id	udpTracker.hpp	/^			uint32_t transaction_id;$/;"	m	struct:UDPT::UDPTracker::udp_error_response
+transaction_id	udpTracker.hpp	/^			uint32_t transaction_id;$/;"	m	struct:UDPT::UDPTracker::udp_scrape_request
+transaction_id	udpTracker.hpp	/^			uint32_t transaction_id;$/;"	m	struct:UDPT::UDPTracker::udp_scrape_response
+udp_announce_request	udpTracker.hpp	/^		typedef struct udp_announce_request$/;"	s	class:UDPT::UDPTracker
+udp_announce_response	udpTracker.hpp	/^		typedef struct udp_announce_response$/;"	s	class:UDPT::UDPTracker
+udp_connection_request	udpTracker.hpp	/^		typedef struct udp_connection_request$/;"	s	class:UDPT::UDPTracker
+udp_connection_response	udpTracker.hpp	/^		typedef struct udp_connection_response$/;"	s	class:UDPT::UDPTracker
+udp_error_response	udpTracker.hpp	/^		typedef struct udp_error_response$/;"	s	class:UDPT::UDPTracker
+udp_scrape_request	udpTracker.hpp	/^		typedef struct udp_scrape_request$/;"	s	class:UDPT::UDPTracker
+udp_scrape_response	udpTracker.hpp	/^		typedef struct udp_scrape_response$/;"	s	class:UDPT::UDPTracker
+updatePeer	db/database.cpp	/^		bool DatabaseDriver::updatePeer(uint8_t peer_id [20], uint8_t info_hash [20],$/;"	f	class:UDPT::Data::DatabaseDriver
+updatePeer	db/driver_sqlite.cpp	/^		bool SQLite3Driver::updatePeer(uint8_t peer_id[20], uint8_t info_hash[20], uint32_t ip, uint16_t port, int64_t downloaded, int64_t left, int64_t uploaded, enum TrackerEvents event)$/;"	f	class:UDPT::Data::SQLite3Driver
+uploaded	udpTracker.hpp	/^			uint64_t uploaded;$/;"	m	struct:UDPT::UDPTracker::udp_announce_request
+verifyConnectionId	db/database.cpp	/^		bool DatabaseDriver::verifyConnectionId(uint64_t cid, uint32_t ip, uint16_t port)$/;"	f	class:UDPT::Data::DatabaseDriver
+verifyConnectionId	db/driver_sqlite.cpp	/^		bool SQLite3Driver::verifyConnectionId(uint64_t cId, uint32_t ip, uint16_t port)$/;"	f	class:UDPT::Data::SQLite3Driver
+write	http/httpserver.cpp	/^		void HTTPServer::Response::write (const char *data, int len)$/;"	f	class:UDPT::Server::HTTPServer::Response
+~DatabaseDriver	db/database.cpp	/^		DatabaseDriver::~DatabaseDriver()$/;"	f	class:UDPT::Data::DatabaseDriver
+~HTTPServer	http/httpserver.cpp	/^		HTTPServer::~HTTPServer ()$/;"	f	class:UDPT::Server::HTTPServer
+~SQLite3Driver	db/driver_sqlite.cpp	/^		SQLite3Driver::~SQLite3Driver()$/;"	f	class:UDPT::Data::SQLite3Driver
+~Settings	settings.cpp	/^	Settings::~Settings()$/;"	f	class:UDPT::Settings
+~UDPTracker	udpTracker.cpp	/^	UDPTracker::~UDPTracker ()$/;"	f	class:UDPT::UDPTracker
+~WebApp	http/webapp.cpp	/^		WebApp::~WebApp()$/;"	f	class:UDPT::Server::WebApp

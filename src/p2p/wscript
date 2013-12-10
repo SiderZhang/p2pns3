@@ -1,0 +1,151 @@
+# -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+# def options(opt):
+#     pass
+
+# def configure(conf):
+#     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
+
+import os
+import os.path
+
+REQUIRED_BOOST_LIBS = ['system', 'signals', 'filesystem', 'thread', 'atomic', 'chrono']
+
+def required_boost_libs(conf):
+    conf.env['REQUIRED_BOOST_LIBS'] += REQUIRED_BOOST_LIBS
+
+def configure(conf):
+    if not conf.env['LIB_BOOST']:
+	conf.report_optional_feature("p2p", "NS-3 p2p Integration", False,
+				     "Required boost libraries not found")
+
+        # Add this module to the list of modules that won't be built
+        # if they are enabled.
+        conf.env['MODULES_NOT_BUILT'].append('p2p')
+
+	return 
+	conf.report_optional_feature("p2p", "NS-3 p2p Integration", False,
+				     "Required boost libraries not found")
+
+#    env = conf.env.derive()
+ #   env.append_value('CXXFLAGS', '-lboost_system')
+    present_boost_libs = []
+    for boost_lib_name in conf.env['LIB_BOOST']:
+        if boost_lib_name.startswith("boost_"):
+            boost_lib_name = boost_lib_name[6:]
+        if boost_lib_name.endswith("-mt"):
+            boost_lib_name = boost_lib_name[:-3]
+        present_boost_libs.append(boost_lib_name)
+
+    missing_boost_libs = [lib for lib in REQUIRED_BOOST_LIBS if lib not in present_boost_libs]
+    if missing_boost_libs != []:
+	conf.report_optional_feature("p2pclient", "NS-3 p2p client", False,
+				     "Required boost libraries not found, missing: %s" % ', '.join(missing_boost_libs))
+
+        # Add this module to the list of modules that won't be built
+        # if they are enabled.
+        conf.env['MODULES_NOT_BUILT'].append('p2p')
+
+	return 
+
+def build(bld):
+    module = bld.create_ns3_module('p2p', ['core', 'internet', 'config-store', 'tools', 'applications' ])
+
+    moduleName = 'p2p'
+    curPath = os.path.abspath('.')
+    path = curPath + '/src/' + moduleName + '/'
+    os.chdir(path)
+
+    # 自动寻找目录下所有的源文件和头文件
+    print os.path.abspath('.')
+    source = pathFind('model/', ('.cc', '.cpp'), [], 'test/')
+    source = pathFind('helper/', ('.cc', '.cpp'), source, 'test/')
+    header = pathFind('model/', ('.h', '.hpp'), [], 'ww')
+    header = pathFind('helper/', ('.h', '.hpp'), header, 'ww')
+    print header
+
+    os.chdir(curPath)
+
+#    module.source = [
+#        'model/p2p.cc',
+#        'model/p2p-client.cc',
+#        'model/tracker_manager.cpp',
+#        'model/udp_tracker_connection.cpp',
+#        'model/assert.cpp',
+#        'model/udp-p2p-header.cc',
+#        'model/p2ptracker.cc',
+#        'model/udpTracker.cpp',
+#        'model/logging.cpp',
+#        'model/settings.cpp',
+#        'model/tools.cpp',
+#        'model/database.cpp',
+#        'model/driver_sqlite.cpp',
+#        'helper/p2ptracker-helper.cc',
+#        'helper/p2p-client-helper.cc',
+#        'helper/p2p-helper.cc',
+#        ]
+
+    module.source = source
+    module.includes='. ../libtorrent/model'
+
+    headers = bld(features='ns3header')
+    headers.module = 'p2p'
+#    headers.source = [
+#        'model/p2p.h',
+#        'model/p2p-client.h',
+#        'model/udp_tracker_connection.hpp',
+#        'model/peer_id.hpp',
+#        'model/tracker_req.hpp',
+#        'model/allocator.hpp',
+#        'model/error_code.hpp',
+#        'model/intrusive_ptr_base.hpp',
+#        'model/assert.hpp',
+#        'model/version.hpp',
+#        'model/pch.hpp',
+#        'model/action.h',
+#        'model/p2ptracker.h',
+#        'model/udpTracker.hpp',
+#        'model/logging.h',
+#        'model/settings.hpp',
+#        'model/tools.h',
+#        'model/multiplatform.h',
+#        'model/database.hpp',
+#        'model/driver_sqlite.hpp',
+#        'model/udp-p2p-header.h',
+#        'model/kademlia/dht_tracker.hpp',
+#        'model/kademlia/find_data.hpp',
+#        'model/kademlia/logging.hpp',
+#        'model/kademlia/msg.hpp',
+#        'model/kademlia/node_entry.hpp',
+#        'model/kademlia/node_id.hpp',
+#        'model/kademlia/node.hpp',
+#        'model/kademlia/observer.hpp',
+#        'model/kademlia/refresh.hpp',
+#        'model/kademlia/routing_table.hpp',
+#        'model/kademlia/rpc_manager.hpp',
+#        'model/kademlia/traversal_algorithm.hpp',
+#        'helper/p2ptracker-helper.h',
+#        'helper/p2p-client-helper.h',
+#        'helper/p2p-helper.h',
+#        ]
+    headers.source = header
+
+    if bld.env.ENABLE_EXAMPLES:
+        bld.recurse('examples')
+
+    # bld.ns3_python_bindings()
+
+def pathFind(rootDir, endtype, fileEntry, excepPath):
+
+    for lists in os.listdir(rootDir):
+        path = os.path.join(rootDir, lists)
+
+        if path.startswith(excepPath):
+            continue
+
+#        if os.path.isdir(path):
+#            pathFind(path, endtype, fileEntry, excepPath)
+
+        if path.endswith(endtype):
+            fileEntry.append(path)
+    return fileEntry
