@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007, Arvid Norberg
+Copyright (c) 2009, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,22 +30,47 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef TORRENT_INSTANTIATE_CONNECTION
-#define TORRENT_INSTANTIATE_CONNECTION
+#ifndef TORRENT_ADDRESS_HPP_INCLUDED
+#define TORRENT_ADDRESS_HPP_INCLUDED
 
-#include <boost/shared_ptr.hpp>
+#include <boost/version.hpp>
+#include "libtorrent/config.hpp"
+
+#ifdef __OBJC__
+#define Protocol Protocol_
+#endif
+
+#if defined TORRENT_WINDOWS || defined TORRENT_CYGWIN
+// asio assumes that the windows error codes are defined already
+#include <winsock2.h>
+#endif
+
+#if BOOST_VERSION < 103500
+#include <asio/ip/address.hpp>
+#else
+#include <boost/asio/ip/address.hpp>
+#endif
+
+#ifdef __OBJC__ 
+#undef Protocol
+#endif
 
 namespace libtorrent
 {
-	struct proxy_settings;
-	struct utp_socket_manager;
 
-	// instantiate a boost::asio::ip::tcp::socket (s) according to the specified criteria
-	TORRENT_EXTRA_EXPORT bool instantiate_connection(io_service& ios
-		, proxy_settings const& ps, boost::asio::ip::tcp::socket& s
-		, void* ssl_context = 0
-		, utp_socket_manager* sm = 0
-		, bool peer_connection = false);
+#if BOOST_VERSION < 103500
+	typedef ::asio::ip::address address;
+	typedef ::asio::ip::address_v4 address_v4;
+#if TORRENT_USE_IPV6
+	typedef ::asio::ip::address_v6 address_v6;
+#endif
+#else
+	typedef boost::asio::ip::address address;
+	typedef boost::asio::ip::address_v4 address_v4;
+#if TORRENT_USE_IPV6
+	typedef boost::asio::ip::address_v6 address_v6;
+#endif
+#endif
 }
 
 #endif

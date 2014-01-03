@@ -73,7 +73,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/assert.hpp"
 #include "libtorrent/bitfield.hpp"
 #include "libtorrent/aux_/session_impl.hpp"
-#include "libtorrent/deadline_timer.hpp"
 #include "libtorrent/union_endpoint.hpp"
 
 #if TORRENT_COMPLETE_TYPES_REQUIRED
@@ -117,11 +116,6 @@ namespace libtorrent
 			, sha1_hash const& info_hash);
 		~torrent();
 
-#ifndef TORRENT_DISABLE_ENCRYPTION
-		sha1_hash const& obfuscated_hash() const
-		{ return m_obfuscated_hash; }
-#endif
-
 		sha1_hash const& info_hash() const
 		{
 			static sha1_hash empty;
@@ -132,13 +126,6 @@ namespace libtorrent
 		void start();
 
 		void start_download_url();
-
-#ifndef TORRENT_DISABLE_EXTENSIONS
-		void add_extension(boost::shared_ptr<torrent_plugin>);
-		void add_extension(boost::function<boost::shared_ptr<torrent_plugin>(torrent*, void*)> const& ext
-			, void* userdata);
-		void notify_extension_add_peer(tcp::endpoint const& ip, int src, int flags);
-#endif
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 		bool has_peer(peer_connection* p) const
@@ -318,7 +305,6 @@ namespace libtorrent
 		void use_interface(std::string net_interface);
 		tcp::endpoint get_interface() const;
 		
-		void connect_to_url_seed(std::list<web_seed_entry>::iterator url);
 		bool connect_to_peer(policy::peer* peerinfo, bool ignore_limit = false);
 
 		void set_ratio(float r)
@@ -337,16 +323,6 @@ namespace libtorrent
 			state_updated();
 		}
 
-#ifndef TORRENT_DISABLE_RESOLVE_COUNTRIES
-		void resolve_countries(bool r)
-		{ m_resolve_countries = r; }
-
-		bool resolving_countries() const
-		{
-			return m_resolve_countries && !m_ses.settings().anonymous_mode;
-		}
-#endif
-
 // --------------------------------------------
 		// BANDWIDTH MANAGEMENT
 
@@ -360,24 +336,6 @@ namespace libtorrent
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_ERROR_LOGGING || defined TORRENT_LOGGING
 		void log_to_all_peers(char const* message);
 #endif
-
-		// add or remove a url that will be attempted for
-		// finding the file(s) in this torrent.
-		void add_web_seed(std::string const& url, web_seed_entry::type_t type);
-		void add_web_seed(std::string const& url, web_seed_entry::type_t type
-			, std::string const& auth, web_seed_entry::headers_t const& extra_headers);
-	
-		void remove_web_seed(std::string const& url, web_seed_entry::type_t type);
-		void disconnect_web_seed(peer_connection* p);
-
-		void retry_web_seed(peer_connection* p, int retry = 0);
-
-		void remove_web_seed(peer_connection* p);
-
-		std::list<web_seed_entry> web_seeds() const
-		{ return m_web_seeds; }
-
-		std::set<std::string> web_seeds(web_seed_entry::type_t type) const;
 
 		bool free_upload_slots() const
 		{ return m_num_uploads < m_max_uploads; }
@@ -414,8 +372,6 @@ namespace libtorrent
 
 		peer_iterator begin() { return m_connections.begin(); }
 		peer_iterator end() { return m_connections.end(); }
-
-		void resolve_peer_country(boost::intrusive_ptr<peer_connection> const& p) const;
 
 		void get_full_peer_list(std::vector<peer_list_entry>& v) const;
 		void get_peer_info(std::vector<peer_info>& v);
@@ -468,10 +424,6 @@ namespace libtorrent
 			= tracker_request::none
 			, address const& bind_interface = address_v4::any());
 		int seconds_since_last_scrape() const { return m_last_scrape; }
-
-#ifndef TORRENT_DISABLE_DHT
-		void dht_announce();
-#endif
 
 		// sets the username and password that will be sent to
 		// the tracker
@@ -590,30 +542,10 @@ namespace libtorrent
 		// all seeds and let the tracker know we're finished.
 		void completed();
 
-#if TORRENT_USE_I2P
-		void on_i2p_resolve(error_code const& ec, char const* dest);
-#endif
-
 		// this is the asio callback that is called when a name
 		// lookup for a PEER is completed.
 		void on_peer_name_lookup(error_code const& e, tcp::resolver::iterator i
 			, peer_id pid);
-
-		// this is the asio callback that is called when a name
-		// lookup for a WEB SEED is completed.
-		void on_name_lookup(error_code const& e, tcp::resolver::iterator i
-			, std::list<web_seed_entry>::iterator url, tcp::endpoint proxy);
-
-		void connect_web_seed(std::list<web_seed_entry>::iterator web, tcp::endpoint a);
-
-		// this is the asio callback that is called when a name
-		// lookup for a proxy for a web seed is completed.
-		void on_proxy_name_lookup(error_code const& e, tcp::resolver::iterator i
-			, std::list<web_seed_entry>::iterator url);
-
-		// remove a web seed, or schedule it for removal in case there
-		// are outstanding operations on it
-		void remove_web_seed(std::list<web_seed_entry>::iterator web);
 
 		// this is called when the torrent has finished. i.e.
 		// all the pieces we have not filtered have been downloaded.
@@ -689,12 +621,12 @@ namespace libtorrent
 		torrent_info const& torrent_file() const
 		{ return *m_torrent_file; }
 
-		std::string const& uuid() const { return m_uuid; }
-		void set_uuid(std::string const& s) { m_uuid = s; }
-		std::string const& url() const { return m_url; }
-		void set_url(std::string const& s) { m_url = s; }
-		std::string const& source_feed_url() const { return m_source_feed_url; }
-		void set_source_feed_url(std::string const& s) { m_source_feed_url = s; }
+		//std::string const& uuid() const { return m_uuid; }
+		//void set_uuid(std::string const& s) { m_uuid = s; }
+		//std::string const& url() const { return m_url; }
+		//void set_url(std::string const& s) { m_url = s; }
+		//std::string const& source_feed_url() const { return m_source_feed_url; }
+		//void set_source_feed_url(std::string const& s) { m_source_feed_url = s; }
 
 		std::vector<announce_entry> const& trackers() const
 		{ return m_trackers; }
@@ -834,13 +766,6 @@ namespace libtorrent
 		}
 
 		bool is_ssl_torrent() const { return m_ssl_torrent; } 
-#ifdef TORRENT_USE_OPENSSL
-		void set_ssl_cert(std::string const& certificate
-			, std::string const& private_key
-			, std::string const& dh_params
-			, std::string const& passphrase);
-		boost::asio::ssl::context* ssl_ctx() const { return m_ssl_ctx.get(); } 
-#endif
 
 	private:
 
@@ -873,13 +798,6 @@ namespace libtorrent
 			, error_code const& e);
 
 		void on_tracker_announce();
-
-#ifndef TORRENT_DISABLE_DHT
-		static void on_dht_announce_response_disp(boost::weak_ptr<torrent> t
-			, std::vector<tcp::endpoint> const& peers);
-		void on_dht_announce_response(std::vector<tcp::endpoint> const& peers);
-		bool should_announce_dht() const;
-#endif
 
 		void remove_time_critical_piece(int piece, bool finished = false);
 		void remove_time_critical_pieces(std::vector<int> const& priority);
@@ -925,16 +843,6 @@ namespace libtorrent
 		// the object.
 		piece_manager* m_storage;
 
-#ifdef TORRENT_USE_OPENSSL
-		boost::shared_ptr<asio::ssl::context> m_ssl_ctx;
-
-#if BOOST_VERSION >= 104700
-		bool verify_peer_cert(bool preverified, boost::asio::ssl::verify_context& ctx);
-#endif
-
-		void init_ssl(std::string const& cert);
-#endif
-
 #ifdef TORRENT_DEBUG
 	public:
 #endif
@@ -950,17 +858,8 @@ namespace libtorrent
 		// connections (if we've reached the connection limit)
 		int m_num_connecting;
 
-		// The list of web seeds in this torrent. Seeds
-		// with fatal errors are removed from the set
-		std::list<web_seed_entry> m_web_seeds;
-
-#ifndef TORRENT_DISABLE_EXTENSIONS
-		typedef std::list<boost::shared_ptr<torrent_plugin> > extension_list_t;
-		extension_list_t m_extensions;
-#endif
-
 		// used for tracker announces
-		deadline_timer m_tracker_timer;
+		//deadline_timer m_tracker_timer;
 
 		// this is the upload and download statistics for the whole torrent.
 		// it's updated from all its peers once every second.
@@ -971,9 +870,6 @@ namespace libtorrent
 		// a back reference to the session
 		// this torrent belongs to.
 		aux::session_impl& m_ses;
-
-		// used to resolve hostnames for web seeds
-		mutable tcp::resolver m_host_resolver;
 
 		std::vector<boost::uint8_t> m_file_priority;
 
@@ -1021,15 +917,15 @@ namespace libtorrent
 
 		// if we don't have the metadata, this is a url to
 		// the torrent file
-		std::string m_url;
+		//std::string m_url;
 
 		// if this was added from an RSS feed, this is the unique
 		// identifier in the feed.
-		std::string m_uuid;
+		//std::string m_uuid;
 
 		// if this torrent was added by an RSS feed, this is the
 		// URL to that feed
-		std::string m_source_feed_url;
+		//std::string m_source_feed_url;
 
 		// this is used as temporary storage while downloading
 		// the .torrent file from m_url
@@ -1065,12 +961,6 @@ namespace libtorrent
 		time_t m_completed_time;
 		time_t m_last_seen_complete;
 		time_t m_last_saved_resume;
-
-#ifndef TORRENT_DISABLE_ENCRYPTION
-		// this is SHA1("req2" + info-hash), used for
-		// encrypted hand shakes
-		sha1_hash m_obfuscated_hash;
-#endif
 
 		// the upload/download ratio that each peer
 		// tries to maintain.
@@ -1167,19 +1057,7 @@ namespace libtorrent
 		// paused or auto_managed from the resume data
 		bool m_override_resume_data:1;
 
-#ifndef TORRENT_DISABLE_RESOLVE_COUNTRIES
-		// this is true while there is a country
-		// resolution in progress. To avoid flodding
-		// the DNS request queue, only one ip is resolved
-		// at a time.
-		mutable bool m_resolving_country:1;
-		
-		// this is true if the user has enabled
-		// country resolution in this torrent
-		bool m_resolve_countries:1;
-#else
 		unsigned int m_dummy_padding_bits_to_align:2;
-#endif
 
 		// set to false when saving resume data. Set to true
 		// whenever something is downloaded

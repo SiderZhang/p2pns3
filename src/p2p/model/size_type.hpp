@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007, Arvid Norberg
+Copyright (c) 2003, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,23 +30,24 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef TORRENT_INSTANTIATE_CONNECTION
-#define TORRENT_INSTANTIATE_CONNECTION
+#ifndef TORRENT_SIZE_TYPE_HPP_INCLUDED
+#define TORRENT_SIZE_TYPE_HPP_INCLUDED
 
-#include <boost/shared_ptr.hpp>
+#ifdef _MSC_VER
+#pragma warning(push, 1)
+#endif
+
+#include <boost/cstdint.hpp>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace libtorrent
 {
-	struct proxy_settings;
-	struct utp_socket_manager;
-
-	// instantiate a boost::asio::ip::tcp::socket (s) according to the specified criteria
-	TORRENT_EXTRA_EXPORT bool instantiate_connection(io_service& ios
-		, proxy_settings const& ps, boost::asio::ip::tcp::socket& s
-		, void* ssl_context = 0
-		, utp_socket_manager* sm = 0
-		, bool peer_connection = false);
+	typedef boost::int64_t size_type;
+	typedef boost::uint64_t unsigned_size_type;
 }
 
-#endif
 
+#endif

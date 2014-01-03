@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007, Arvid Norberg
+Copyright (c) 2010, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,22 +30,74 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef TORRENT_INSTANTIATE_CONNECTION
-#define TORRENT_INSTANTIATE_CONNECTION
-
-#include <boost/shared_ptr.hpp>
+#ifndef TORRENT_SLIDING_AVERAGE_HPP_INCLUDED
+#define TORRENT_SLIDING_AVERAGE_HPP_INCLUDED
 
 namespace libtorrent
 {
-	struct proxy_settings;
-	struct utp_socket_manager;
+// a sliding average accumulator. Add samples to it and it
+// keeps track of a sliding mean value and an average deviation
+// from that average.
+template <int history_size>
+struct sliding_average
+{
+	sliding_average(): m_mean(-1), m_average_deviation(-1) {}
 
-	// instantiate a boost::asio::ip::tcp::socket (s) according to the specified criteria
-	TORRENT_EXTRA_EXPORT bool instantiate_connection(io_service& ios
-		, proxy_settings const& ps, boost::asio::ip::tcp::socket& s
-		, void* ssl_context = 0
-		, utp_socket_manager* sm = 0
-		, bool peer_connection = false);
+	void add_sample(int s)
+	{
+		if (m_mean == -1)
+		{
+			m_mean = s;
+			return;
+		}
+		int deviation = abs(m_mean - s);
+
+		m_mean = m_mean - m_mean / history_size + s / history_size;
+
+		if (m_average_deviation == -1)
+		{
+			m_average_deviation = deviation;
+			return;
+		}
+		m_average_deviation = m_average_deviation - m_average_deviation
+			/ history_size + deviation / history_size;
+	}
+
+	int mean() const { return m_mean != -1 ? m_mean : 0; }
+	int avg_deviation() const { return m_average_deviation != -1 ? m_average_deviation : 0; }
+
+private:
+	int m_mean;
+	int m_average_deviation;
+};
+
+struct average_accumulator
+{
+	average_accumulator()
+		: m_num_samples(0)
+		, m_sample_sum(0)
+	{}
+
+	void add_sample(int s)
+	{
+		++m_num_samples;
+		m_sample_sum += s;
+	}
+
+	int mean()
+	{
+		int ret;
+		if (m_num_samples == 0) ret = 0;
+		else ret = int(m_sample_sum / m_num_samples);
+		m_num_samples = 0;
+		m_sample_sum = 0;
+		return ret;
+	}
+
+	int m_num_samples;
+	size_type m_sample_sum;
+};
+
 }
 
 #endif

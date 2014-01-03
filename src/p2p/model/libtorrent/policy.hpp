@@ -480,11 +480,12 @@ namespace libtorrent
 		bool m_finished:1;
 	};
 
-	inline policy::ipv4_peer::ipv4_peer(
+/*	inline policy::ipv4_peer::ipv4_peer(
 		tcp::endpoint const& ep, bool c, int src
 	)
 		: peer(ep.port(), c, src)
-		, addr(ep.address().to_v4())
+          // TODO: 禁用boost::asio
+		//, addr(ep.address().to_v4())
 	{
 #if TORRENT_USE_IPV6
 		is_v6_addr = false;
@@ -492,7 +493,7 @@ namespace libtorrent
 #if TORRENT_USE_I2P
 		is_i2p_addr = false;
 #endif
-	}
+	}*/
 
 #if TORRENT_USE_I2P
 	inline policy::i2p_peer::i2p_peer(char const* dest, bool connectable, int src)
@@ -509,17 +510,18 @@ namespace libtorrent
 #endif // TORRENT_USE_I2P
 
 #if TORRENT_USE_IPV6
-	inline policy::ipv6_peer::ipv6_peer(
+	/*inline policy::ipv6_peer::ipv6_peer(
 		tcp::endpoint const& ep, bool c, int src
 	)
 		: peer(ep.port(), c, src)
-		, addr(ep.address().to_v6().to_bytes())
+          // TODO: 禁用boost::asio
+		//, addr(ep.address().to_v6().to_bytes())
 	{
 		is_v6_addr = true;
 #if TORRENT_USE_I2P
 		is_i2p_addr = false;
 #endif
-	}
+	}*/
 
 #endif // TORRENT_USE_IPV6
 

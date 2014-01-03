@@ -72,7 +72,7 @@ namespace UDPT
 			throw DatabaseException (DatabaseException::E_NOT_IMPLEMENTED);
 		}
 
-		bool DatabaseDriver::getPeers (uint8_t info_hash [20], int *max_count, PeerEntry *pe)
+		bool DatabaseDriver::getPeers (uint8_t info_hash [20], uint32_t *max_count, PeerEntry *pe)
 		{
 			throw DatabaseException (DatabaseException::E_NOT_IMPLEMENTED);
 		}

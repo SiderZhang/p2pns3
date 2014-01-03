@@ -100,6 +100,8 @@ namespace libtorrent
 
 		void set_peer(tcp::endpoint const& ep)
 		{
+            // TODO: 禁用boost::asio
+            /*
 #if TORRENT_USE_IPV6
 			is_v6_addr = ep.address().is_v6();
 			if (is_v6_addr)
@@ -107,7 +109,7 @@ namespace libtorrent
 			else
 #endif
 				addr.v4 = ep.address().to_v4().to_bytes();
-			port = ep.port();
+			port = ep.port();*/
 		}
 
 		tcp::endpoint peer() const

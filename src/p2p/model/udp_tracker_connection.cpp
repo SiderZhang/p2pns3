@@ -53,11 +53,11 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "udp_tracker_connection.hpp"
 #include "udp-p2p-header.h"
+#include "libtorrent/peer.hpp"
 
 using boost::bind;
 using namespace std;
 using namespace ns3;
-using namespace libtorrent::dht;
 
 namespace libtorrent
 {
@@ -103,17 +103,21 @@ namespace libtorrent
 		, udp::endpoint const& ep, char const* buf, int size)*/
     {
 		// ignore resposes before we've sent any requests
-		if (m_state == action_error) return;
+		if (m_state == action_error)
+        {
+            NS_LOG_INFO("unknown action type!");
+            return;
+        }
 
-		//if (!m_socket.is_open()) return; // the operation was aborted
+		//if (!m_socket.is_open())
+        //{
+         //   NS_LOG_INFO("socket is closed!");
+        //    return; // the operation was aborted
+       // }
 
 		// ignore packet not sent from the tracker
 		//if (m_target != ep) return;
 		
-        // 接受数据
-        // TODO: size is waiting to correct
-		//received_bytes(size + 28); // assuming UDP/IP header
-		//if (e) fail(-1, e.message().c_str());
 /*
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		boost::shared_ptr<request_callback> cb = requester();
@@ -124,9 +128,6 @@ namespace libtorrent
 			cb->debug_log(msg);
 		}
 #endif*/
-
-		// ignore packets smaller than 8 bytes
-		//if (size < 8) return;
 
         // 重置超时
 	//	restart_read_timeout();
@@ -198,7 +199,7 @@ namespace libtorrent
 		// reset transaction
 		m_transaction_id = 0;
 		m_attempts = 0;
-		uint64_t connection_id = header.getConnectionID_64();
+		uint64_t connection_id = header.getConnectionID();
 
 		connection_cache_entry& cce = m_connection_cache[remoteAddress];
 		cce.connection_id = connection_id;
@@ -263,13 +264,11 @@ namespace libtorrent
 	{
 		//restart_read_timeout();
         
-        // TODO: 这里的几个变量还没有被使用上
+        // TODO: 待完成BOOST的更换后，使用这四个变量
 		//int interval = header.getInterval();
 		//int min_interval = 60;
-        // TODO: leechers 与seeders的含义有待澄清
-		int leechers = header.getLeechersList().size();
-		int seeders = header.getSeedersList().size();
-		int num_peers = leechers + seeders;
+		//int leechers = header.getLeechersList().size();
+		//int seeders = header.getSeedersList().size();
 
 		boost::shared_ptr<request_callback> cb = requester();
 //#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
@@ -290,33 +289,61 @@ namespace libtorrent
 
         // TODO: 待处理
 		std::vector<peer_entry> peer_list;
-		for (int i = 0; i < num_peers; ++i)
+        std::list<uint32_t>::iterator iter;
+        std::list<uint16_t>::iterator portIter;
+        portIter = header.getLeecherPortList().begin();
+
+        std::list<uint32_t>& leechersList = header.getLeechersList();
+		for (iter = leechersList.begin();iter != leechersList.end();++iter)
 		{
-			// TODO: don't use a string here
-//			peer_entry e;
-//			char ip_string[100];
-//            // TODO: 待添加解析代码
-//			unsigned int a = -1;// detail::read_uint8(buf);
-//			unsigned int b = -1;// detail::read_uint8(buf);
-//			unsigned int c = -1;// detail::read_uint8(buf);
-//			unsigned int d = -1;// detail::read_uint8(buf);
-//			snprintf(ip_string, 100, "%u.%u.%u.%u", a, b, c, d);
-//			e.ip = ip_string;
-//            
-//			e.port = -1;//detail::read_uint16(buf);
-//			e.pid.clear();
-//			peer_list.push_back(e);
+			peer_entry e;
+			char ip_string[100];
+			
+            uint32_t ip = *iter;
+            unsigned int a = ip >> 24 & 0xff; 
+			unsigned int b = ip >> 16 & 0xff;
+			unsigned int c = ip >> 8 & 0xff;
+			unsigned int d = ip >> 0 & 0xff;
+			snprintf(ip_string, 100, "%u.%u.%u.%u", a, b, c, d);
+			e.ip = ip_string;
+            
+			e.port = *portIter;
+			e.pid.clear();
+			peer_list.push_back(e);
+            portIter++;
 		}
-//
-//		std::list<address> ip_list;
-//		for (std::list<udp::endpoint>::const_iterator i = m_endpoints.begin()
-//			, end(m_endpoints.end()); i != end; ++i)
-//		{
-//			ip_list.push_back(i->address());
-//		}
-//
+
+        std::list<uint32_t>& seedersList = header.getSeedersList();
+        portIter = header.getSeederPortList().begin();
+        for (iter = seedersList.begin();iter != seedersList.end();++iter)
+        {
+			peer_entry e;
+			char ip_string[100];
+			
+            uint32_t ip = *iter;
+            unsigned int a = ip >> 24 & 0xff; 
+			unsigned int b = ip >> 16 & 0xff;
+			unsigned int c = ip >> 8 & 0xff;
+			unsigned int d = ip >> 0 & 0xff;
+			snprintf(ip_string, 100, "%u.%u.%u.%u", a, b, c, d);
+			e.ip = ip_string;
+            
+			e.port = *portIter;
+			e.pid.clear();
+			peer_list.push_back(e);
+            portIter++;
+        }
+
+        //TODO: Boost的网络管理待更换
+		//std::list<address> ip_list;
+		//for (std::list<udp::endpoint>::const_iterator i = m_endpoints.begin()
+		//	, end(m_endpoints.end()); i != end; ++i)
+		//{
+		//	ip_list.push_back(i->address());
+		//}
+
 		//cb->tracker_response(tracker_req(), m_target.address(), ip_list
-		//	, peer_list, interval, min_interval, complete, incomplete, address());
+		//	, peer_list, interval, min_interval, seeders leechers, address());
 
 		m_man.remove_request(this);
 		close();

@@ -27,6 +27,7 @@
 #include "udptSettings.hpp"
 #include "ns3/application.h"
 #include "ns3/ptr.h"
+#include "udp-p2p-header.h"
 
 #include <string>
 using namespace std;
@@ -43,65 +44,6 @@ namespace UDPT
 	class UDPTracker : public Application
 	{
 	public:
-		typedef struct udp_connection_request
-		{
-			uint64_t connection_id;
-			uint32_t action;
-			uint32_t transaction_id;
-		} ConnectionRequest;
-
-		typedef struct udp_connection_response
-		{
-			uint32_t action;
-			uint32_t transaction_id;
-			uint64_t connection_id;
-		} ConnectionResponse;
-
-		typedef struct udp_announce_request
-		{
-			uint64_t connection_id;
-			uint32_t action;
-			uint32_t transaction_id;
-			uint8_t info_hash [20];
-			uint8_t peer_id [20];
-			uint64_t downloaded;
-			uint64_t left;
-			uint64_t uploaded;
-			uint32_t event;
-			uint32_t ip_address;
-			uint32_t key;
-			int32_t num_want;
-			uint16_t port;
-		} AnnounceRequest;
-
-		typedef struct udp_announce_response
-		{
-			uint32_t action;
-			uint32_t transaction_id;
-			uint32_t interval;
-			uint32_t leechers;
-			uint32_t seeders;
-
-			uint8_t *peer_list_data;
-		} AnnounceResponse;
-
-		typedef struct udp_scrape_request
-		{
-			uint64_t connection_id;
-			uint32_t action;
-			uint32_t transaction_id;
-
-			uint8_t *torrent_list_data;
-		} ScrapeRequest;
-
-		typedef struct udp_scrape_response
-		{
-			uint32_t action;
-			uint32_t transaction_id;
-
-			uint8_t *data;
-		} ScrapeResponse;
-
 		typedef struct udp_error_response
 		{
 			uint32_t action;
@@ -181,16 +123,16 @@ namespace UDPT
 		static void* _maintainance_start (void *arg);
 #endif*/
 
-		static int resolveRequest (UDPTracker *usi, Ipv4Address *remote, uint8_t *data, int r);
+		static int resolveRequest (UDPTracker *usi, Address *remote, ns3::UdpP2PHeader& header);
 
-		static int handleConnection (UDPTracker *usi, Ipv4Address *remote, uint8_t *data);
-		static int handleAnnounce (UDPTracker *usi, Ipv4Address *remote, uint8_t *data);
-		static int handleScrape (UDPTracker *usi, Ipv4Address *remote, uint8_t *data, int len);
+		static int handleConnection (UDPTracker *usi, Address *remote, ns3::UdpP2PHeader& header);
+		static int handleAnnounce (UDPTracker *usi, Address *remote, ns3::UdpP2PHeader& header);
+		static int handleScrape (UDPTracker *usi, Address *remote, ns3::UdpP2PHeader& header);
 
-		static int sendError (UDPTracker *, Ipv4Address *remote, uint32_t transId, const string &);
+		static int sendError (UDPTracker *, Address *remote, uint32_t transId, const string &);
 
     protected:
-        void sendto(const uint8_t* buf, size_t length, int flags, Ipv4Address* remote, uint16_t m_port = 6969);
+        void sendto(ns3::UdpP2PHeader& header, int flags, Address* remote);
 	};
 };
 

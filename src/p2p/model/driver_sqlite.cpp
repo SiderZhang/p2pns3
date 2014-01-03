@@ -147,12 +147,13 @@ namespace UDPT
 			return gotInfo;
 		}
 
-		bool SQLite3Driver::getPeers (uint8_t info_hash [20], int *max_count, PeerEntry *pe)
+		bool SQLite3Driver::getPeers (uint8_t info_hash [20], uint32_t *max_count, PeerEntry *pe)
 		{
 			string sql;
 			char hash [50];
 			sqlite3_stmt *stmt;
-			int r, i;
+			int r;
+            uint32_t i;
 
 			to_hex_str(info_hash, hash);
 

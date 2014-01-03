@@ -148,7 +148,7 @@ namespace UDPT
 			 * @param pe The list of peers. Must be pre-allocated to the size of max_count.
 			 * @return true on success, otherwise false (shouldn't happen).
 			 */
-			virtual bool getPeers (uint8_t info_hash [20], int *max_count, PeerEntry *pe);
+			virtual bool getPeers (uint8_t info_hash [20], uint32_t *max_count, PeerEntry *pe);
 
 			/**
 			 * Cleanup the database.

@@ -49,91 +49,100 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "ns3/application.h"
-#include "ns3/event-id.h"
-#include "ns3/ptr.h"
-#include "ns3/ipv4-address.h"
-#include "ns3/traced-callback.h"
-#include "ns3/attribute.h"
-#include "ns3/allocator.hpp"
-#include <string>
-#include <map>
-#include "ns3/peer_id.hpp"
-#include "ns3/tracker_req.hpp"
-#include "udp-p2p-header.h"
-#include "action.h"
-
-// TODO
-//#include "udp_socket.hpp"
-/*#include "entry.hpp"
-#include "session_settings.hpp"
-#include "peer_id.hpp"
-#include "peer.hpp"
-#include "tracker_manager.hpp"
-#include "config.hpp"*/
-
-/*
- * 修改说明：
- * 这个代码我更改了start与close方法。这两个方法是原库中建立与取消与一个trakcer连接的功能。
- * 我移除了fail与timeout函数。由于模拟的时候，不考虑与trakcer突然断开连接，因此不使用这两个函数。
- * 我移除了tracker_manager这个类。由于暂时不考虑多个tracker的问题，因此不需要tracker_manager。
- * 我移除了Boost的所有网络连接的代码
- * 这里我加入了一个SetRemote的方法，用于设置trakcer在NS3模拟网络中的坐标。
- * 在构造函数中，我移除了io_service类型的参数，这个参数是提供Boost中连接的类型。
- */
-
-namespace ns3{
-    class Socket;
-}
+#include "libtorrent/udp_socket.hpp"
+#include "libtorrent/entry.hpp"
+#include "libtorrent/session_settings.hpp"
+#include "libtorrent/peer_id.hpp"
+#include "libtorrent/peer.hpp"
+#include "libtorrent/tracker_manager.hpp"
+#include "libtorrent/config.hpp"
 
 namespace libtorrent
 {
-	class udp_tracker_connection: public tracker_connection
+	namespace aux { struct session_impl; }
+
+	class TORRENT_EXTRA_EXPORT udp_tracker_connection: public tracker_connection
 	{
-	//friend class tracker_manager;
+	friend class tracker_manager;
 	public:
 
-		udp_tracker_connection(tracker_manager& man
-                , tracker_request const& req
-                , boost::weak_ptr<request_callback> c);
+		udp_tracker_connection(
+			io_service& ios
+			, connection_queue& cc
+			, tracker_manager& man
+			, tracker_request const& req
+			, boost::weak_ptr<request_callback> c
+			, aux::session_impl& ses
+			, proxy_settings const& ps);
 
-        // 这个函数开启与一个远程trakcer的连接
 		void start();
-        // 这个函数关闭与一个远程tracker的连接
 		void close();
 
-        void SetRemote(ns3::Ipv4Address ip, uint16_t port);
+#if !defined TORRENT_VERBOSE_LOGGING \
+	&& !defined TORRENT_LOGGING \
+	&& !defined TORRENT_ERROR_LOGGING
+	// necessary for logging member offsets
 	private:
+#endif
+
+		enum action_t
+		{
+			action_connect,
+			action_announce,
+			action_scrape,
+			action_error
+		};
 
 		boost::intrusive_ptr<udp_tracker_connection> self()
 		{ return boost::intrusive_ptr<udp_tracker_connection>(this); }
 
-		void on_receive(ns3::Ptr<ns3::Packet> p);
-		void on_connect_response(ns3::UdpP2PHeader &header);
-		void on_announce_response(ns3::UdpP2PHeader &header);
-		void on_scrape_response(ns3::UdpP2PHeader &header);
+		void name_lookup(error_code const& error, tcp::resolver::iterator i);
+		void timeout(error_code const& error);
+		void start_announce();
+
+		bool on_receive(error_code const& e, udp::endpoint const& ep
+			, char const* buf, int size);
+		bool on_receive_hostname(error_code const& e, char const* hostname
+			, char const* buf, int size);
+		bool on_connect_response(char const* buf, int size);
+		bool on_announce_response(char const* buf, int size);
+		bool on_scrape_response(char const* buf, int size);
+
+		// wraps tracker_connection::fail
+		void fail(error_code const& ec, int code = -1
+			, char const* msg = "", int interval = 0, int min_interval = 0);
 
 		void send_udp_connect();
 		void send_udp_announce();
 		void send_udp_scrape();
 
-		//virtual void on_timeout();
+		virtual void on_timeout(error_code const& ec);
 
-        ns3::Ptr<ns3::Socket> m_socket;
+		udp::endpoint pick_target_endpoint() const;
+
+//		tracker_manager& m_man;
+
+		bool m_abort;
+		std::string m_hostname;
+		udp::endpoint m_target;
+		std::list<tcp::endpoint> m_endpoints;
 
 		int m_transaction_id;
+		aux::session_impl& m_ses;
 		int m_attempts;
 
 		struct connection_cache_entry
 		{
 			boost::int64_t connection_id;
+			ptime expires;
 		};
 
-		static std::map<ns3::Ipv4Address, connection_cache_entry> m_connection_cache;
+		static std::map<address, connection_cache_entry> m_connection_cache;
+		static mutex m_cache_mutex;
 
-        ns3::action_t m_state;
+		action_t m_state;
 
-        ns3::Ipv4Address remoteAddress;
+		proxy_settings m_proxy;
 	};
 
 }

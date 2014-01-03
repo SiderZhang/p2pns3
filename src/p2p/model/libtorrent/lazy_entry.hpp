@@ -202,10 +202,10 @@ namespace libtorrent
 		pascal_string list_pstr_at(int i) const;
 		size_type list_int_value_at(int i, size_type default_val = 0) const;
 
-		int list_size() const
+		uint32_t list_size() const
 		{
 			TORRENT_ASSERT(m_type == list_t);
-			return int(m_size);
+			return m_size;
 		}
 
 		// end points one byte passed last byte

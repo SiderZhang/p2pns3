@@ -42,7 +42,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #error TORRENT_DEBUG_BUFFERS only works if you also disable pool allocators with TORRENT_DISABLE_POOL_ALLOCATOR
 #endif
 
-#define BOOST_ASIO_DYN_LINK
+#define BOOST_ASIO_SEPARATE_COMPILATION 1
 
 #if !defined BOOST_ASIO_SEPARATE_COMPILATION && !defined BOOST_ASIO_DYN_LINK
 #error you must define either BOOST_ASIO_SEPARATE_COMPILATION or BOOST_ASIO_DYN_LINK in your project in \
@@ -377,15 +377,13 @@ inline int snprintf(char* buf, int len, char const* fmt, ...)
 #define TORRENT_BROKEN_UNIONS 0
 #endif
 
-// TODO: 对多字节的支持待定
+#ifndef TORRENT_USE_WSTRING
+#if !defined BOOST_NO_STD_WSTRING
+#define TORRENT_USE_WSTRING 1
+#else
 #define TORRENT_USE_WSTRING 0
-//#ifndef TORRENT_USE_WSTRING
-//#if !defined BOOST_NO_STD_WSTRING
-//#define TORRENT_USE_WSTRING 1
-//#else
-//#define TORRENT_USE_WSTRING 0
-//#endif // BOOST_NO_STD_WSTRING
-//#endif // TORRENT_USE_WSTRING
+#endif // BOOST_NO_STD_WSTRING
+#endif // TORRENT_USE_WSTRING
 
 #ifndef TORRENT_HAS_FALLOCATE
 #define TORRENT_HAS_FALLOCATE 1

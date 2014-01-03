@@ -40,7 +40,7 @@ namespace UDPT
 			bool removePeer (uint8_t peer_id [20], uint8_t info_hash [20], uint32_t ip, uint16_t port);
 			bool getTorrentInfo (TorrentEntry *e);
 			bool isTorrentAllowed (uint8_t info_hash[20]);
-			bool getPeers (uint8_t info_hash [20], int *max_count, PeerEntry *pe);
+			bool getPeers (uint8_t info_hash [20], uint32_t *max_count, PeerEntry *pe);
 			void cleanup ();
 
 			~SQLite3Driver ();

@@ -69,14 +69,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/config.hpp"
 #include "libtorrent/bandwidth_limit.hpp"
 #include "libtorrent/policy.hpp"
-#include "libtorrent/socket_type_fwd.hpp"
 #include "libtorrent/intrusive_ptr_base.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/chained_buffer.hpp"
 #include "libtorrent/disk_buffer_holder.hpp"
 #include "libtorrent/bitfield.hpp"
 #include "libtorrent/bandwidth_socket.hpp"
-#include "libtorrent/socket_type_fwd.hpp"
 #include "libtorrent/error_code.hpp"
 #include "libtorrent/sliding_average.hpp"
 
@@ -89,9 +87,6 @@ namespace libtorrent
 	class torrent;
 	struct peer_info;
 	struct disk_io_job;
-#ifndef TORRENT_DISABLE_EXTENSIONS
-	struct peer_plugin;
-#endif
 
 	namespace detail
 	{
@@ -169,7 +164,7 @@ namespace libtorrent
 		peer_connection(
 			aux::session_impl& ses
 			, boost::weak_ptr<torrent> t
-			, boost::shared_ptr<socket_type> s
+			, boost::shared_ptr<boost::asio::ip::tcp::socket> s
 			, tcp::endpoint const& remote
 			, policy::peer* peerinfo
 			, bool outgoing = true);
@@ -178,7 +173,7 @@ namespace libtorrent
 		// know which torrent the connection belongs to
 		peer_connection(
 			aux::session_impl& ses
-			, boost::shared_ptr<socket_type> s
+			, boost::shared_ptr<boost::asio::ip::tcp::socket> s
 			, tcp::endpoint const& remote
 			, policy::peer* peerinfo);
 
@@ -203,11 +198,6 @@ namespace libtorrent
 		peer_speed_t peer_speed();
 
 		void send_allowed_set();
-
-#ifndef TORRENT_DISABLE_EXTENSIONS
-		void add_extension(boost::shared_ptr<peer_plugin>);
-		peer_plugin const* find_plugin(char const* type);
-#endif
 
 		// this function is called once the torrent associated
 		// with this peer connection has retrieved the meta-
@@ -344,7 +334,7 @@ namespace libtorrent
 
 		void timeout_requests();
 
-		boost::shared_ptr<socket_type> get_socket() const { return m_socket; }
+		boost::shared_ptr<boost::asio::ip::tcp::socket> get_socket() const { return m_socket; }
 		tcp::endpoint const& remote() const { return m_remote; }
 
 		bitfield const& get_bitfield() const;
@@ -575,16 +565,6 @@ namespace libtorrent
 
 		virtual void append_const_send_buffer(char const* buffer, int size);
 
-#ifndef TORRENT_DISABLE_RESOLVE_COUNTRIES	
-		void set_country(char const* c)
-		{
-			TORRENT_ASSERT(strlen(c) == 2);
-			m_country[0] = c[0];
-			m_country[1] = c[1];
-		}
-		bool has_country() const { return m_country[0] != 0; }
-#endif
-
 		int outstanding_bytes() const { return m_outstanding_bytes; }
 
 		int send_buffer_size() const
@@ -657,24 +637,6 @@ namespace libtorrent
 		virtual void on_sent(error_code const& error
 			, std::size_t bytes_transferred) = 0;
 
-#ifndef TORRENT_DISABLE_ENCRYPTION
-		buffer::interval wr_recv_buffer()
-		{
-			if (m_recv_buffer.empty())
-			{
-				TORRENT_ASSERT(m_recv_pos == 0);
-				return buffer::interval(0,0);
-			}
-			TORRENT_ASSERT(!m_disk_recv_buffer);
-			TORRENT_ASSERT(m_disk_recv_buffer_size == 0);
-			int rcv_pos = (std::min)(m_recv_pos, int(m_recv_buffer.size()));
-			return buffer::interval(&m_recv_buffer[0]
-				, &m_recv_buffer[0] + rcv_pos);
-		}
-
-		std::pair<buffer::interval, buffer::interval> wr_recv_buffers(int bytes);
-#endif
-		
 		buffer::const_interval receive_buffer() const
 		{
 			if (m_recv_buffer.empty())
@@ -741,19 +703,6 @@ namespace libtorrent
 
 		void set_timeout(int s) { m_timeout = s; }
 
-#ifndef TORRENT_DISABLE_EXTENSIONS
-		typedef std::list<boost::shared_ptr<peer_plugin> > extension_list_t;
-		extension_list_t m_extensions;
-#endif
-
-#ifndef TORRENT_DISABLE_RESOLVE_COUNTRIES	
-		// in case the session settings is set
-		// to resolve countries, this is set to
-		// the two character country code this
-		// peer resides in.
-		char m_country[2];
-#endif
-
 		boost::intrusive_ptr<peer_connection> self()
 		{
 			TORRENT_ASSERT(!m_in_constructor);
@@ -780,7 +729,8 @@ namespace libtorrent
 
 		// keep the io_service running as long as we
 		// have peer connections
-		io_service::work m_work;
+        // TODO: 临时禁用boost::asio
+		//io_service::work m_work;
 
 		// the time when we last got a part of a
 		// piece packet from this peer
@@ -849,10 +799,6 @@ namespace libtorrent
 		// for the round-robin unchoke algorithm.
 		size_type m_uploaded_at_last_unchoke;
 
-#ifndef TORRENT_DISABLE_GEO_IP
-		std::string m_inet_as_name;
-#endif
-
 		buffer m_recv_buffer;
 
 		// if this peer is receiving a piece, this
@@ -863,7 +809,7 @@ namespace libtorrent
 
 		chained_buffer m_send_buffer;
 
-		boost::shared_ptr<socket_type> m_socket;
+		boost::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
 		// this is the peer we're actually talking to
 		// it may not necessarily be the peer we're
 		// connected to, in case we use a proxy
