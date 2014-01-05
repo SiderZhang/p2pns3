@@ -57,7 +57,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/storage.hpp"
 #include "libtorrent/address.hpp"
 #include "libtorrent/bitfield.hpp"
-#include "libtorrent/socket.hpp" // tcp::endpoint
+
+#include "ns3/inet-socket-address.h"
 
 namespace libtorrent
 {
@@ -89,37 +90,21 @@ namespace libtorrent
 	private:
 		TORRENT_UNION addr_t
 		{
-			address_v4::bytes_type v4;
-#if TORRENT_USE_IPV6
-			address_v6::bytes_type v6;
-#endif
+            uint32_t v4;
 		} addr;
 
-		boost::uint16_t port;
+		uint16_t port;
 	public:
 
-		void set_peer(tcp::endpoint const& ep)
+		void set_peer(ns3::InetSocketAddress const& ep)
 		{
-            // TODO: 禁用boost::asio
-            /*
-#if TORRENT_USE_IPV6
-			is_v6_addr = ep.address().is_v6();
-			if (is_v6_addr)
-				addr.v6 = ep.address().to_v6().to_bytes();
-			else
-#endif
-				addr.v4 = ep.address().to_v4().to_bytes();
-			port = ep.port();*/
+			addr.v4 = ep.GetIpv4().Get();
+			port = ep.GetPort();
 		}
 
-		tcp::endpoint peer() const
+		ns3::InetSocketAddress peer() const
 		{
-#if TORRENT_USE_IPV6
-			if (is_v6_addr)
-				return tcp::endpoint(address_v6(addr.v6), port);
-			else
-#endif
-				return tcp::endpoint(address_v4(addr.v4), port);
+			return ns3::InetSocketAddress(ns3::Ipv4Address(addr.v4), port);
 		}
 
 		// number of bytes downloaded in this block
@@ -274,13 +259,13 @@ namespace libtorrent
 #ifndef TORRENT_NO_DEPRECATE
 		// deprecated in 0.16, feature will be removed
 		TORRENT_DEPRECATED_PREFIX
-		int get_peer_upload_limit(tcp::endpoint ip) const TORRENT_DEPRECATED;
+		int get_peer_upload_limit(ns3::InetSocketAddress ip) const TORRENT_DEPRECATED;
 		TORRENT_DEPRECATED_PREFIX
-		int get_peer_download_limit(tcp::endpoint ip) const TORRENT_DEPRECATED;
+		int get_peer_download_limit(ns3::InetSocketAddress ip) const TORRENT_DEPRECATED;
 		TORRENT_DEPRECATED_PREFIX
-		void set_peer_upload_limit(tcp::endpoint ip, int limit) const TORRENT_DEPRECATED;
+		void set_peer_upload_limit(ns3::InetSocketAddress ip, int limit) const TORRENT_DEPRECATED;
 		TORRENT_DEPRECATED_PREFIX
-		void set_peer_download_limit(tcp::endpoint ip, int limit) const TORRENT_DEPRECATED;
+		void set_peer_download_limit(ns3::InetSocketAddress ip, int limit) const TORRENT_DEPRECATED;
 
 		// deprecated in 0.16, feature will be removed
 		TORRENT_DEPRECATED_PREFIX
@@ -383,7 +368,7 @@ namespace libtorrent
 		void set_sequential_download(bool sd) const;
 
 		// manually connect a peer
-		void connect_peer(tcp::endpoint const& adr, int source = 0) const;
+		void connect_peer(ns3::InetSocketAddress const& adr, int source = 0) const;
 
 		std::string save_path() const;
 

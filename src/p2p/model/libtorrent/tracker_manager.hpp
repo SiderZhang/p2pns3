@@ -67,6 +67,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/asio/ssl/context.hpp>
 #endif
 
+#include "ns3/inet-socket-address.h"
+
 namespace libtorrent
 {
 	struct request_callback;
@@ -164,7 +166,7 @@ namespace libtorrent
 			, const std::string& msg
 			, int retry_interval) = 0;
 
-		union_endpoint m_tracker_address;
+        ns3::InetSocketAddress m_tracker_address;
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 		virtual void debug_log(const char* fmt, ...) const = 0;

@@ -42,6 +42,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #else
 #include <boost/asio/buffer.hpp>
 #endif
+#include <vector>
 #include <list>
 #include <string.h> // for memcpy
 
@@ -92,7 +93,7 @@ namespace libtorrent
 		// enough room, returns 0
 		char* allocate_appendix(int s);
 
-		std::list<asio::const_buffer> const& build_iovec(int to_send);
+        std::vector<uint8_t> const& build_iovec(int to_send);
 
 		~chained_buffer();
 
@@ -113,7 +114,7 @@ namespace libtorrent
 
 		// this is the vector of buffers used when
 		// invoking the async write call
-		std::list<asio::const_buffer> m_tmp_vec;
+        std::vector<uint8_t> m_tmp_vec;
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 		bool m_destructed;
@@ -122,4 +123,3 @@ namespace libtorrent
 }
 
 #endif
-

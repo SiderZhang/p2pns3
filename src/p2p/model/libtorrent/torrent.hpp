@@ -55,8 +55,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "libtorrent/torrent_handle.hpp"
-#include "libtorrent/entry.hpp"
-#include "libtorrent/torrent_info.hpp"
 #include "libtorrent/socket.hpp"
 #include "libtorrent/address.hpp"
 #include "libtorrent/policy.hpp"
@@ -67,13 +65,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/config.hpp"
 #include "libtorrent/escape_string.hpp"
 #include "libtorrent/bandwidth_limit.hpp"
+#include "libtorrent/bandwidth_manager.hpp"
 #include "libtorrent/bandwidth_queue_entry.hpp"
-#include "libtorrent/storage_defs.hpp"
+//#include "libtorrent/storage_defs.hpp"
 #include "libtorrent/hasher.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/bitfield.hpp"
 #include "libtorrent/aux_/session_impl.hpp"
-#include "libtorrent/union_endpoint.hpp"
+
+#include "ns3/ptr.h"
+#include "ns3/node.h"
 
 #if TORRENT_COMPLETE_TYPES_REQUIRED
 #include "libtorrent/peer_connection.hpp"
@@ -87,13 +88,13 @@ namespace libtorrent
 	struct logger;
 #endif
 
-	class piece_manager;
+	//class piece_manager;
 	struct torrent_plugin;
 	struct bitfield;
 	struct announce_entry;
 	struct tracker_request;
 	struct add_torrent_params;
-	struct storage_interface;
+	//struct storage_interface;
 	class bt_peer_connection;
 	struct listen_socket_t;
 
@@ -111,7 +112,7 @@ namespace libtorrent
 	{
 	public:
 
-		torrent(aux::session_impl& ses, tcp::endpoint const& net_interface
+		torrent(aux::session_impl& ses, ns3::InetSocketAddress const& net_interface
 			, int block_size, int seq, add_torrent_params const& p
 			, sha1_hash const& info_hash);
 		~torrent();
@@ -139,17 +140,18 @@ namespace libtorrent
 		// find the peer that introduced us to the given endpoint. This is
 		// used when trying to holepunch. We need the introducer so that we
 		// can send a rendezvous connect message
-		bt_peer_connection* find_introducer(tcp::endpoint const& ep) const;
+		bt_peer_connection* find_introducer(ns3::InetSocketAddress const& ep) const;
 
 		// if we're connected to a peer at ep, return its peer connection
 		// only count BitTorrent peers
-		bt_peer_connection* find_peer(tcp::endpoint const& ep) const;
+		bt_peer_connection* find_peer(ns3::InetSocketAddress const& ep) const;
 
-		void on_resume_data_checked(int ret, disk_io_job const& j);
-		void on_force_recheck(int ret, disk_io_job const& j);
-		void on_piece_checked(int ret, disk_io_job const& j);
-		void files_checked();
-		void start_checking();
+		//void on_resume_data_checked(int ret, disk_io_job const& j);
+		//void on_force_recheck(int ret, disk_io_job const& j);
+		//void on_piece_checked(int ret, disk_io_job const& j);
+        // TODO: 禁用完整性检测
+		//void files_checked();
+		//void start_checking();
 
 		void start_announcing();
 		void stop_announcing();
@@ -170,9 +172,10 @@ namespace libtorrent
 
 		enum flags_t { overwrite_existing = 1 };
 		void add_piece(int piece, char const* data, int flags = 0);
-		void on_disk_write_complete(int ret, disk_io_job const& j
-			, peer_request p);
-		void on_disk_cache_complete(int ret, disk_io_job const& j);
+        // TODO: 禁用磁盘读写
+		//void on_disk_write_complete(int ret, disk_io_job const& j
+		//	, peer_request p);
+		//void on_disk_cache_complete(int ret, disk_io_job const& j);
 
 		void set_progress_ppm(int p) { m_progress_ppm = p; }
 		struct read_piece_struct
@@ -182,14 +185,16 @@ namespace libtorrent
 			bool fail;
 		};
 		void read_piece(int piece);
-		void on_disk_read_complete(int ret, disk_io_job const& j, peer_request r, read_piece_struct* rp);
+        // TODO: 禁用磁盘读写
+		//void on_disk_read_complete(int ret, disk_io_job const& j, peer_request r, read_piece_struct* rp);
 
-		storage_mode_t storage_mode() const { return (storage_mode_t)m_storage_mode; }
-		storage_interface* get_storage()
+		//storage_mode_t storage_mode() const { return (storage_mode_t)m_storage_mode; }
+        // TODO: 禁用存储
+		/*storage_interface* get_storage()
 		{
 			if (!m_owning_storage) return 0;
 			return m_owning_storage->get_storage_impl();
-		}
+		}*/
 
 		// this will flag the torrent as aborted. The main
 		// loop in session_impl will check for this state
@@ -233,23 +238,24 @@ namespace libtorrent
 		bool has_error() const { return !!m_error; }
 		error_code error() const { return m_error; }
 
-		void flush_cache();
-		void pause(bool graceful = false);
-		void resume();
+		//void flush_cache();
+		//void pause(bool graceful = false);
+		//void resume();
 		void set_allow_peers(bool b, bool graceful_pause = false);
 		void set_announce_to_dht(bool b) { m_announce_to_dht = b; }
 		void set_announce_to_trackers(bool b) { m_announce_to_trackers = b; }
 		void set_announce_to_lsd(bool b) { m_announce_to_lsd = b; }
 
 		ptime started() const { return m_started; }
-		void do_pause();
-		void do_resume();
+		//void do_pause();
+		//void do_resume();
 
 		bool is_paused() const;
 		bool allows_peers() const { return m_allow_peers; }
 		bool is_torrent_paused() const { return !m_allow_peers || m_graceful_pause_mode; }
-		void force_recheck();
-		void save_resume_data(int flags);
+        // TODO: 禁用完整性检测
+		//void force_recheck();
+		//void save_resume_data(int flags);
 
 		bool need_save_resume_data() const
 		{
@@ -303,7 +309,7 @@ namespace libtorrent
 		void file_progress(std::vector<size_type>& fp, int flags = 0) const;
 
 		void use_interface(std::string net_interface);
-		tcp::endpoint get_interface() const;
+		ns3::InetSocketAddress get_interface() const;
 		
 		bool connect_to_peer(policy::peer* peerinfo, bool ignore_limit = false);
 
@@ -358,7 +364,7 @@ namespace libtorrent
 
 		bool want_more_peers() const;
 		bool try_connect_peer();
-		void add_peer(tcp::endpoint const& adr, int source);
+		void add_peer(ns3::InetSocketAddress const& adr, int source);
 
 		// the number of peers that belong to this torrent
 		int num_peers() const { return (int)m_connections.size(); }
@@ -429,9 +435,9 @@ namespace libtorrent
 		// the tracker
 		void set_tracker_login(std::string const& name, std::string const& pw);
 
-		// the tcp::endpoint of the tracker that we managed to
+		// the ns3::InetSocketAddress of the tracker that we managed to
 		// announce ourself at the last time we tried to announce
-		tcp::endpoint current_tracker() const;
+		ns3::InetSocketAddress current_tracker() const;
 
 		announce_entry* find_tracker(tracker_request const& r);
 
@@ -606,7 +612,7 @@ namespace libtorrent
 		}
 
 		std::string save_path() const;
-		alert_manager& alerts() const;
+//		alert_manager& alerts() const;
 		piece_picker& picker()
 		{
 			TORRENT_ASSERT(m_picker.get());
@@ -617,7 +623,7 @@ namespace libtorrent
 			return m_picker.get() != 0;
 		}
 		policy& get_policy() { return m_policy; }
-		piece_manager& filesystem();
+		//piece_manager& filesystem();
 		torrent_info const& torrent_file() const
 		{ return *m_torrent_file; }
 
@@ -636,8 +642,9 @@ namespace libtorrent
 
 		torrent_handle get_handle();
 
-		void write_resume_data(entry& rd) const;
-		void read_resume_data(lazy_entry const& rd);
+        // TODO: 禁用磁盘文件
+		//void write_resume_data(entry& rd) const;
+		//void read_resume_data(lazy_entry const& rd);
 
 		void seen_complete() { m_last_seen_complete = time(0); }
 		int time_since_complete() const { return int(time(0) - m_last_seen_complete); }
@@ -665,10 +672,10 @@ namespace libtorrent
 				m_available_free_upload = UINT_MAX;
 		}
 
-		int get_peer_upload_limit(tcp::endpoint ip) const;
-		int get_peer_download_limit(tcp::endpoint ip) const;
-		void set_peer_upload_limit(tcp::endpoint ip, int limit);
-		void set_peer_download_limit(tcp::endpoint ip, int limit);
+		int get_peer_upload_limit(ns3::InetSocketAddress ip) const;
+		int get_peer_download_limit(ns3::InetSocketAddress ip) const;
+		void set_peer_upload_limit(ns3::InetSocketAddress ip, int limit);
+		void set_peer_download_limit(ns3::InetSocketAddress ip, int limit);
 
 		void set_upload_limit(int limit);
 		int upload_limit() const;
@@ -680,12 +687,12 @@ namespace libtorrent
 		void set_max_connections(int limit);
 		int max_connections() const { return m_max_connections; }
 
-		void move_storage(std::string const& save_path);
+		//void move_storage(std::string const& save_path);
 
 		// renames the file with the given index to the new name
 		// the name may include a directory path
 		// returns false on failure
-		bool rename_file(int index, std::string const& name);
+		//bool rename_file(int index, std::string const& name);
 
 		// unless this returns true, new connections must wait
 		// with their initialization.
@@ -715,7 +722,7 @@ namespace libtorrent
 			m_seed_mode = false;
 			// seed is false if we turned out not
 			// to be a seed after all
-			if (!seed) force_recheck();
+			//if (!seed) force_recheck();
 			m_num_verified = 0;
 			m_verified.free();
 		}
@@ -769,16 +776,18 @@ namespace libtorrent
 
 	private:
 
-		void on_files_deleted(int ret, disk_io_job const& j);
-		void on_files_released(int ret, disk_io_job const& j);
-		void on_torrent_paused(int ret, disk_io_job const& j);
-		void on_storage_moved(int ret, disk_io_job const& j);
-		void on_save_resume_data(int ret, disk_io_job const& j);
-		void on_file_renamed(int ret, disk_io_job const& j);
-		void on_cache_flushed(int ret, disk_io_job const& j);
+        // 禁用VCR操作
+		//void on_files_deleted(int ret, disk_io_job const& j);
+		//void on_files_released(int ret, disk_io_job const& j);
+		//void on_torrent_paused(int ret, disk_io_job const& j);
+		//void on_storage_moved(int ret, disk_io_job const& j);
+            // TODO: 禁用piece操作
+		//void on_save_resume_data(int ret, disk_io_job const& j);
+		//void on_file_renamed(int ret, disk_io_job const& j);
+		//void on_cache_flushed(int ret, disk_io_job const& j);
 
-		void on_piece_verified(int ret, disk_io_job const& j
-			, boost::function<void(int)> f);
+		//void on_piece_verified(int ret, disk_io_job const& j
+		//	, boost::function<void(int)> f);
 	
 		int prioritize_tracker(int tracker_index);
 		int deprioritize_tracker(int tracker_index);
@@ -835,13 +844,13 @@ namespace libtorrent
 		// the piece_manager, and stored in the
 		// torrent, so the torrent cannot destruct
 		// before the piece_manager.
-		boost::intrusive_ptr<piece_manager> m_owning_storage;
+		//boost::intrusive_ptr<piece_manager> m_owning_storage;
 
 		// this is a weak (non owninig) pointer to
 		// the piece_manager. This is used after the torrent
 		// has been aborted, and it can no longer own
 		// the object.
-		piece_manager* m_storage;
+		//piece_manager* m_storage;
 
 #ifdef TORRENT_DEBUG
 	public:
@@ -911,7 +920,7 @@ namespace libtorrent
 		// the network interfaces outgoing connections
 		// are opened through. If there is more then one,
 		// they are used in a round-robin fasion
-		std::vector<union_endpoint> m_net_interfaces;
+		std::vector<ns3::InetSocketAddress> m_net_interfaces;
 
 		std::string m_save_path;
 
@@ -999,7 +1008,7 @@ namespace libtorrent
 		unsigned int m_state:3;
 
 		// determines the storage state for this torrent.
-		unsigned int m_storage_mode:2;
+		//unsigned int m_storage_mode:2;
 
 		// this is true while tracker announcing is enabled
 		// is is disabled while paused and checking files
@@ -1223,11 +1232,51 @@ namespace libtorrent
 		// accidentally start seeding it without any authentication.
 		bool m_ssl_torrent:1;
 
+        // 张惊
+        // 这个是代替连接队列的用于计数的功能
+        uint32_t m_ticket_count;
+
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 	public:
 		// set to false until we've loaded resume data
 		bool m_resume_data_loaded;
 #endif
+
+        // 张惊
+        // TODO: 添加归属节点的指针
+        // 这个是所属的节点
+        ns3::Ptr<ns3::Node> node;
+
+        //////////////////  bandwidth_manager //////////////////////////////
+        // 从session那边搬来的
+			// the bandwidth manager is responsible for
+			// handing out bandwidth to connections that
+			// asks for it, it can also throttle the
+			// rate.
+			bandwidth_manager m_download_rate;
+			bandwidth_manager m_upload_rate;
+
+			// the global rate limiter bandwidth channels
+			bandwidth_channel m_download_channel;
+			bandwidth_channel m_upload_channel;
+
+			// bandwidth channels for local peers when
+			// rate limits are ignored. They are only
+			// throttled by these global rate limiters
+			// and they don't have a rate limit set by
+			// default
+			bandwidth_channel m_local_download_channel;
+			bandwidth_channel m_local_upload_channel;
+
+			// all tcp peer connections are subject to these
+			// bandwidth limits. Local peers are excempted
+			// from this limit. The purpose is to be able to
+			// throttle TCP that passes over the internet
+			// bottleneck (i.e. modem) to avoid starving out
+			// uTP connections.
+			bandwidth_channel m_tcp_download_channel;
+			bandwidth_channel m_tcp_upload_channel;
+        //////////////////  bandwidth_manager //////////////////////////////
 	};
 }
 

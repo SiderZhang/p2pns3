@@ -91,10 +91,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/peer_connection.hpp"
 #endif
 
-#ifdef TORRENT_USE_OPENSSL
-#include <boost/asio/ssl/context.hpp>
-#endif
-
 #if defined TORRENT_STATS && defined __MACH__
 #include <mach/vm_statistics.h>
 #include <mach/mach_init.h>
@@ -273,30 +269,7 @@ namespace libtorrent
 			void set_settings(session_settings const& s);
 			session_settings const& settings() const { return m_settings; }
 
-#ifndef TORRENT_DISABLE_DHT	
-			void add_dht_node_name(std::pair<std::string, int> const& node);
-			void add_dht_node(udp::endpoint n);
-			void add_dht_router(std::pair<std::string, int> const& node);
-			void set_dht_settings(dht_settings const& s);
-			dht_settings const& get_dht_settings() const { return m_dht_settings; }
-			void start_dht();
-			void stop_dht();
-			void start_dht(entry const& startup_state);
-
-#ifndef TORRENT_NO_DEPRECATE
-			entry dht_state() const;
-#endif
-			void on_dht_announce(error_code const& e);
-			void on_dht_router_name_lookup(error_code const& e
-				, tcp::resolver::iterator host);
-#endif
-
 			void maybe_update_udp_mapping(int nat, int local_port, int external_port);
-
-#ifndef TORRENT_DISABLE_ENCRYPTION
-			void set_pe_settings(pe_settings const& settings);
-			pe_settings const& get_pe_settings() const { return m_pe_settings; }
-#endif
 
 			void on_port_map_log(char const* msg, int map_transport);
 
@@ -406,15 +379,7 @@ namespace libtorrent
 			proxy_settings const& web_seed_proxy() const { return proxy(); }
 			proxy_settings const& tracker_proxy() const { return proxy(); }
 
-#ifndef TORRENT_DISABLE_DHT
-			void set_dht_proxy(proxy_settings const& s) { set_proxy(s); }
-			proxy_settings const& dht_proxy() const { return proxy(); }
-#endif
 #endif // TORRENT_NO_DEPRECATE
-
-#ifndef TORRENT_DISABLE_DHT
-			bool is_dht_running() const { return m_dht.get(); }
-#endif
 
 #if TORRENT_USE_I2P
 			void set_i2p_proxy(proxy_settings const& s)
@@ -534,7 +499,7 @@ namespace libtorrent
 
 			void update_disk_thread_settings();
 			void on_lsd_peer(tcp::endpoint peer, sha1_hash const& ih);
-			void setup_socket_buffers(socket_type& s);
+			void setup_socket_buffers(boost::asio::ip::tcp::socket& s);
 
 			// the settings for the client
 			session_settings m_settings;
@@ -567,22 +532,8 @@ namespace libtorrent
 			};
 			boost::object_pool<
 				policy::ipv4_peer, logging_allocator> m_ipv4_peer_pool;
-#if TORRENT_USE_IPV6
-			boost::object_pool<
-				policy::ipv6_peer, logging_allocator> m_ipv6_peer_pool;
-#endif
-#if TORRENT_USE_I2P
-			boost::object_pool<
-				policy::i2p_peer, logging_allocator> m_i2p_peer_pool;
-#endif
 #else
 			boost::object_pool<policy::ipv4_peer> m_ipv4_peer_pool;
-#if TORRENT_USE_IPV6
-			boost::object_pool<policy::ipv6_peer> m_ipv6_peer_pool;
-#endif
-#if TORRENT_USE_I2P
-			boost::object_pool<policy::i2p_peer> m_i2p_peer_pool;
-#endif
 #endif
 
 			// this vector is used to store the block_info
@@ -608,12 +559,6 @@ namespace libtorrent
 			// the selector can sleep while there's no activity on
 			// them
 			mutable io_service m_io_service;
-
-#ifdef TORRENT_USE_OPENSSL
-			// this is a generic SSL context used when talking to
-			// unauthenticated HTTPS servers
-			asio::ssl::context m_ssl_ctx;
-#endif
 
 			// handles delayed alerts
 			alert_manager m_alerts;
@@ -720,10 +665,6 @@ namespace libtorrent
 			// we might need more than one listen socket
 			std::list<listen_socket_t> m_listen_sockets;
 
-#ifdef TORRENT_USE_OPENSSL
-			void ssl_handshake(error_code const& ec, boost::shared_ptr<socket_type> s);
-#endif
-
 			// when as a socks proxy is used for peers, also
 			// listen for incoming connections on a socks connection
 			boost::shared_ptr<socket_type> m_socks_listen_socket;
@@ -742,9 +683,6 @@ namespace libtorrent
 			// the proxy used for bittorrent
 			proxy_settings m_proxy;
 
-#ifndef TORRENT_DISABLE_DHT	
-			entry m_dht_state;
-#endif
 			// set to true when the session object
 			// is being destructed and the thread
 			// should exit
@@ -844,19 +782,6 @@ namespace libtorrent
 			// port we'll bind the next outgoing socket to
 			int m_next_port;
 
-#ifndef TORRENT_DISABLE_DHT
-			boost::intrusive_ptr<dht::dht_tracker> m_dht;
-			dht_settings m_dht_settings;
-			
-			// these are used when starting the DHT
-			// (and bootstrapping it), and then erased
-			std::list<udp::endpoint> m_dht_router_nodes;
-
-			// this announce timer is used
-			// by the DHT.
-			deadline_timer m_dht_announce_timer;
-#endif
-
 			void on_receive_udp(error_code const& e
 				, udp::endpoint const& ep, char const* buf, int len);
 
@@ -876,10 +801,6 @@ namespace libtorrent
 			// this is deducted from the connect speed
 			int m_boost_connections;
 
-#ifndef TORRENT_DISABLE_ENCRYPTION
-			pe_settings m_pe_settings;
-#endif
-
 			boost::intrusive_ptr<natpmp> m_natpmp;
 			boost::intrusive_ptr<upnp> m_upnp;
 			boost::intrusive_ptr<lsd> m_lsd;
@@ -892,9 +813,6 @@ namespace libtorrent
 			// 0 is natpmp 1 is upnp
 			int m_tcp_mapping[2];
 			int m_udp_mapping[2];
-#ifdef TORRENT_USE_OPENSSL
-			int m_ssl_mapping[2];
-#endif
 
 			// the timer used to fire the tick
 			deadline_timer m_timer;
@@ -904,14 +822,6 @@ namespace libtorrent
 			// within the LSD announce interval (which defaults to
 			// 5 minutes)
 			torrent_map::iterator m_next_lsd_torrent;
-
-#ifndef TORRENT_DISABLE_DHT
-			// torrents are announced on the DHT in a
-			// round-robin fashion. All torrents are cycled through
-			// within the DHT announce interval (which defaults to
-			// 15 minutes)
-			torrent_map::iterator m_next_dht_torrent;
-#endif
 
 			// this announce timer is used
 			// by Local service discovery

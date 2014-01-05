@@ -40,6 +40,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/config.hpp"
 #include "libtorrent/bitfield.hpp"
 
+#include "ns3/inet-socket-address.h"
+
 namespace libtorrent
 {
 	struct TORRENT_EXPORT peer_info
@@ -97,7 +99,7 @@ namespace libtorrent
 		char read_state;
 		char write_state;
 		
-		tcp::endpoint ip;
+        ns3::InetSocketAddress ip;
 		int up_speed;
 		int down_speed;
 		int payload_up_speed;
@@ -228,8 +230,6 @@ namespace libtorrent
 		// the peers progress
 		float progress; // [0, 1]
 		int progress_ppm; // [0, 1000000]
-
-		int estimated_reciprocation_rate;
 
 		tcp::endpoint local_endpoint;
 	};

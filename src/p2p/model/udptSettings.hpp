@@ -18,7 +18,8 @@
  *		along with UDPT.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#ifndef UDP_SETTINGS
+#define UDP_SETTINGS
 
 #include <stdint.h>
 #include <map>
@@ -167,3 +168,6 @@ namespace UDPT
 //#ifdef __cplusplus
 //}
 //#endif
+
+
+#endif

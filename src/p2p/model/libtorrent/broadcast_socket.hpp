@@ -42,14 +42,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/function/function3.hpp>
 #include <list>
 
+#include "ns3/inet-socket-address.h"
+
 namespace libtorrent
 {
 
-	TORRENT_EXPORT bool is_local(address const& a);
-	TORRENT_EXPORT bool is_loopback(address const& addr);
-	TORRENT_EXPORT bool is_multicast(address const& addr);
-	TORRENT_EXPORT bool is_any(address const& addr);
-	TORRENT_EXPORT bool is_teredo(address const& addr);
+	TORRENT_EXPORT bool is_local(ns3::Ipv4Address const& a);
+	TORRENT_EXPORT bool is_loopback(ns3::Ipv4Address const& addr);
+	TORRENT_EXPORT bool is_multicast(ns3::Ipv4Address const& addr);
+	TORRENT_EXPORT bool is_any(ns3::Ipv4Address const& addr);
+	TORRENT_EXPORT bool is_teredo(ns3::Ipv4Address const& addr);
 	TORRENT_EXTRA_EXPORT int cidr_distance(address const& a1, address const& a2);
 
 	// determines if the operating system supports IPv6
@@ -89,8 +91,8 @@ namespace libtorrent
 				, address_v4 const& mask): socket(s), netmask(mask), broadcast(false) {}
 			boost::shared_ptr<datagram_socket> socket;
 			char buffer[1500];
-			udp::endpoint remote;
-			address_v4 netmask;
+            ns3::InetSocketAddress remote;
+            ns3::Ipv4Address netmask;
 			bool broadcast;
 			void close()
 			{

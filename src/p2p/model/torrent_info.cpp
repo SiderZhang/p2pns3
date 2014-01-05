@@ -66,10 +66,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/invariant_check.hpp"
 #include "libtorrent/session_settings.hpp"
 
-#if TORRENT_USE_I2P
-#include "libtorrent/parse_url.hpp"
-#endif
-
 namespace libtorrent
 {
 	
@@ -577,7 +573,6 @@ namespace libtorrent
 		, m_info_section_size(t.m_info_section_size)
 		, m_multifile(t.m_multifile)
 		, m_private(t.m_private)
-		, m_i2p(t.m_i2p)
 	{
 #if defined TORRENT_DEBUG && !defined TORRENT_DISABLE_INVARIANT_CHECKS
 		t.check_invariant();
@@ -627,7 +622,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		std::vector<char> tmp;
 		std::back_insert_iterator<std::vector<char> > out(tmp);
@@ -660,7 +654,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		error_code ec;
 		if (!parse_torrent_file(torrent_file, ec, flags))
@@ -676,7 +669,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		error_code ec;
 		lazy_entry e;
@@ -696,7 +688,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		std::vector<char> buf;
 		error_code ec;
@@ -722,7 +713,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		std::vector<char> buf;
 		std::string utf8;
@@ -751,7 +741,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		parse_torrent_file(torrent_file, ec, flags);
 
@@ -765,7 +754,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		lazy_entry e;
 		if (lazy_bdecode(buffer, buffer + size, e, ec) != 0)
@@ -782,7 +770,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		std::vector<char> buf;
 		int ret = load_file(filename, buf, ec);
@@ -805,7 +792,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{
 		std::vector<char> buf;
 		std::string utf8;
@@ -835,7 +821,6 @@ namespace libtorrent
 		, m_info_section_size(0)
 		, m_multifile(false)
 		, m_private(false)
-		, m_i2p(false)
 	{}
 
 	torrent_info::~torrent_info()
@@ -874,7 +859,6 @@ namespace libtorrent
 		boost::uint32_t tmp;
 		SWAP(m_multifile, ti.m_multifile);
 		SWAP(m_private, ti.m_private);
-		SWAP(m_i2p, ti.m_i2p);
 		swap(m_info_section, ti.m_info_section);
 		SWAP(m_info_section_size, ti.m_info_section_size);
 		swap(m_piece_hashes, ti.m_piece_hashes);
@@ -1135,19 +1119,6 @@ namespace libtorrent
 		return ret;
 	}
 
-#if TORRENT_USE_I2P
-	bool is_i2p_url(std::string const& url)
-	{
-		using boost::tuples::ignore;
-		std::string hostname;
-		error_code ec;
-		boost::tie(ignore, ignore, hostname, ignore, ignore)
-			= parse_url_components(url, ec);
-		char const* top_domain = strrchr(hostname.c_str(), '.');
-		return top_domain && strcmp(top_domain, ".i2p") == 0;
-	}
-#endif
-
 	bool torrent_info::parse_torrent_file(lazy_entry const& torrent_file, error_code& ec, int flags)
 	{
 		if (torrent_file.type() != lazy_entry::dict_t)
@@ -1181,9 +1152,6 @@ namespace libtorrent
 					e.tier = j;
 					e.fail_limit = 0;
 					e.source = announce_entry::source_torrent;
-#if TORRENT_USE_I2P
-					if (is_i2p_url(e.url)) m_i2p = true;
-#endif
 					m_urls.push_back(e);
 				}
 			}
@@ -1214,9 +1182,6 @@ namespace libtorrent
 			e.fail_limit = 0;
 			e.source = announce_entry::source_torrent;
 			e.trim();
-#if TORRENT_USE_I2P
-			if (is_i2p_url(e.url)) m_i2p = true;
-#endif
 			if (!e.url.empty()) m_urls.push_back(e);
 		}
 

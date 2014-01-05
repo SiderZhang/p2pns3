@@ -39,6 +39,12 @@ public:
 
   UdpP2PHeader();
 
+  UdpP2PHeader(uint8_t* data, uint32_t length);
+
+  virtual ~UdpP2PHeader()
+  {
+  }
+
   void setAction(int32_t action);
 
   int32_t getAction() const;
@@ -51,17 +57,74 @@ public:
 
   void setAnnounceIp(uint32_t ip);
 
-  uint64_t getConnectionID_64();
+  uint64_t getConnectionID();
 
   uint32_t getInterval();
 
+  void setInterval(uint32_t inter)
+  {
+      this->interval = inter;
+  }
+
   uint32_t getLeechers();
+
+  void setLeechers (uint32_t nleecher)
+  {
+      this->leechers = nleecher;
+  }
 
   uint32_t getSeeders();
 
-  uint32_t getIpAddress();
+  void setSeeders(uint32_t nSeeders)
+  {
+      this->seeders = nSeeders;
+  }
 
-  uint16_t getTcpPort();
+  uint32_t getIpAddress()
+  {
+      return this->announce_ip_v4;
+  }
+
+  uint16_t getPort()
+  {
+      return this->port;
+  }
+
+  uint8_t* getPeerId()
+  {
+      return this->peer_id;
+  }
+
+  // announce用到的hash
+  uint8_t* getInfo_hash()
+  {
+      return this->info_hash;
+  }
+
+  uint32_t getNum_want()
+  {
+      return this->num_want;
+  }
+
+  uint32_t getEvent()
+  {
+      return this->event;
+  }
+
+  uint64_t getDownloaded()
+  {
+      return this->downloaded;
+  }
+
+  uint64_t getLeft()
+  {
+      return this->left;
+  }
+
+  uint64_t getUploaded()
+  {
+      return this->uploaded;
+  }
 
   std::list<uint32_t>& getSeedersList()
   {
@@ -78,9 +141,14 @@ public:
       return this->leechersList;
   }
 
-  std::list<uint16_t>& getTcpPortList()
+  std::list<uint16_t>& getLeecherPortList()
   {
-      return this->tcpPortList;
+      return this->leecherPortList;
+  }
+
+  std::list<uint16_t>& getSeederPortList()
+  {
+      return this->seedersPortList;
   }
 
   std::list<uint8_t*>& getinfo_hashList()
@@ -88,9 +156,19 @@ public:
       return this->info_hashList;
   }
 
+  // TODO:等待完成这一部分
+  uint32_t getSize()
+  {
+      return -1;
+  }
+
   void setIsResponse(bool isResponse);
 
   static TypeId GetTypeId (void);
+
+  // 将ip地址字符串
+  static uint32_t AsciiTouint32Ipv4 (char const *address);
+  static void Uint32ToAsciiIpv4 (char * addressBuf, int bufLength, uint32_t ip); 
 private:
   virtual TypeId GetInstanceTypeId (void) const;
   virtual void Print (std::ostream &os) const;
@@ -107,12 +185,14 @@ private:
 
   uint8_t info_hash[20];
   uint8_t peer_id[20];
+  uint64_t downloaded;
   uint64_t left;
   uint64_t uploaded;
   uint32_t event;
   uint32_t ipAddress;
   uint32_t key;
   uint32_t num_want;
+
   uint16_t port;
 
   uint32_t announce_ip_v4;
@@ -120,13 +200,12 @@ private:
   uint32_t interval;
   uint32_t leechers;
   uint32_t seeders;
-  uint16_t tcpPort;
 
   std::list<uint32_t> seedersList;
   std::list<uint32_t> completedList;
   std::list<uint32_t> leechersList;
-  std::list<uint32_t> ipAddressList;
-  std::list<uint16_t> tcpPortList;
+  std::list<uint16_t> leecherPortList;
+  std::list<uint16_t> seedersPortList;
   std::list<uint8_t*> info_hashList;
 
   libtorrent::tracker_request req;

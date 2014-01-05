@@ -53,6 +53,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/address.hpp"
 #include "libtorrent/assert.hpp"
 
+#include "ns3/ipv4-address.h"
+
 namespace libtorrent
 {
 
@@ -268,15 +270,10 @@ struct TORRENT_EXPORT ip_filter
 
 	// both addresses MUST be of the same type (i.e. both must
 	// be either IPv4 or both must be IPv6)
-	void add_rule(address first, address last, int flags);
-	int access(address const& addr) const;
+	void add_rule(ns3::Ipv4Address first, address last, int flags);
+	int access(ns3::Ipv4Address const& addr) const;
 
-#if TORRENT_USE_IPV6
-	typedef boost::tuple<std::vector<ip_range<address_v4> >
-		, std::vector<ip_range<address_v6> > > filter_tuple_t;
-#else
 	typedef std::vector<ip_range<address_v4> > filter_tuple_t;
-#endif
 	
 	filter_tuple_t export_filter() const;
 
@@ -285,9 +282,6 @@ struct TORRENT_EXPORT ip_filter
 private:
 
 	detail::filter_impl<address_v4::bytes_type> m_filter4;
-#if TORRENT_USE_IPV6
-	detail::filter_impl<address_v6::bytes_type> m_filter6;
-#endif
 };
 
 class TORRENT_EXPORT port_filter

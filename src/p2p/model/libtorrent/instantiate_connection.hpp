@@ -34,6 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TORRENT_INSTANTIATE_CONNECTION
 
 #include <boost/shared_ptr.hpp>
+#include "ns3/socket.h"
 
 namespace libtorrent
 {
@@ -42,7 +43,7 @@ namespace libtorrent
 
 	// instantiate a boost::asio::ip::tcp::socket (s) according to the specified criteria
 	TORRENT_EXTRA_EXPORT bool instantiate_connection(io_service& ios
-		, proxy_settings const& ps, boost::asio::ip::tcp::socket& s
+		, proxy_settings const& ps, Ptr<Socket> s
 		, void* ssl_context = 0
 		, utp_socket_manager* sm = 0
 		, bool peer_connection = false);

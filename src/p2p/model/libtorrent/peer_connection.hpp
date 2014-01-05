@@ -78,6 +78,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/error_code.hpp"
 #include "libtorrent/sliding_average.hpp"
 
+#include "ns3/ptr.h"
+#include "ns3/socket.h"
+#include "ns3/inet-socket-address.h"
+
 #ifdef TORRENT_STATS
 #include "libtorrent/aux_/session_impl.hpp"
 #endif
@@ -135,7 +139,7 @@ namespace libtorrent
 		{ return pb.block == block; }
 	};
 
-	class TORRENT_EXTRA_EXPORT peer_connection
+	class peer_connection
 		: public bandwidth_socket
 		, public boost::noncopyable
 	{
@@ -164,8 +168,8 @@ namespace libtorrent
 		peer_connection(
 			aux::session_impl& ses
 			, boost::weak_ptr<torrent> t
-			, boost::shared_ptr<boost::asio::ip::tcp::socket> s
-			, tcp::endpoint const& remote
+			, ns3::Ptr<ns3::Socket> s
+            , ns3::InetSocketAddress const& remote
 			, policy::peer* peerinfo
 			, bool outgoing = true);
 
@@ -173,8 +177,8 @@ namespace libtorrent
 		// know which torrent the connection belongs to
 		peer_connection(
 			aux::session_impl& ses
-			, boost::shared_ptr<boost::asio::ip::tcp::socket> s
-			, tcp::endpoint const& remote
+            , ns3::Ptr<ns3::Socket> s
+            , ns3::InetSocketAddress const& remote
 			, policy::peer* peerinfo);
 
 		// this function is called after it has been constructed and properly
@@ -334,8 +338,8 @@ namespace libtorrent
 
 		void timeout_requests();
 
-		boost::shared_ptr<boost::asio::ip::tcp::socket> get_socket() const { return m_socket; }
-		tcp::endpoint const& remote() const { return m_remote; }
+        ns3::Ptr<ns3::Socket> get_socket() const { return m_socket; }
+        ns3::InetSocketAddress const& remote() const { return m_remote; }
 
 		bitfield const& get_bitfield() const;
 		std::vector<int> const& allowed_fast();
@@ -429,10 +433,6 @@ namespace libtorrent
 		// if this peer connection is useless (neither party is
 		// interested in the other), disconnect it
 		void disconnect_if_redundant();
-
-		void increase_est_reciprocation_rate();
-		void decrease_est_reciprocation_rate();
-		int est_reciprocation_rate() const { return m_est_reciprocation_rate; }
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_ERROR_LOGGING
 		void peer_log(char const* fmt, ...) const;
@@ -809,11 +809,11 @@ namespace libtorrent
 
 		chained_buffer m_send_buffer;
 
-		boost::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
+        ns3::Ptr<ns3::Socket> m_socket;
 		// this is the peer we're actually talking to
 		// it may not necessarily be the peer we're
 		// connected to, in case we use a proxy
-		tcp::endpoint m_remote;
+		ns3::InetSocketAddress m_remote;
 		
 		// this is the torrent this connection is
 		// associated with. If the connection is an
@@ -979,12 +979,6 @@ namespace libtorrent
 		// max transfer rates seen on this peer
 		int m_download_rate_peak;
 		int m_upload_rate_peak;
-
-		// when using the BitTyrant choker, this is our
-		// estimated reciprocation rate. i.e. the rate
-		// we need to send to this peer for it to unchoke
-		// us
-		int m_est_reciprocation_rate;
 
 		// estimated round trip time to this peer
 		// based on the time from when async_connect

@@ -49,7 +49,7 @@ void PeerHeader::Print(std::ostream &os) const
     NS_LOG_FUNCTION (this << &os);
 }
     
-void PeerHeader::setBuffer(char* nbuffer, uint32_t size)
+void PeerHeader::setBuffer(const uint8_t* nbuffer, uint32_t size)
 {
     if (buffer != NULL)
     {
@@ -60,6 +60,7 @@ void PeerHeader::setBuffer(char* nbuffer, uint32_t size)
     buffer = new uint8_t[size];
     memset (buffer, '0', size * sizeof(uint8_t));
     memcpy (buffer, nbuffer, size);
+    bufSize = size;
 }
 
 const uint8_t* PeerHeader::getBuffer() const

@@ -26,6 +26,7 @@
 #include "tracker_req.hpp"
 
 #include <assert.h>
+#include <cstring>
 
 NS_LOG_COMPONENT_DEFINE ("UdpP2PHeader");
 
@@ -77,7 +78,7 @@ UdpP2PHeader::setTransactionId (int32_t transactionId)
 }
 
 uint64_t
-UdpP2PHeader::getConnectionID_64 ()
+UdpP2PHeader::getConnectionID ()
 {
   NS_LOG_FUNCTION (this << connection_id_64);
   return connection_id_64;
@@ -126,11 +127,11 @@ UdpP2PHeader::GetSerializedSize (void) const
 
 void UdpP2PHeader::clearList()
 {
-    seedersList.clear();
     completedList.clear();
     leechersList.clear();
-    ipAddressList.clear();
-    tcpPortList.clear();
+    seedersList.clear();
+    leecherPortList.clear();
+    seedersPortList.clear();
 
     list<uint8_t*>::iterator iter = info_hashList.begin();
     while (iter != info_hashList.end())
@@ -187,15 +188,37 @@ UdpP2PHeader::Serialize (Buffer::Iterator start) const
               i.WriteHtonU32(leechers);
               i.WriteHtonU32(seeders);
 
-              list<uint32_t>::const_iterator ipIter = ipAddressList.begin();
-              list<uint16_t>::const_iterator tcpPortIter = tcpPortList.begin();
-              for (uint index = 0;index < ipAddressList.size();++index)
+              list<uint32_t>::const_iterator ipIter = leechersList.begin();
+              list<uint16_t>::const_iterator portIter = leecherPortList.begin();
+              for (size_t index = 0;index < leechersList.size();++index)
               {
                 i.WriteHtonU32(*ipIter);
-                i.WriteHtonU16(*tcpPortIter);
+                i.WriteHtonU16(*portIter);
 
                 ipIter++;
-                tcpPortIter++;
+                portIter++;
+              }
+
+              if (ipIter != leechersList.end() || portIter != leecherPortList.end())
+              {
+                  NS_LOG_WARN("the number of leechers in header is not right");
+              }
+
+              ipIter = seedersList.begin();
+              portIter = seedersPortList.begin();
+
+              for (size_t index = 0;index < seedersList.size();++index)
+              {
+                  i.WriteHtonU32(*ipIter);
+                  i.WriteHtonU32(*portIter);
+
+                  ipIter++;
+                  portIter++;
+              }
+
+              if (ipIter != seedersList.end() || portIter != seedersPortList.end())
+              {
+                  NS_LOG_WARN("the number of seeders in header is not right");
               }
 
               break;
@@ -254,6 +277,8 @@ UdpP2PHeader::Serialize (Buffer::Iterator start) const
     }
   }
 }
+
+// TODO: 加入Peer列表的数量限制，限制在74个为上限
 uint32_t
 UdpP2PHeader::Deserialize (Buffer::Iterator start)
 {
@@ -350,8 +375,10 @@ UdpP2PHeader::Deserialize (Buffer::Iterator start)
         this->leechers = i.ReadNtohU32();
         this->seeders = i.ReadNtohU32();
         
-        this->ipAddressList.clear();
-        this->tcpPortList.clear();
+        this->seedersList.clear();
+        this->leechersList.clear();
+        this->leecherPortList.clear();
+        this->seedersPortList.clear();
 
         int count = start.GetSize();
         count -= 8;
@@ -359,12 +386,17 @@ UdpP2PHeader::Deserialize (Buffer::Iterator start)
         {
             NS_LOG_ERROR("announce response packet error.");
         }
-        count = count / 12;
 
-        for (int index = 0;index < count;++index)
+        for (uint32_t index = 0;index < leechers;++index)
         {
-            ipAddressList.push_back(i.ReadNtohU32());
-            tcpPortList.push_back(i.ReadNtohU16());
+            leechersList.push_back(i.ReadNtohU32());
+            leecherPortList.push_back(i.ReadNtohU16());
+        }
+
+        for (uint32_t index = 0;index < seeders;++index)
+        {
+            seedersList.push_back(i.ReadNtohU32());
+            seedersPortList.push_back(i.ReadNtohU16());
         }
 
         break;
@@ -376,6 +408,45 @@ UdpP2PHeader::Deserialize (Buffer::Iterator start)
   }
 
   return GetSerializedSize ();
+}
+
+uint32_t UdpP2PHeader::AsciiTouint32Ipv4(const char *address)
+{
+    size_t length = strlen(address);
+    char* buf = (char*)calloc(length + 1, sizeof(char));
+    strncpy(buf, address, length);
+    char* pTok = NULL;
+
+    int iBuf[4];
+    uint32_t result = 0;
+    int index = 0;
+    do
+    {
+        if (index >= 4)
+        {
+            NS_LOG_WARN("something is wrong during ascii uint32 convertion ");
+        }
+        pTok = strtok(buf, ".");
+        iBuf[index] = atoi(pTok);
+        index++;
+    }
+    while (pTok != NULL);
+    free(buf);
+
+    result = 0;
+    result |= iBuf[0];
+    result <<= 8;
+    result |= iBuf[1];
+    result <<= 8;
+    result |= iBuf[2];
+    result <<= 8;
+    result |= iBuf[3];
+    return result;
+}
+
+void UdpP2PHeader::Uint32ToAsciiIpv4(char * addressBuf, int bufLength, uint32_t ip)
+{
+    NS_LOG_ERROR("Not implement");
 }
 
 } // namespace ns3

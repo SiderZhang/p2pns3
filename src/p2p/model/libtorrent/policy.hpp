@@ -40,10 +40,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/peer.hpp"
 #include "libtorrent/piece_picker.hpp"
 #include "libtorrent/socket.hpp"
-#include "libtorrent/address.hpp"
 #include "libtorrent/size_type.hpp"
 #include "libtorrent/invariant_check.hpp"
 #include "libtorrent/config.hpp"
+
+#include "ns3/inet-socket-address.h"
 
 namespace libtorrent
 {
@@ -111,13 +112,9 @@ namespace libtorrent
 
 		struct peer;
 
-#if TORRENT_USE_I2P
-		policy::peer* add_i2p_peer(char const* destination, int source, char flags);
-#endif
-
 		// this is called once for every peer we get from
 		// the tracker, pex, lsd or dht.
-		policy::peer* add_peer(const tcp::endpoint& remote, const peer_id& pid
+		policy::peer* add_peer(const ns3::InetSocketAddress& remote, const peer_id& pid
 			, int source, char flags);
 
 		// false means duplicate connection
@@ -173,10 +170,10 @@ namespace libtorrent
 			size_type total_download() const;
 			size_type total_upload() const;
 
-			libtorrent::address address() const;
+			ns3::Ipv4Address address() const;
 			char const* dest() const;
 
-			tcp::endpoint ip() const { return tcp::endpoint(address(), port); }
+			ns3::InetSocketAddress ip() const { return ns3::InetSocketAddress(address(), port); }
 
 			// this is the accumulated amount of
 			// uploaded and downloaded data to this
@@ -267,29 +264,6 @@ namespace libtorrent
 			// from peer_info.
 			unsigned source:6;
 
-#ifndef TORRENT_DISABLE_ENCRYPTION
-			// Hints encryption support of peer. Only effective
-			// for and when the outgoing encryption policy
-			// allows both encrypted and non encrypted
-			// connections (pe_settings::out_enc_policy
-			// == enabled). The initial state of this flag
-			// determines the initial connection attempt
-			// type (true = encrypted, false = standard).
-			// This will be toggled everytime either an
-			// encrypted or non-encrypted handshake fails.
-			bool pe_support:1;
-#endif
-
-#if TORRENT_USE_IPV6
-			// this is true if the v6 union member in addr is
-			// the one to use, false if it's the v4 one
-			bool is_v6_addr:1;
-#endif
-#if TORRENT_USE_I2P
-			// set if the i2p_destination is in use in the addr union
-			bool is_i2p_addr:1;
-#endif
-
 			// if this is true, the peer has previously
 			// participated in a piece that failed the piece
 			// hash check. This will put the peer on parole
@@ -302,11 +276,6 @@ namespace libtorrent
 			// is set to true if this peer has been banned
 			bool banned:1;
 
-#ifndef TORRENT_DISABLE_DHT
-			// this is set to true when this peer as been
-			// pinged by the DHT
-			bool added_to_dht:1;
-#endif
 			// we think this peer supports uTP
 			bool supports_utp:1;
 			// we have been connected via uTP at least once
@@ -325,67 +294,30 @@ namespace libtorrent
 
 		struct TORRENT_EXTRA_EXPORT ipv4_peer : peer
 		{
-			ipv4_peer(tcp::endpoint const& ip, bool connectable, int src);
+			ipv4_peer(ns3::InetSocketAddress const& ip, bool connectable, int src);
 
-			const address_v4 addr;
+			const ns3::Ipv4Address addr;
 		};
-
-#if TORRENT_USE_I2P
-		struct TORRENT_EXTRA_EXPORT i2p_peer : peer
-		{
-			i2p_peer(char const* destination, bool connectable, int src);
-			~i2p_peer();
-
-			char* destination;
-		};
-#endif
-
-#if TORRENT_USE_IPV6
-		struct TORRENT_EXTRA_EXPORT ipv6_peer : peer
-		{
-			ipv6_peer(tcp::endpoint const& ip, bool connectable, int src);
-
-			const address_v6::bytes_type addr;
-		};
-#endif
 
 		int num_peers() const { return m_peers.size(); }
 
 		struct peer_address_compare
 		{
 			bool operator()(
-				peer const* lhs, libtorrent::address const& rhs) const
+				peer const* lhs, ns3::Ipv4Address const& rhs) const
 			{
 				return lhs->address() < rhs;
 			}
 
 			bool operator()(
-				libtorrent::address const& lhs, peer const* rhs) const
+				ns3::Ipv4Address const& lhs, peer const* rhs) const
 			{
 				return lhs < rhs->address();
 			}
 
-#if TORRENT_USE_I2P
-			bool operator()(
-				peer const* lhs, char const* rhs) const
-			{
-				return strcmp(lhs->dest(), rhs) < 0;
-			}
-
-			bool operator()(
-				char const* lhs, peer const* rhs) const
-			{
-				return strcmp(lhs, rhs->dest()) < 0;
-			}
-#endif
-
 			bool operator()(
 				peer const* lhs, peer const* rhs) const
 			{
-#if TORRENT_USE_I2P
-				if (rhs->is_i2p_addr == lhs->is_i2p_addr)
-					return strcmp(lhs->dest(), rhs->dest()) < 0;
-#endif
 				return lhs->address() < rhs->address();
 			}
 		};
@@ -399,13 +331,13 @@ namespace libtorrent
 		const_iterator begin_peer() const { return m_peers.begin(); }
 		const_iterator end_peer() const { return m_peers.end(); }
 
-		std::pair<iterator, iterator> find_peers(address const& a)
+		std::pair<iterator, iterator> find_peers(ns3::Ipv4Address const& a)
 		{
 			return std::equal_range(
 				m_peers.begin(), m_peers.end(), a, peer_address_compare());
 		}
 
-		std::pair<const_iterator, const_iterator> find_peers(address const& a) const
+		std::pair<const_iterator, const_iterator> find_peers(ns3::Ipv4Address const& a) const
 		{
 			return std::equal_range(
 				m_peers.begin(), m_peers.end(), a, peer_address_compare());
@@ -425,12 +357,12 @@ namespace libtorrent
 	private:
 
 		void update_peer(policy::peer* p, int src, int flags
-		, tcp::endpoint const& remote, char const* destination);
+		, ns3::InetSocketAddress const& remote, char const* destination);
 		bool insert_peer(policy::peer* p, iterator iter, int flags);
 
 		bool compare_peer_erase(policy::peer const& lhs, policy::peer const& rhs) const;
 		bool compare_peer(policy::peer const& lhs, policy::peer const& rhs
-			, address const& external_ip) const;
+			, ns3::Ipv4Address const& external_ip) const;
 
 		iterator find_connect_candidate(int session_time);
 
@@ -480,73 +412,12 @@ namespace libtorrent
 		bool m_finished:1;
 	};
 
-/*	inline policy::ipv4_peer::ipv4_peer(
-		tcp::endpoint const& ep, bool c, int src
+	inline policy::ipv4_peer::ipv4_peer(
+		ns3::InetSocketAddress const& ep, bool c, int src
 	)
-		: peer(ep.port(), c, src)
-          // TODO: 禁用boost::asio
-		//, addr(ep.address().to_v4())
+		: peer(ep.GetPort(), c, src)
+		, addr(ep.GetIpv4())
 	{
-#if TORRENT_USE_IPV6
-		is_v6_addr = false;
-#endif
-#if TORRENT_USE_I2P
-		is_i2p_addr = false;
-#endif
-	}*/
-
-#if TORRENT_USE_I2P
-	inline policy::i2p_peer::i2p_peer(char const* dest, bool connectable, int src)
-		: peer(0, connectable, src), destination(allocate_string_copy(dest))
-	{
-#if TORRENT_USE_IPV6
-		is_v6_addr = false;
-#endif
-		is_i2p_addr = true;
-	}
-
-	inline policy::i2p_peer::~i2p_peer()
-	{ free(destination); }
-#endif // TORRENT_USE_I2P
-
-#if TORRENT_USE_IPV6
-	/*inline policy::ipv6_peer::ipv6_peer(
-		tcp::endpoint const& ep, bool c, int src
-	)
-		: peer(ep.port(), c, src)
-          // TODO: 禁用boost::asio
-		//, addr(ep.address().to_v6().to_bytes())
-	{
-		is_v6_addr = true;
-#if TORRENT_USE_I2P
-		is_i2p_addr = false;
-#endif
-	}*/
-
-#endif // TORRENT_USE_IPV6
-
-#if TORRENT_USE_I2P
-	inline char const* policy::peer::dest() const
-	{
-		if (is_i2p_addr)
-			return static_cast<policy::i2p_peer const*>(this)->destination;
-		return "";
-	}
-#endif
-	
-	inline libtorrent::address policy::peer::address() const
-	{
-#if TORRENT_USE_IPV6
-		if (is_v6_addr)
-			return libtorrent::address_v6(
-				static_cast<policy::ipv6_peer const*>(this)->addr);
-		else
-#endif
-#if TORRENT_USE_I2P
-		if (is_i2p_addr) return libtorrent::address();
-		else
-#endif
-		return static_cast<policy::ipv4_peer const*>(this)->addr;
 	}
 
 }

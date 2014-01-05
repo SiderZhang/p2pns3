@@ -49,7 +49,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/version.hpp"
 #include "libtorrent/extensions.hpp"
 #include "libtorrent/aux_/session_impl.hpp"
-#include "libtorrent/broadcast_socket.hpp"
 #include "libtorrent/escape_string.hpp"
 #include "libtorrent/peer_info.hpp"
 #include "libtorrent/random.hpp"
@@ -72,7 +71,6 @@ namespace libtorrent
 		&bt_peer_connection::on_request,
 		&bt_peer_connection::on_piece,
 		&bt_peer_connection::on_cancel,
-		&bt_peer_connection::on_dht_port,
 		0, 0, 0,
 		// FAST extension messages
 		&bt_peer_connection::on_suggest_piece,
@@ -88,8 +86,8 @@ namespace libtorrent
 	bt_peer_connection::bt_peer_connection(
 		session_impl& ses
 		, boost::weak_ptr<torrent> tor
-		, shared_ptr<boost::asio::ip::tcp::socket> s
-		, tcp::endpoint const& remote
+        , ns3::Ptr<ns3::Socket> s
+        , ns3::InetSocketAddress const& remote
 		, policy::peer* peerinfo
 		, bool outgoing)
 		: peer_connection(ses, tor, s, remote
@@ -114,8 +112,8 @@ namespace libtorrent
 
 	bt_peer_connection::bt_peer_connection(
 		session_impl& ses
-		, boost::shared_ptr<boost::asio::ip::tcp::socket> s
-		, tcp::endpoint const& remote
+        , ns3::Ptr<ns3::Socket> s
+        , ns3::InetSocketAddress const& remote
 		, policy::peer* peerinfo)
 		: peer_connection(ses, s, remote, peerinfo)
 		, m_state(read_protocol_identifier)
@@ -181,26 +179,8 @@ namespace libtorrent
 		boost::shared_ptr<torrent> t = associated_torrent().lock();
 		TORRENT_ASSERT(t);
 		write_bitfield();
-#ifndef TORRENT_DISABLE_DHT
-		if (m_supports_dht_port && m_ses.m_dht)
-			write_dht_port(m_ses.m_external_udp_port);
-#endif
 	}
 
-	void bt_peer_connection::write_dht_port(int listen_port)
-	{
-		INVARIANT_CHECK;
-
-		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
-		
-#ifdef TORRENT_VERBOSE_LOGGING
-		peer_log("==> DHT_PORT [ %d ]", listen_port);
-#endif
-		char msg[] = {0,0,0,3, msg_dht_port, 0, 0};
-		char* ptr = msg + 5;
-		detail::write_uint16(listen_port, ptr);
-		send_buffer(msg, sizeof(msg));
-	}
 
 	void bt_peer_connection::write_have_all()
 	{
@@ -341,10 +321,6 @@ namespace libtorrent
 		// 8 zeroes
 		memset(ptr, 0, 8);
 
-#ifndef TORRENT_DISABLE_DHT
-		// indicate that we support the DHT messages
-		*(ptr + 7) |= 0x01;
-#endif
 
 		// we support merkle torrents
 		*(ptr + 5) |= 0x08;
@@ -856,40 +832,6 @@ namespace libtorrent
 		r.length = detail::read_int32(ptr);
 
 		incoming_cancel(r);
-	}
-
-	// -----------------------------
-	// --------- DHT PORT ----------
-	// -----------------------------
-
-	void bt_peer_connection::on_dht_port(int received)
-	{
-		INVARIANT_CHECK;
-
-		TORRENT_ASSERT(received > 0);
-		m_statistics.received_bytes(0, received);
-		if (packet_size() != 3)
-		{
-			disconnect(errors::invalid_dht_port, 2);
-			return;
-		}
-		if (!packet_finished()) return;
-
-		buffer::const_interval recv_buffer = receive_buffer();
-
-		const char* ptr = recv_buffer.begin + 1;
-		int listen_port = detail::read_uint16(ptr);
-		
-		incoming_dht_port(listen_port);
-
-		if (!m_supports_dht_port)
-		{
-			m_supports_dht_port = true;
-#ifndef TORRENT_DISABLE_DHT
-			if (m_supports_dht_port && m_ses.m_dht)
-				write_dht_port(m_ses.m_external_udp_port);
-#endif
-		}
 	}
 
 	void bt_peer_connection::on_suggest_piece(int received)
@@ -1538,7 +1480,7 @@ namespace libtorrent
 					&& p->connection
 					&& p->connection->pid() == m_id
 					&& !p->connection->pid().is_all_zeros()
-					&& p->address() == m_pc->remote().address();
+					&& p->address() == m_pc->remote().GetIpv4();
 			}
 
 			peer_id const& m_id;
@@ -1770,10 +1712,6 @@ namespace libtorrent
 			if (t->ready_for_connections())
 			{
 				write_bitfield();
-#ifndef TORRENT_DISABLE_DHT
-				if (m_supports_dht_port && m_ses.m_dht)
-					write_dht_port(m_ses.m_external_udp_port);
-#endif
 			}
 
 			TORRENT_ASSERT(!packet_finished());

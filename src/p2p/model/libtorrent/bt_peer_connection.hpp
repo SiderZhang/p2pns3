@@ -73,7 +73,7 @@ namespace libtorrent
 		struct session_impl;
 	}
 
-	class TORRENT_EXTRA_EXPORT bt_peer_connection
+	class bt_peer_connection
 		: public peer_connection
 	{
 	friend class invariant_access;
@@ -85,8 +85,8 @@ namespace libtorrent
 		bt_peer_connection(
 			aux::session_impl& ses
 			, boost::weak_ptr<torrent> t
-			, boost::shared_ptr<boost::asio::ip::tcp::socket> s
-			, tcp::endpoint const& remote
+            , ns3::Ptr<ns3::Socket> s
+            , ns3::InetSocketAddress const& remote
 			, policy::peer* peerinfo
 			, bool outgoing = true);
 
@@ -94,8 +94,8 @@ namespace libtorrent
 		// know which torrent the connection belongs to
 		bt_peer_connection(
 			aux::session_impl& ses
-			, boost::shared_ptr<boost::asio::ip::tcp::socket> s
-			, tcp::endpoint const& remote
+            , ns3::Ptr<ns3::Socket> s
+            , ns3::InetSocketAddress const& remote
 			, policy::peer* peerinfo);
 
 		void start();
@@ -116,8 +116,6 @@ namespace libtorrent
 			msg_request,
 			msg_piece,
 			msg_cancel,
-			// DHT extension
-			msg_dht_port,
 			// FAST extension
 			msg_suggest_piece = 0xd,
 			msg_have_all,
@@ -177,9 +175,6 @@ namespace libtorrent
 		void on_piece(int received);
 		void on_cancel(int received);
 
-		// DHT extension
-		void on_dht_port(int received);
-
 		// FAST extension
 		void on_suggest_piece(int received);
 		void on_have_all(int received);
@@ -208,9 +203,6 @@ namespace libtorrent
 		void write_metadata(std::pair<int, int> req);
 		void write_metadata_request(std::pair<int, int> req);
 		void write_keepalive();
-
-		// DHT extension
-		void write_dht_port(int listen_port);
 
 		// FAST extension
 		void write_have_all();
