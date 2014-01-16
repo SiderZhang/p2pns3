@@ -606,8 +606,10 @@ namespace libtorrent
 			return false;
 		
 		aux::session_impl const& ses = m_torrent->session();
-		if (ses.m_port_filter.access(p.port) & port_filter::blocked)
-			return false;
+
+        // TODO:不需要使用过滤器
+		//if (ses.m_port_filter.access(p.port) & port_filter::blocked)
+		//	return false;
 
 		// only apply this to peers we've only heard
 		// about from the DHT

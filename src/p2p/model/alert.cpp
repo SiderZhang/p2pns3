@@ -372,7 +372,8 @@ namespace libtorrent {
 		while (m_alerts.empty())
 		{
 			lock.unlock();
-			sleep(50);
+            // TODO: 用NS3版本代替
+			//sleep(50);
 			lock.lock();
 			if (time_now_hires() - start >= max_wait) return 0;
 		}

@@ -88,7 +88,7 @@ namespace libtorrent
 			socket_entry(boost::shared_ptr<datagram_socket> const& s)
 				: socket(s), broadcast(false) {}
 			socket_entry(boost::shared_ptr<datagram_socket> const& s
-				, address_v4 const& mask): socket(s), netmask(mask), broadcast(false) {}
+				, ns3::Ipv4Address const& mask): socket(s), netmask(mask), broadcast(false) {}
 			boost::shared_ptr<datagram_socket> socket;
 			char buffer[1500];
             ns3::InetSocketAddress remote;
@@ -104,24 +104,15 @@ namespace libtorrent
 			{
 				error_code ec;
 				return broadcast
-					&& netmask != address_v4()
+					&& netmask != ns3::Ipv4Address()
 					&& socket->local_endpoint(ec).address().is_v4();
-			}
-			address_v4 broadcast_address() const
-			{
-				error_code ec;
-#if BOOST_VERSION < 104700
-				return address_v4(socket->local_endpoint(ec).address().to_v4().to_ulong() | ((~netmask.to_ulong()) & 0xffffffff));
-#else
-				return address_v4::broadcast(socket->local_endpoint(ec).address().to_v4(), netmask);
-#endif
 			}
 		};
 	
 		void on_receive(socket_entry* s, error_code const& ec
 			, std::size_t bytes_transferred);
 		void open_unicast_socket(io_service& ios, address const& addr
-			, address_v4 const& mask);
+			, ns3::Ipv4Address const& mask);
 		void open_multicast_socket(io_service& ios, address const& addr
 			, bool loopback, error_code& ec);
 

@@ -650,10 +650,6 @@ namespace libtorrent
 		// in the background
 		bool low_prio_disk;
 
-		// number of seconds between local service announces for
-		// torrents. Defaults to 5 minutes
-		int local_service_announce_interval;
-
 		// number of seconds between DHT announces for
 		// torrents. Defaults to 15 minutes
 		int dht_announce_interval;

@@ -133,6 +133,9 @@ namespace libtorrent
 		{ return m_connections.find(p) != m_connections.end(); }
 #endif
 
+        // 张惊 自定义监听的端口，这个是从session 移动过来的函数
+        uint16_t listen_port(){return 6538;}
+
 		// this is called when the torrent has metadata.
 		// it will initialize the storage and the piece-picker
 		void init();
@@ -145,13 +148,6 @@ namespace libtorrent
 		// if we're connected to a peer at ep, return its peer connection
 		// only count BitTorrent peers
 		bt_peer_connection* find_peer(ns3::InetSocketAddress const& ep) const;
-
-		//void on_resume_data_checked(int ret, disk_io_job const& j);
-		//void on_force_recheck(int ret, disk_io_job const& j);
-		//void on_piece_checked(int ret, disk_io_job const& j);
-        // TODO: 禁用完整性检测
-		//void files_checked();
-		//void start_checking();
 
 		void start_announcing();
 		void stop_announcing();
@@ -238,23 +234,16 @@ namespace libtorrent
 		bool has_error() const { return !!m_error; }
 		error_code error() const { return m_error; }
 
-		//void flush_cache();
-		//void pause(bool graceful = false);
-		//void resume();
 		void set_allow_peers(bool b, bool graceful_pause = false);
-		void set_announce_to_dht(bool b) { m_announce_to_dht = b; }
+		//void set_announce_to_dht(bool b) { m_announce_to_dht = b; }
 		void set_announce_to_trackers(bool b) { m_announce_to_trackers = b; }
-		void set_announce_to_lsd(bool b) { m_announce_to_lsd = b; }
 
 		ptime started() const { return m_started; }
-		//void do_pause();
-		//void do_resume();
 
 		bool is_paused() const;
 		bool allows_peers() const { return m_allow_peers; }
 		bool is_torrent_paused() const { return !m_allow_peers || m_graceful_pause_mode; }
         // TODO: 禁用完整性检测
-		//void force_recheck();
 		//void save_resume_data(int flags);
 
 		bool need_save_resume_data() const
@@ -722,7 +711,6 @@ namespace libtorrent
 			m_seed_mode = false;
 			// seed is false if we turned out not
 			// to be a seed after all
-			//if (!seed) force_recheck();
 			m_num_verified = 0;
 			m_verified.free();
 		}
@@ -744,10 +732,6 @@ namespace libtorrent
 		}
 
 		bool add_merkle_nodes(std::map<int, sha1_hash> const& n, int piece);
-
-		// this is called once periodically for torrents
-		// that are not private
-		void lsd_announce();
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 		static void print_size(logger& l);
@@ -1139,15 +1123,11 @@ namespace libtorrent
 
 		// true when the torrent should announce to
 		// the DHT
-		bool m_announce_to_dht:1;
+		//bool m_announce_to_dht:1;
 
 		// true when this torrent should anncounce to
 		// trackers
 		bool m_announce_to_trackers:1;
-
-		// true when this torrent should anncounce to
-		// the local network
-		bool m_announce_to_lsd:1;
 
 		// is true if this torrent has allows having peers
 		bool m_allow_peers:1;
@@ -1198,10 +1178,6 @@ namespace libtorrent
 		// and set this to false. We only do this once to get
 		// the torrent kick-started
 		bool m_need_connect_boost:1;
-
-		// rotating sequence number for LSD announces sent out.
-		// used to only use IP broadcast for every 8th lsd announce
-		boost::uint8_t m_lsd_seq:3;
 
 		// this is set to true if the torrent was started without
 		// metadata. It is used to save metadata in the resume file

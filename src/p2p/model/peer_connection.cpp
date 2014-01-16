@@ -222,11 +222,12 @@ namespace libtorrent
 
 		TORRENT_ASSERT(peerinfo == 0 || peerinfo->banned == false);
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_ERROR_LOGGING
-		error_code ec;
+        // TODO: 暂时禁用log
+		/*error_code ec;
 		m_logger = m_ses.create_log(m_remote.GetIpv4().to_string(ec) + "_"
 			+ to_string(m_remote.port()).elems, m_ses.listen_port());
         // TODO: 禁用boost::asio
-		/*peer_log("%s [ ep: %s type: %s seed: %d p: %p local: %s]"
+	    *peer_log("%s [ ep: %s type: %s seed: %d p: %p local: %s]"
 			, m_outgoing ? ">>> OUTGOING_CONNECTION" : "<<< INCOMING CONNECTION"
 			, print_endpoint(m_remote).c_str()
 			, m_socket->type_name()
