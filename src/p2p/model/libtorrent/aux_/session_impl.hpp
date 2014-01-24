@@ -39,14 +39,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <stdarg.h> // for va_start, va_end
 
-#ifndef TORRENT_DISABLE_GEO_IP
-#ifdef WITH_SHIPPED_GEOIP_H
-#include "libtorrent/GeoIP.h"
-#else
-#include <GeoIP.h>
-#endif
-#endif
-
 #ifdef _MSC_VER
 #pragma warning(push, 1)
 #endif
@@ -73,13 +65,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/bandwidth_manager.hpp"
 #include "libtorrent/socket_type.hpp"
 #include "libtorrent/connection_queue.hpp"
-#include "libtorrent/disk_io_thread.hpp"
+//#include "libtorrent/disk_io_thread.hpp"
 #include "libtorrent/udp_socket.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/thread.hpp"
 #include "libtorrent/policy.hpp" // for policy::peer
 #include "libtorrent/alert.hpp" // for alert_manager
-#include "libtorrent/deadline_timer.hpp"
 #include "libtorrent/socket_io.hpp" // for print_address
 #include "libtorrent/address.hpp"
 #include "libtorrent/utp_socket_manager.hpp"
@@ -98,6 +89,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "ns3/inet-socket-address.h"
+#include "ns3/event-id.h"
+#include "ns3/ipv4-address.h"
+#include "ns3/socket.h"
+#include "ns3/ptr.h"
 
 namespace libtorrent
 {
@@ -105,7 +100,6 @@ namespace libtorrent
 	struct plugin;
 	class upnp;
 	class natpmp;
-	class lsd;
 	struct fingerprint;
 	class torrent;
 	class alert;
@@ -123,7 +117,7 @@ namespace libtorrent
 
 		// this is typically empty but can be set
 		// to the WAN IP address of NAT-PMP or UPnP router
-		address external_address;
+        ns3::Ipv4Address external_address;
 
 		// this is typically set to the same as the local
 		// listen port. In case a NAT port forward was
@@ -138,7 +132,9 @@ namespace libtorrent
 		bool ssl;
 
 		// the actual socket
-		boost::shared_ptr<socket_acceptor> sock;
+		//boost::shared_ptr<socket_acceptor> sock;
+        
+       ns3::Ptr<ns3::Socket> sock;
 	};
 
 	namespace aux
@@ -182,6 +178,9 @@ namespace libtorrent
 		struct TORRENT_EXTRA_EXPORT session_impl: boost::noncopyable, initialize_timer
 			, boost::enable_shared_from_this<session_impl>
 		{
+            // TODO: 完成这个函数，加入获得Node的代码
+            ns3::Ptr<ns3::Node> GetNode() {return NULL;}
+
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			// this needs to be destructed last, since other components may log
 			// things as they are being destructed. That's why it's declared at
@@ -229,15 +228,14 @@ namespace libtorrent
 			// if we are listening on an IPv6 interface
 			// this will return one of the IPv6 addresses on this
 			// machine, otherwise just an empty endpoint
-            ns3::INetSocketAddress get_ipv4_interface() const;
+            ns3::Ipv4EndPoint get_ipv4_interface() const;
 
-			void async_accept(boost::shared_ptr<socket_acceptor> const& listener, bool ssl);
-			void on_accept_connection(boost::shared_ptr<socket_type> const& s
-				, boost::weak_ptr<socket_acceptor> listener, error_code const& e, bool ssl);
+			void async_accept(ns3::Ptr<ns3::Socket> const& listener);
+			void on_accept_connection(ns3::Ptr<ns3::Socket> listen_socket);
 			void on_socks_accept(boost::shared_ptr<socket_type> const& s
 				, error_code const& e);
 
-			void incoming_connection(boost::shared_ptr<socket_type> const& s);
+			void incoming_connection(ns3::Ptr<ns3::Socket> const& s);
 		
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 			bool is_network_thread() const
@@ -262,8 +260,6 @@ namespace libtorrent
 			void maybe_update_udp_mapping(int nat, int local_port, int external_port);
 
 			void on_port_map_log(char const* msg, int map_transport);
-
-			void on_lsd_announce(error_code const& e);
 
 			// called when a port mapping is successful, or a router returns
 			// a failure to map a port
@@ -362,7 +358,7 @@ namespace libtorrent
 			char* allocate_buffer();
 			void free_buffer(char* buf);
 
-			char* allocate_disk_buffer(char const* category);
+			//char* allocate_disk_buffer(char const* category);
 			void free_disk_buffer(char* buf);
 
 			enum
@@ -377,8 +373,8 @@ namespace libtorrent
 				, int source_type, address const& source);
 			address const& external_address() const { return m_external_address; }
 
-			bool can_write_to_disk() const
-			{ return m_disk_thread.can_write(); }
+			//bool can_write_to_disk() const
+			//{ return m_disk_thread.can_write(); }
 
 			// used when posting synchronous function
 			// calls to session_impl and torrent objects
@@ -487,7 +483,7 @@ namespace libtorrent
 			// m_files. The disk io thread posts completion
 			// events to the io service, and needs to be
 			// constructed after it.
-			disk_io_thread m_disk_thread;
+			//disk_io_thread m_disk_thread;
 
 			// this is a list of half-open tcp connections
 			// (only outgoing connections)
@@ -558,12 +554,12 @@ namespace libtorrent
 			// if the ip is set to zero, it means
 			// that we should let the os decide which
 			// interface to listen on
-			ns3::InetSocketAddress m_listen_interface;
+			ns3::Ipv4EndPoint m_listen_interface;
 
 			// if we're listening on an IPv6 interface
 			// this is one of the non local IPv6 interfaces
 			// on this machine
-			ns3::InetSocketAddress m_ipv4_interface;
+			ns3::Ipv4EndPoint m_ipv4_interface;
 			
 			// since we might be listening on multiple interfaces
 			// we might need more than one listen socket
@@ -650,7 +646,7 @@ namespace libtorrent
 			void on_tick(error_code const& e);
 
 			void auto_manage_torrents(std::vector<torrent*>& list
-				, int& dht_limit, int& tracker_limit, int& lsd_limit
+				, int& dht_limit, int& tracker_limit
 				, int& hard_limit, int type_limit);
 			void recalculate_auto_managed_torrents();
 			void recalculate_unchoke_slots(int congested_torrents
@@ -684,9 +680,11 @@ namespace libtorrent
 			// but for the udp port used by the DHT.
 			int m_external_udp_port;
 
-			rate_limited_udp_socket m_udp_socket;
+            // TODO: 注意转换为NS3的版本
+			//rate_limited_udp_socket m_udp_socket;
 
-			utp_socket_manager m_utp_socket_manager;
+            // TODO: 注意转换为NS3的版本
+			//utp_socket_manager m_utp_socket_manager;
 
 			// the number of torrent connection boosts
 			// connections that have been made this second
@@ -706,9 +704,7 @@ namespace libtorrent
 			int m_udp_mapping[2];
 
 			// the timer used to fire the tick
-			deadline_timer m_timer;
-
-			tcp::resolver m_host_resolver;
+            ns3::EventId timerId;
 
 			// the index of the torrent that will be offered to
 			// connect to a peer next time on_tick is called.
@@ -800,7 +796,7 @@ namespace libtorrent
 			int m_no_memory_peers;
 			int m_too_many_peers;
 			int m_transport_timeout_peers;
-			cache_status m_last_cache_status;
+	//		cache_status m_last_cache_status;
 			size_type m_last_failed;
 			size_type m_last_redundant;
 			size_type m_last_uploaded;
@@ -817,8 +813,6 @@ namespace libtorrent
 				on_read_counter,
 				on_write_counter,
 				on_tick_counter,
-				on_lsd_counter,
-				on_lsd_peer_counter,
 				on_udp_counter,
 				on_accept_counter,
 				on_disk_queue_counter,

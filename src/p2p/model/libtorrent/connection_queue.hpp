@@ -39,12 +39,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/noncopyable.hpp>
 #include "libtorrent/io_service.hpp"
 #include "libtorrent/error_code.hpp"
-#include "libtorrent/deadline_timer.hpp"
+#include "libtorrent/ptime.hpp"
+#include "libtorrent/time.hpp"
 
 #ifdef TORRENT_CONNECTION_LOGGING
 #include <fstream>
 #endif
 
+#include "ns3/event-id.h"
 #include "libtorrent/thread.hpp"
 
 namespace libtorrent
@@ -53,7 +55,7 @@ namespace libtorrent
 class TORRENT_EXTRA_EXPORT connection_queue : public boost::noncopyable
 {
 public:
-	connection_queue(io_service& ios);
+	connection_queue();
 
 	// if there are no free slots, returns the negative
 	// number of queued up connections
@@ -125,15 +127,16 @@ private:
 	std::list<entry> m_queue;
 
 	// the next ticket id a connection will be given
-	int m_next_ticket;
-	int m_num_connecting;
-	int m_half_open_limit;
+	uint m_next_ticket;
+	uint m_num_connecting;
+	uint m_half_open_limit;
 	bool m_abort;
 
 	// the number of outstanding timers
 	int m_num_timers;
 
-	deadline_timer m_timer;
+	//deadline_timer m_timer;
+    ns3::EventId timerId;
 
 	mutable mutex_t m_mutex;
 

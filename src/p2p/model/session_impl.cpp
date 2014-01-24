@@ -79,6 +79,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/random.hpp"
 #include "libtorrent/magnet_uri.hpp"
 
+#include <string>
+#include <ostream>
+
 #if defined TORRENT_STATS && defined __MACH__
 #include <mach/task.h>
 #endif
@@ -107,6 +110,11 @@ mutex logger::file_mutex;
 #endif // TORRENT_USE_IOSTREAM
 
 #endif
+using namespace ns3;
+
+#include "ns3/simulator.h"
+#include "ns3/event-id.h"
+#include "ns3/adapter.h"
 
 #ifdef TORRENT_USE_GCRYPT
 
@@ -310,7 +318,6 @@ namespace aux {
 		TORRENT_SETTING(integer, active_seeds)
 		TORRENT_SETTING(integer, active_dht_limit)
 		TORRENT_SETTING(integer, active_tracker_limit)
-		TORRENT_SETTING(integer, active_lsd_limit)
 		TORRENT_SETTING(integer, active_limit)
 		TORRENT_SETTING(boolean, auto_manage_prefer_seeds)
 		TORRENT_SETTING(boolean, dont_count_slow_torrents)
@@ -366,7 +373,6 @@ namespace aux {
 		TORRENT_SETTING(boolean, incoming_starts_queued_torrents)
 		TORRENT_SETTING(boolean, report_true_downloaded)
 		TORRENT_SETTING(boolean, strict_end_game_mode)
-		TORRENT_SETTING(boolean, broadcast_lsd)
 		TORRENT_SETTING(boolean, enable_outgoing_utp)
 		TORRENT_SETTING(boolean, enable_incoming_utp)
 		TORRENT_SETTING(boolean, enable_outgoing_tcp)
@@ -480,7 +486,7 @@ namespace aux {
 #endif
 		, m_files(40)
 		//, m_io_service()
-		//, m_alerts(m_io_service, m_settings.alert_queue_size, alert_mask)
+		, m_alerts(m_settings.alert_queue_size, alert_mask)
 		//, m_disk_thread(m_io_service, boost::bind(&session_impl::on_disk_queue, this), m_files)
 		//, m_half_open(m_io_service)
 		, m_download_rate(peer_connection::download_channel)
@@ -513,15 +519,14 @@ namespace aux {
 		, m_last_disk_queue_performance_warning(min_time())
 		, m_last_choke(m_created)
 		, m_external_udp_port(0)
+        // TODO: 注意转换为NS3的版本
 		/*, m_udp_socket(m_io_service
 			, boost::bind(&session_impl::on_receive_udp, this, _1, _2, _3, _4)
 			, boost::bind(&session_impl::on_receive_udp_hostname, this, _1, _2, _3, _4)
 			, m_half_open)*/
-		, m_utp_socket_manager(m_settings, m_udp_socket
-			, boost::bind(&session_impl::incoming_connection, this, _1))
+		//, m_utp_socket_manager(m_settings, m_udp_socket
+		//	, boost::bind(&session_impl::incoming_connection, this, _1))
 		, m_boost_connections(0)
-		//, m_timer(m_io_service)
-		//, m_host_resolver(m_io_service)
 		, m_tick_residual(0)
 		, m_non_filtered_torrents(0)
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
@@ -534,7 +539,8 @@ namespace aux {
 #endif
 	{
 		memset(m_redundant_bytes, 0, sizeof(m_redundant_bytes));
-		m_udp_socket.set_rate_limit(m_settings.dht_upload_rate_limit);
+        // TODO: 注意转换为NS3的版本
+		//m_udp_socket.set_rate_limit(m_settings.dht_upload_rate_limit);
 
 		m_disk_queues[0] = 0;
 		m_disk_queues[1] = 0;
@@ -826,7 +832,7 @@ namespace aux {
 		m_log_seq = 0;
 		m_stats_logging_enabled = true;
 
-		memset(&m_last_cache_status, 0, sizeof(m_last_cache_status));
+		//memset(&m_last_cache_status, 0, sizeof(m_last_cache_status));
 		get_vm_stats(&m_last_vm_stat);
 
 		m_last_failed = 0;
@@ -1048,8 +1054,6 @@ namespace aux {
 			":read_counter"
 			":write_counter"
 			":tick_counter"
-			":lsd_counter"
-			":lsd_peer_counter"
 			":udp_counter"
 			":accept_counter"
 			":disk_queue_counter"
@@ -1130,6 +1134,7 @@ namespace aux {
 #if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
 		(*m_logger) << time_now_string() << " *** session thread init\n";
 #endif
+        error_code ec;
 
 		// this is where we should set up all async operations. This
 		// is called from within the network thread as opposed to the
@@ -1166,17 +1171,6 @@ namespace aux {
 			save_struct(e[c.name], reinterpret_cast<char const*>(this) + c.offset
 				, c.map, c.num_entries, reinterpret_cast<char const*>(&def) + c.default_offset);
 		}
-
-		if (flags & session::save_feeds)
-		{
-			entry::list_type& feeds = e["feeds"].list();
-			for (std::vector<boost::shared_ptr<feed> >::const_iterator i =
-				m_feeds.begin(), end(m_feeds.end()); i != end; ++i)
-			{
-				feeds.push_back(entry());
-				(*i)->save_state(feeds.back());
-			}
-		}
 	}
 	
 	void session_impl::set_proxy(proxy_settings const& s)
@@ -1187,7 +1181,8 @@ namespace aux {
 		// in case we just set a socks proxy, we might have to
 		// open the socks incoming connection
 		if (!m_socks_listen_socket) open_new_incoming_socks_connection();
-		m_udp_socket.set_proxy_settings(m_proxy);
+        // TODO: 注意转换为NS3的版本
+		//m_udp_socket.set_proxy_settings(m_proxy);
 	}
 
 	void session_impl::load_state(lazy_entry const* e)
@@ -1214,7 +1209,8 @@ namespace aux {
 		// in case we just set a socks proxy, we might have to
 		// open the socks incoming connection
 		if (!m_socks_listen_socket) open_new_incoming_socks_connection();
-		m_udp_socket.set_proxy_settings(m_proxy);
+        // TODO: 注意转换为NS3的版本
+		//m_udp_socket.set_proxy_settings(m_proxy);
 
  		if (m_settings.connection_speed < 0) m_settings.connection_speed = 200;
 
@@ -1232,17 +1228,16 @@ namespace aux {
 		// abort the main thread
 		//m_abort = true;
 		error_code ec;
-		stop_lsd();
 		stop_upnp();
 		stop_natpmp();
-		m_timer.cancel(ec);
+        ns3::Simulator::Cancel(timerId);
+		//m_timer.cancel(ec);
 
 		// close the listen sockets
 		for (std::list<listen_socket_t>::iterator i = m_listen_sockets.begin()
 			, end(m_listen_sockets.end()); i != end; ++i)
 		{
-			i->sock->close(ec);
-			TORRENT_ASSERT(!ec);
+			i->sock->Close();
 		}
 		m_listen_sockets.clear();
 		if (m_socks_listen_socket && m_socks_listen_socket->is_open())
@@ -1309,10 +1304,11 @@ namespace aux {
 
 		// #error closing the udp socket here means that
 		// the uTP connections cannot be closed gracefully
-		m_udp_socket.close();
+        // TODO: 注意转换为NS3的版本
+		//m_udp_socket.close();
 		m_external_udp_port = 0;
 
-		m_disk_thread.abort();
+		//m_disk_thread.abort();
 	}
 
 	void session_impl::update_disk_thread_settings()
@@ -1320,7 +1316,7 @@ namespace aux {
 		disk_io_job j;
 		j.buffer = (char*)new session_settings(m_settings);
 		j.action = disk_io_job::update_settings;
-		m_disk_thread.add_job(j);
+		//m_disk_thread.add_job(j);
 	}
 
     // 张惊：关闭动态变更设置的功能
@@ -1455,7 +1451,6 @@ namespace aux {
 //		{
 //			m_settings.user_agent.clear();
 //			url_random((char*)&m_peer_id[0], (char*)&m_peer_id[0] + 20);
-//			stop_lsd();
 //			stop_upnp();
 //			stop_natpmp();
 //			// close the listen sockets
@@ -1498,99 +1493,66 @@ namespace aux {
 //		}
 //	}
 
-	ns3::InetSocketAddress session_impl::get_ipv4_interface() const
+	ns3::Ipv4EndPoint session_impl::get_ipv4_interface() const
 	{
 		return m_ipv4_interface;
 	}
 
-	void session_impl::setup_listener(listen_socket_t* s, ns3::InetSocketAddress ep
-		, int& retries, bool v6_only, int flags, error_code& ec)
+	void session_impl::setup_listener(listen_socket_t* s, ns3::InetSocketAddress addr
+            , int& retries, bool v6_only, int flags, error_code& ec)
 	{
-        // TODO: 关掉IO_Service的代码
-		//s->sock.reset(new socket_acceptor(m_io_service));
-		s->sock->open(ep.protocol(), ec);
-		if (ec)
-		{
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			(*m_logger) << "failed to open socket: " << print_endpoint(ep)
-				<< ": " << ec.message() << "\n" << "\n";
-#endif
-			return;
-		}
-
 		// SO_REUSEADDR on windows is a bit special. It actually allows
 		// two active sockets to bind to the same port. That means we
 		// may end up binding to the same socket as some other random
 		// application. Don't do it!
-#ifndef TORRENT_WINDOWS
-		error_code err; // ignore errors here
-		s->sock->set_option(socket_acceptor::reuse_address(true), err);
-#endif
 
-		s->sock->bind(ep, ec);
+		s->sock->Bind(addr);
 		while (ec && retries > 0)
 		{
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			char msg[200];
-			snprintf(msg, 200, "failed to bind to interface \"%s\": %s"
-				, print_endpoint(ep).c_str(), ec.message().c_str());
-			(*m_logger) << time_now_string() << " " << msg << "\n";
-#endif
 			ec.clear();
 			TORRENT_ASSERT_VAL(!ec, ec);
 			--retries;
-			ep.port(ep.port() + 1);
-			s->sock->bind(ep, ec);
+			addr.SetPort(addr.GetPort() + 1);
+			s->sock->Bind(addr);
 		}
 		if (ec && !(flags & session::listen_no_system_port))
 		{
 			// instead of giving up, trying
 			// let the OS pick a port
-			ep.port(0);
+			addr.SetPort(0);
 			ec = error_code();
-			s->sock->bind(ep, ec);
+			s->sock->Bind(addr, ec);
 		}
 		if (ec)
 		{
 			// not even that worked, give up
 			if (m_alerts.should_post<listen_failed_alert>())
 				m_alerts.post_alert(listen_failed_alert(ep, ec));
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			char msg[200];
-			snprintf(msg, 200, "cannot bind to interface \"%s\": %s"
-				, print_endpoint(ep).c_str(), ec.message().c_str());
-			(*m_logger) << time_now_string() << msg << "\n";
-#endif
+            NS_LOG_ERROR("cannot bind to interface ");
 			return;
 		}
-		s->external_port = s->sock->local_endpoint(ec).port();
-		TORRENT_ASSERT(s->external_port == ep.port() || ep.port() == 0);
-		if (!ec) s->sock->listen(m_settings.listen_queue_size, ec);
+		s->external_port = addr.GetPort();
+		if (!ec) 
+        {
+            //s->sock->listen(m_settings.listen_queue_size, ec);
+            s->sock->Listen();
+            NS_LOG_INFO("socket start to listen");
+        }
 		if (ec)
 		{
-			if (m_alerts.should_post<listen_failed_alert>())
-				m_alerts.post_alert(listen_failed_alert(ep, ec));
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			char msg[200];
-			snprintf(msg, 200, "cannot listen on interface \"%s\": %s"
-				, print_endpoint(ep).c_str(), ec.message().c_str());
-			(*m_logger) << time_now_string() << msg << "\n";
-#endif
+			NS_LOG_ERROR("cannot listen on interface");
 			return;
 		}
 
 		// if we asked the system to listen on port 0, which
 		// socket did it end up choosing?
-		if (ep.port() == 0)
-			ep.port(s->sock->local_endpoint(ec).port());
+		//if (ep.port() == 0)
+		//	ep.port(s->sock->local_endpoint(ec).port());
 
-		if (m_alerts.should_post<listen_succeeded_alert>())
-			m_alerts.post_alert(listen_succeeded_alert(ep));
-
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-		(*m_logger) << time_now_string() << " listening on: " << ep
+        std::ostringstream ostr;
+		ostr << time_now_string() << " listening on: " << ep
 			<< " external port: " << s->external_port << "\n";
-#endif
+        NS_LOG_INFO(ostr.str().c_str());
 	}
 	
 	void session_impl::open_listen_port(int flags, error_code& ec)
@@ -1604,7 +1566,7 @@ retry:
 		// close the listen sockets
 		for (std::list<listen_socket_t>::iterator i = m_listen_sockets.begin()
 			, end(m_listen_sockets.end()); i != end; ++i)
-			i->sock->close(ec);
+			i->sock->Close();
 		m_listen_sockets.clear();
 		m_incoming_connection = false;
 		ec.clear();
@@ -1613,56 +1575,26 @@ retry:
 
 		m_ipv4_interface = ns3::InetSocketAddress();
 	
-		if (is_any(m_listen_interface.address()))
-		{
-			// this means we should open two listen sockets
-			// one for IPv4 and one for IPv6
+		bool bAny = 
+
+        NS_ASSERT(is_any(m_listen_interface.GetPeerAddress()));
 		
-			listen_socket_t s;
-			setup_listener(&s, ns3::InetSocketAddress(address_v4::any(), m_listen_interface.port())
-				, m_listen_port_retries, false, flags, ec);
+		// we should only open a single listen socket, that
+		// binds to the given interface
 
-			if (s.sock)
-			{
-				// update the listen_interface member with the
-				// actual port we ended up listening on, so that the other
-				// sockets can be bound to the same one
-				m_listen_interface.port(s.external_port);
+		listen_socket_t s;
+		setup_listener(&s, m_listen_interface, m_listen_port_retries, false, flags, ec);
 
-				//TORRENT_ASSERT(!m_abort);
-				m_listen_sockets.push_back(s);
-			}
-
-			// set our main IPv4 and IPv6 interfaces
-			// used to send to the tracker
-            // TODO: 暂时注释掉io_service相关的代码
-//			std::vector<ip_interface> ifs = enum_net_interfaces(m_io_service, ec);
-//			for (std::vector<ip_interface>::const_iterator i = ifs.begin()
-//					, end(ifs.end()); i != end; ++i)
-//			{
-//				address const& addr = i->interface_address;
-//				if (addr.is_v4() && !is_local(addr) && !is_loopback(addr))
-//					m_ipv4_interface = ns3::InetSocketAddress(addr, m_listen_interface.port());
-//			}
-		}
-		else
+		if (s.sock)
 		{
-			// we should only open a single listen socket, that
-			// binds to the given interface
+			//TORRENT_ASSERT(!m_abort);
+			m_listen_sockets.push_back(s);
 
-			listen_socket_t s;
-			setup_listener(&s, m_listen_interface, m_listen_port_retries, false, flags, ec);
-
-			if (s.sock)
-			{
-				//TORRENT_ASSERT(!m_abort);
-				m_listen_sockets.push_back(s);
-
-				m_ipv4_interface = m_listen_interface;
-			}
+			m_ipv4_interface = m_listen_interface;
 		}
 
-		m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.port()), ec);
+        // TODO: 注意转换为NS3的版本
+		//m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.port()), ec);
 		if (ec)
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
@@ -1682,12 +1614,14 @@ retry:
 		}
 		else
 		{
-			m_external_udp_port = m_udp_socket.local_port();
+        // TODO: 注意转换为NS3的版本
+			//m_external_udp_port = m_udp_socket.local_port();
 			maybe_update_udp_mapping(0, m_listen_interface.port(), m_listen_interface.port());
 			maybe_update_udp_mapping(1, m_listen_interface.port(), m_listen_interface.port());
 		}
 
-		m_udp_socket.set_option(type_of_service(m_settings.peer_tos), ec);
+        // TODO: 注意转换为NS3的版本
+		//m_udp_socket.set_option(type_of_service(m_settings.peer_tos), ec);
 #if defined TORRENT_VERBOSE_LOGGING
 		(*m_logger) << ">>> SET_TOS[ udp_socket tos: " << m_settings.peer_tos << " e: " << ec.message() << " ]\n";
 #endif
@@ -1700,11 +1634,12 @@ retry:
 
 		open_new_incoming_socks_connection();
 
-		if (!m_listen_sockets.empty())
-		{
-			ns3::InetSocketAddress local = m_listen_sockets.front().sock->local_endpoint(ec);
-			if (!ec) remap_tcp_ports(3, local.port(), ssl_listen_port());
-		}
+        // TODO: 不明代码
+//		if (!m_listen_sockets.empty())
+//		{
+//			ns3::InetSocketAddress local = m_listen_sockets.front().sock->local_endpoint(ec);
+//			if (!ec) remap_tcp_ports(3, local.port(), ssl_listen_port());
+//		}
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 		m_logger = create_log("main_session", listen_port(), false);
@@ -1790,8 +1725,9 @@ retry:
 			return;
 		}
 
-		if (m_utp_socket_manager.incoming_packet(buf, len, ep))
-			return;
+        // TODO: 注意转换为NS3的版本
+		//if (m_utp_socket_manager.incoming_packet(buf, len, ep))
+			//return;
 
 		// maybe it's a udp tracker response
 		if (m_tracker_manager.incoming_udp(e, ep, buf, len))
@@ -1808,166 +1744,49 @@ retry:
 		}
 	}
 
-	void session_impl::async_accept(boost::shared_ptr<socket_acceptor> const& listener, bool ssl)
+    void session_impl::async_accept(ns3::Ptr<ns3::Socket> const& listener)
 	{
-		//TORRENT_ASSERT(!m_abort);
-        // TODO: 暂时注释掉io_service的代码
-		/*shared_ptr<socket_type> c(new socket_type(m_io_service));
-		stream_socket* str = 0;
-
-		c->instantiate<stream_socket>(m_io_service);
-		str = c->get<stream_socket>();
-
-#if defined TORRENT_ASIO_DEBUGGING
-		add_outstanding_async("session_impl::on_accept_connection");
-#endif
-		listener->async_accept(*str
-			, boost::bind(&session_impl::on_accept_connection, this, c
-			, boost::weak_ptr<socket_acceptor>(listener), _1, ssl));*/
+		NS_LOG_INFO("session_impl::on_accept_connection");
+        listener->SetRecvCallback(MakeCallback (session_impl,boost::bind());
+		//listener->async_accept(*str
+		//	, boost::bind(&session_impl::on_accept_connection, this, c
+		//	, boost::weak_ptr<socket_acceptor>(listener), _1, ssl));
 	}
 
-	void session_impl::on_accept_connection(shared_ptr<socket_type> const& s
-		, weak_ptr<socket_acceptor> listen_socket, error_code const& e, bool ssl)
+	void session_impl::on_accept_connection(ns3::Ptr<ns3::Socket> listen_socket)
 	{
-#if defined TORRENT_ASIO_DEBUGGING
-		complete_async("session_impl::on_accept_connection");
-#endif
-#ifdef TORRENT_STATS
-		++m_num_messages[on_accept_counter];
-#endif
+		NS_LOG_INFO("session_impl::on_accept_connection");
 		TORRENT_ASSERT(is_network_thread());
-		boost::shared_ptr<socket_acceptor> listener = listen_socket.lock();
-		if (!listener) return;
-		
-		if (e == asio::error::operation_aborted) return;
 
-		//if (m_abort) return;
+		async_accept(listen_socket);
 
-		error_code ec;
-		if (e)
-		{
-			ns3::InetSocketAddress ep = listener->local_endpoint(ec);
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-			std::string msg = "error accepting connection on '"
-				+ print_endpoint(ep) + "' " + e.message();
-			(*m_logger) << msg << "\n";
-#endif
-#ifdef TORRENT_WINDOWS
-			// Windows sometimes generates this error. It seems to be
-			// non-fatal and we have to do another async_accept.
-			if (e.value() == ERROR_SEM_TIMEOUT)
-			{
-				async_accept(listener, ssl);
-				return;
-			}
-#endif
-#ifdef TORRENT_BSD
-			// Leopard sometimes generates an "invalid argument" error. It seems to be
-			// non-fatal and we have to do another async_accept.
-			if (e.value() == EINVAL)
-			{
-				async_accept(listener, ssl);
-				return;
-			}
-#endif
-			if (e == boost::system::errc::too_many_files_open)
-			{
-				// if we failed to accept an incoming connection
-				// because we have too many files open, try again
-				// and lower the number of file descriptors used
-				// elsewere.
-				if (m_settings.connections_limit > 10)
-				{
-					// now, disconnect a random peer
-					torrent_map::iterator i = std::max_element(m_torrents.begin()
-						, m_torrents.end(), boost::bind(&torrent::num_peers
-							, boost::bind(&torrent_map::value_type::second, _1)));
-
-					if (m_alerts.should_post<performance_alert>())
-						m_alerts.post_alert(performance_alert(
-							torrent_handle(), performance_alert::too_few_file_descriptors));
-
-					if (i != m_torrents.end())
-					{
-						i->second->disconnect_peers(1, e);
-					}
-
-					m_settings.connections_limit = m_connections.size();
-				}
-				// try again, but still alert the user of the problem
-				async_accept(listener, ssl);
-			}
-			if (m_alerts.should_post<listen_failed_alert>())
-				m_alerts.post_alert(listen_failed_alert(ep, e));
-			return;
-		}
-		async_accept(listener, ssl);
-
-		incoming_connection(s);
+		incoming_connection(listen_socket);
 	}
 
-	void session_impl::incoming_connection(boost::shared_ptr<socket_type> const& s)
+	void session_impl::incoming_connection(ns3::Ptr<ns3::Socket> const& s)
 	{
 		TORRENT_ASSERT(is_network_thread());
 
 		error_code ec;
 		// we got a connection request!
-		ns3::InetSocketAddress endp = s->remote_endpoint(ec);
-
-		if (ec)
-		{
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-			(*m_logger) << endp << " <== INCOMING CONNECTION FAILED, could "
-				"not retrieve remote endpoint " << ec.message() << "\n";
-#endif
-			return;
-		}
-
-		TORRENT_ASSERT(endp.address() != address_v4::any());
-
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-		(*m_logger) << time_now_string() << " <== INCOMING CONNECTION " << endp
-			<< " type: " << s->type_name() << "\n";
-#endif
-
-		if (m_alerts.should_post<incoming_connection_alert>())
-		{
-			m_alerts.post_alert(incoming_connection_alert(s->type(), endp));
-		}
-
-		if (!m_settings.enable_incoming_utp
-			&& s->get<utp_stream>())
-		{
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-			(*m_logger) << "    rejected uTP connection\n";
-#endif
-			if (m_alerts.should_post<peer_blocked_alert>())
-				m_alerts.post_alert(peer_blocked_alert(torrent_handle(), endp.address()));
-			return;
-		}
-
-		if (!m_settings.enable_incoming_tcp
-			&& s->get<stream_socket>())
-		{
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-			(*m_logger) << "    rejected TCP connection\n";
-#endif
-			if (m_alerts.should_post<peer_blocked_alert>())
-				m_alerts.post_alert(peer_blocked_alert(torrent_handle(), endp.address()));
-			return;
-		}
+		ns3::Ipv4EndPoint endp = s->GetIpv4EndPoint();
 
 		// local addresses do not count, since it's likely
 		// coming from our own client through local service discovery
 		// and it does not reflect whether or not a router is open
 		// for incoming connections or not.
-		if (!is_local(endp.address()))
-			m_incoming_connection = true;
+        bool localAddr = false;
+		m_incoming_connection = true;
+        // TODO： 暂时不检测本地IP地址
+        // localAddr = is_local(endp.address());
+//		if (localAddr)
+//		    m_incoming_connection = false;
 
 		// this filter is ignored if a single torrent
 		// is set to ignore the filter, since this peer might be
 		// for that torrent
-		if (m_non_filtered_torrents == 0
+        // TODO: 不进行IP过滤
+		/*if (m_non_filtered_torrents == 0
 			&& (m_ip_filter.access(endp.address()) & ip_filter::blocked))
 		{
 #if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
@@ -1976,11 +1795,11 @@ retry:
 			if (m_alerts.should_post<peer_blocked_alert>())
 				m_alerts.post_alert(peer_blocked_alert(torrent_handle(), endp.address()));
 			return;
-		}
+		}*/
 
 		// don't allow more connections than the max setting
 		bool reject = false;
-		if (m_settings.ignore_limits_on_local_network && is_local(endp.address()))
+		if (m_settings.ignore_limits_on_local_network && localAddr)
 			reject = m_settings.connections_limit < INT_MAX / 12
 				&& num_connections() >= m_settings.connections_limit * 12 / 10;
 		else
@@ -1988,17 +1807,7 @@ retry:
 
 		if (reject)
 		{
-			if (m_alerts.should_post<peer_disconnected_alert>())
-			{
-				m_alerts.post_alert(
-					peer_disconnected_alert(torrent_handle(), endp, peer_id()
-						, error_code(errors::too_many_connections, get_libtorrent_category())));
-			}
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-			(*m_logger) << "number of connections limit exceeded (conns: "
-				<< num_connections() << ", limit: " << m_settings.connections_limit
-				<< "), connection rejected\n";
-#endif
+            NS_LOG_INFO("too many connections!");
 			return;
 		}
 
@@ -2006,42 +1815,14 @@ retry:
 		// if we don't reject the connection
 		if (m_torrents.empty())
 		{
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-			(*m_logger) << " There are no torrents, disconnect\n";
-#endif
+			NS_LOG_INFO(" There are no torrents, disconnect");
 		  	return;
-		}
-
-		// if we don't have any active torrents, there's no
-		// point in accepting this connection. If, however,
-		// the setting to start up queued torrents when they
-		// get an incoming connection is enabled, we cannot
-		// perform this check.
-		if (!m_settings.incoming_starts_queued_torrents)
-		{
-			bool has_active_torrent = false;
-			for (torrent_map::iterator i = m_torrents.begin()
-				, end(m_torrents.end()); i != end; ++i)
-			{
-				if (i->second->allows_peers())
-				{
-					has_active_torrent = true;
-					break;
-				}
-			}
-			if (!has_active_torrent)
-			{
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-				(*m_logger) << " There are no _active_ torrents, disconnect\n";
-#endif
-			  	return;
-			}
 		}
 
 		setup_socket_buffers(*s);
 
 		boost::intrusive_ptr<peer_connection> c(
-			new bt_peer_connection(*this, s, endp, 0));
+			new bt_peer_connection(*this, s, endp.getPeerAddress(), 0));
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 		c->m_in_constructor = false;
 #endif
@@ -2256,15 +2037,18 @@ retry:
 		add_outstanding_async("session_impl::on_tick");
 #endif
 		error_code ec;
-		m_timer.expires_at(now + milliseconds(m_settings.tick_interval), ec);
-		m_timer.async_wait(bind(&session_impl::on_tick, this, _1));
+		//m_timer.expires_at(now + milliseconds(m_settings.tick_interval), ec);
+		//m_timer.async_wait(bind(&session_impl::on_tick, this, _1));
+        ns3::Time time = boostTimeConvert(now + milliseconds(m_settings.tick_interval));
+        timerId = Simulator::Schedule(time, &session_impl::on_tick, this, ec);
 
 		m_download_rate.update_quotas(now - m_last_tick);
 		m_upload_rate.update_quotas(now - m_last_tick);
 
 		m_last_tick = now;
 
-		m_utp_socket_manager.tick(now);
+        // TODO: 注意转换为NS3的版本
+		//m_utp_socket_manager.tick(now);
 
 		// only tick the following once per second
 		if (now - m_last_second_tick < seconds(1)) return;
@@ -3000,13 +2784,13 @@ retry:
 
 		if (m_stats_logger)
 		{
-			cache_status cs = m_disk_thread.status();
+			//cache_status cs = m_disk_thread.status();
 			session_status sst = status();
 
-			m_read_ops.add_sample((cs.reads - m_last_cache_status.reads) * 1000.0 / float(tick_interval_ms));
+			/*m_read_ops.add_sample((cs.reads - m_last_cache_status.reads) * 1000.0 / float(tick_interval_ms));
 			m_write_ops.add_sample((cs.writes - m_last_cache_status.writes) * 1000.0 / float(tick_interval_ms));
 
-			int total_job_time = cs.cumulative_job_time == 0 ? 1 : cs.cumulative_job_time;
+			int total_job_time = cs.cumulative_job_time == 0 ? 1 : cs.cumulative_job_time;*/
 
 #define STAT_LOG(type, val) fprintf(m_stats_logger, "%" #type "\t", val)
 
@@ -3019,7 +2803,7 @@ retry:
 			STAT_LOG(d, seeding_torrents);
 			STAT_LOG(d, num_complete_connections);
 			STAT_LOG(d, num_half_open);
-			STAT_LOG(d, m_disk_thread.disk_allocations());
+			//STAT_LOG(d, m_disk_thread.disk_allocations());
 			STAT_LOG(d, num_peers);
 			STAT_LOG(d, logging_allocator::allocations);
 			STAT_LOG(d, logging_allocator::allocated_bytes);
@@ -3034,7 +2818,7 @@ retry:
 			STAT_LOG(d, m_disk_queues[peer_connection::download_channel]);
 			STAT_LOG(d, m_stat.upload_rate());
 			STAT_LOG(d, m_stat.download_rate());
-			STAT_LOG(d, int(m_disk_thread.queue_buffer_size()));
+			//STAT_LOG(d, int(m_disk_thread.queue_buffer_size()));
 			STAT_LOG(d, peer_dl_rate_buckets[0]);
 			STAT_LOG(d, peer_dl_rate_buckets[1]);
 			STAT_LOG(d, peer_dl_rate_buckets[2]);
@@ -3077,23 +2861,23 @@ retry:
 			STAT_LOG(f, (float(m_total_failed_bytes) * 100.f / (m_stat.total_payload_download() == 0 ? 1 : m_stat.total_payload_download())));
 			STAT_LOG(f, (float(m_total_redundant_bytes) * 100.f / (m_stat.total_payload_download() == 0 ? 1 : m_stat.total_payload_download())));
 			STAT_LOG(f, (float(m_stat.total_protocol_download()) * 100.f / (m_stat.total_download() == 0 ? 1 : m_stat.total_download())));
-			STAT_LOG(f, float(cs.average_read_time) / 1000000.f);
-			STAT_LOG(f, float(cs.average_write_time) / 1000000.f);
-			STAT_LOG(f, float(cs.average_queue_time) / 1000000.f);
-			STAT_LOG(d, int(cs.job_queue_length));
-			STAT_LOG(d, int(cs.queued_bytes));
-			STAT_LOG(d, int(cs.blocks_read_hit - m_last_cache_status.blocks_read_hit));
-			STAT_LOG(d, int(cs.blocks_read - m_last_cache_status.blocks_read));
-			STAT_LOG(d, int(cs.blocks_written - m_last_cache_status.blocks_written));
+			//STAT_LOG(f, float(cs.average_read_time) / 1000000.f);
+			//STAT_LOG(f, float(cs.average_write_time) / 1000000.f);
+			//STAT_LOG(f, float(cs.average_queue_time) / 1000000.f);
+			//STAT_LOG(d, int(cs.job_queue_length));
+			//STAT_LOG(d, int(cs.queued_bytes));
+			//STAT_LOG(d, int(cs.blocks_read_hit - m_last_cache_status.blocks_read_hit));
+			//STAT_LOG(d, int(cs.blocks_read - m_last_cache_status.blocks_read));
+			//STAT_LOG(d, int(cs.blocks_written - m_last_cache_status.blocks_written));
 			STAT_LOG(d, int(m_total_failed_bytes - m_last_failed));
 			STAT_LOG(d, int(m_total_redundant_bytes - m_last_redundant));
 			STAT_LOG(d, error_torrents);
-			STAT_LOG(d, cs.read_cache_size);
-			STAT_LOG(d, cs.cache_size);
-			STAT_LOG(d, cs.total_used_buffers);
-			STAT_LOG(f, float(cs.average_hash_time) / 1000000.f);
-			STAT_LOG(f, float(cs.average_job_time) / 1000000.f);
-			STAT_LOG(f, float(cs.average_sort_time) / 1000000.f);
+			//STAT_LOG(d, cs.read_cache_size);
+			//STAT_LOG(d, cs.cache_size);
+			//STAT_LOG(d, cs.total_used_buffers);
+			//STAT_LOG(f, float(cs.average_hash_time) / 1000000.f);
+			//STAT_LOG(f, float(cs.average_job_time) / 1000000.f);
+			//STAT_LOG(f, float(cs.average_sort_time) / 1000000.f);
 			STAT_LOG(d, m_connection_attempts);
 			STAT_LOG(d, m_num_banned_peers);
 			STAT_LOG(d, m_banned_for_hash_failure);
@@ -3102,13 +2886,13 @@ retry:
 			STAT_LOG(d, connect_candidates);
 			STAT_LOG(d, int(m_settings.max_queued_disk_bytes));
 			STAT_LOG(d, low_watermark);
-			STAT_LOG(f, float(cs.cumulative_read_time * 100.f / total_job_time));
-			STAT_LOG(f, float(cs.cumulative_write_time * 100.f / total_job_time));
-			STAT_LOG(f, float(cs.cumulative_hash_time * 100.f / total_job_time));
-			STAT_LOG(f, float(cs.cumulative_sort_time * 100.f / total_job_time));
-			STAT_LOG(d, int(cs.total_read_back - m_last_cache_status.total_read_back));
-			STAT_LOG(f, float(cs.total_read_back * 100.f / (cs.blocks_written == 0 ? 1: cs.blocks_written)));
-			STAT_LOG(d, cs.read_queue_size);
+			//STAT_LOG(f, float(cs.cumulative_read_time * 100.f / total_job_time));
+			//STAT_LOG(f, float(cs.cumulative_write_time * 100.f / total_job_time));
+			//STAT_LOG(f, float(cs.cumulative_hash_time * 100.f / total_job_time));
+			//STAT_LOG(f, float(cs.cumulative_sort_time * 100.f / total_job_time));
+			//STAT_LOG(d, int(cs.total_read_back - m_last_cache_status.total_read_back));
+			////STAT_LOG(f, float(cs.total_read_back * 100.f / (cs.blocks_written == 0 ? 1: cs.blocks_written)));
+			//STAT_LOG(d, cs.read_queue_size);
 			STAT_LOG(f, float(tick_interval_ms) / 1000.f);
 			STAT_LOG(f, float(m_tick_residual) / 1000.f);
 			STAT_LOG(d, m_allowed_upload_slots);
@@ -3126,8 +2910,8 @@ retry:
 			STAT_LOG(f, float(utp_num_delay_sockets ? float(utp_send_delay_sum) / float(utp_num_delay_sockets) : 0) / 1000000.f);
 			STAT_LOG(f, float(utp_peak_recv_delay) / 1000000.f);
 			STAT_LOG(f, float(utp_num_recv_delay_sockets ? float(utp_recv_delay_sum) / float(utp_num_recv_delay_sockets) : 0) / 1000000.f);
-			STAT_LOG(f, float(cs.reads - m_last_cache_status.reads) * 1000.0 / float(tick_interval_ms));
-			STAT_LOG(f, float(cs.writes - m_last_cache_status.writes) * 1000.0 / float(tick_interval_ms));
+			//STAT_LOG(f, float(cs.reads - m_last_cache_status.reads) * 1000.0 / float(tick_interval_ms));
+			//STAT_LOG(f, float(cs.writes - m_last_cache_status.writes) * 1000.0 / float(tick_interval_ms));
 
 			STAT_LOG(d, int(vm_stat.active_count));
 			STAT_LOG(d, int(vm_stat.inactive_count));
@@ -3213,7 +2997,7 @@ retry:
 
 #undef STAT_LOG
 
-			m_last_cache_status = cs;
+			//m_last_cache_status = cs;
 			m_last_vm_stat = vm_stat;
 			m_network_thread_cpu_usage = cur_cpu_usage;
 			m_last_failed = m_total_failed_bytes;
@@ -3225,28 +3009,6 @@ retry:
 		reset_stat_counters();
 	}
 #endif // TORRENT_STATS
-
-	void session_impl::on_lsd_announce(error_code const& e)
-	{
-#if defined TORRENT_ASIO_DEBUGGING
-		complete_async("session_impl::on_lsd_announce");
-#endif
-#ifdef TORRENT_STATS
-		++m_num_messages[on_lsd_counter];
-#endif
-		TORRENT_ASSERT(is_network_thread());
-		if (e) return;
-
-		//if (m_abort) return;
-
-#if defined TORRENT_ASIO_DEBUGGING
-		add_outstanding_async("session_impl::on_lsd_announce");
-#endif
-		// announce on local network every 5 minutes
-		error_code ec;
-
-		if (m_torrents.empty()) return;
-	}
 
 	namespace
 	{
@@ -3267,7 +3029,7 @@ retry:
 	}
 	
 	void session_impl::auto_manage_torrents(std::vector<torrent*>& list
-		, int& dht_limit, int& tracker_limit, int& lsd_limit
+		, int& dht_limit, int& tracker_limit
 		, int& hard_limit, int type_limit)
 	{
 		for (std::vector<torrent*>::iterator i = list.begin()
@@ -3280,11 +3042,9 @@ retry:
 				continue;
 
 			--dht_limit;
-			--lsd_limit;
 			--tracker_limit;
 			t->set_announce_to_dht(dht_limit >= 0);
 			t->set_announce_to_trackers(tracker_limit >= 0);
-			t->set_announce_to_lsd(lsd_limit >= 0);
 
 			if (!t->is_paused() && !is_active(t, settings())
 				&& hard_limit > 0)
@@ -3327,7 +3087,6 @@ retry:
 		int num_seeds = settings().active_seeds;
 		int dht_limit = settings().active_dht_limit;
 		int tracker_limit = settings().active_tracker_limit;
-		int lsd_limit = settings().active_lsd_limit;
 		int hard_limit = settings().active_limit;
 
 		if (num_downloaders == -1)
@@ -3338,8 +3097,6 @@ retry:
 			hard_limit = (std::numeric_limits<int>::max)();
 		if (dht_limit == -1)
 			dht_limit = (std::numeric_limits<int>::max)();
-		if (lsd_limit == -1)
-			lsd_limit = (std::numeric_limits<int>::max)();
 		if (tracker_limit == -1)
 			tracker_limit = (std::numeric_limits<int>::max)();
             
@@ -3397,16 +3154,16 @@ retry:
 
 		if (settings().auto_manage_prefer_seeds)
 		{
-			auto_manage_torrents(seeds, dht_limit, tracker_limit, lsd_limit
+			auto_manage_torrents(seeds, dht_limit, tracker_limit
 				, hard_limit, num_seeds);
-			auto_manage_torrents(downloaders, dht_limit, tracker_limit, lsd_limit
+			auto_manage_torrents(downloaders, dht_limit, tracker_limit
 				, hard_limit, num_downloaders);
 		}
 		else
 		{
-			auto_manage_torrents(downloaders, dht_limit, tracker_limit, lsd_limit
+			auto_manage_torrents(downloaders, dht_limit, tracker_limit
 				, hard_limit, num_downloaders);
-			auto_manage_torrents(seeds, dht_limit, tracker_limit, lsd_limit
+			auto_manage_torrents(seeds, dht_limit, tracker_limit
 				, hard_limit, num_seeds);
 		}
             
@@ -4322,7 +4079,8 @@ retry:
 		s.total_tracker_upload = 0;
 #endif
 
-		m_utp_socket_manager.get_status(s.utp_stats);
+        // TODO: 注意转换为NS3的版本
+		//m_utp_socket_manager.get_status(s.utp_stats);
 
 		int peerlist_size = 0;
 		for (torrent_map::const_iterator i = m_torrents.begin()
@@ -4388,7 +4146,7 @@ retry:
 		// to disk_io_pool inside the disk_io_thread. Once
 		// the main thread has handled all the outstanding requests
 		// we know it's safe to destruct the disk thread.
-		m_disk_thread.join();
+		//m_disk_thread.join();
 
 #if defined TORRENT_ASIO_DEBUGGING
 		int counter = 0;
@@ -4574,7 +4332,8 @@ retry:
 		{
 			remap_tcp_ports(1, m_listen_interface.port(), ssl_listen_port());
 		}
-		if (m_udp_socket.is_open())
+        // TODO: 注意转换为NS3的版本
+		//if (m_udp_socket.is_open())
 		{
 			m_udp_mapping[0] = m_natpmp->add_mapping(natpmp::udp
 				, m_listen_interface.port(), m_listen_interface.port());
@@ -4608,7 +4367,8 @@ retry:
 		{
 			remap_tcp_ports(2, m_listen_interface.port(), ssl_listen_port());
 		}
-		if (m_udp_socket.is_open())
+        // TODO: 注意转换为NS3的版本
+		//if (m_udp_socket.is_open())
 		{
 			m_udp_mapping[1] = m_upnp->add_mapping(upnp::udp
 				, m_listen_interface.port(), m_listen_interface.port());
@@ -4728,13 +4488,13 @@ retry:
 
 	void session_impl::free_disk_buffer(char* buf)
 	{
-		m_disk_thread.free_buffer(buf);
+		//m_disk_thread.free_buffer(buf);
 	}
 
-	char* session_impl::allocate_disk_buffer(char const* category)
-	{
-		return m_disk_thread.allocate_buffer(category);
-	}
+//	char* session_impl::allocate_disk_buffer(char const* category)
+//	{
+//		//return m_disk_thread.allocate_buffer(category);
+//	}
 	
 	char* session_impl::allocate_buffer()
 	{

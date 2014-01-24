@@ -167,8 +167,8 @@ namespace libtorrent
 		int seed_rank(session_settings const& s) const;
 
 		enum flags_t { overwrite_existing = 1 };
-		void add_piece(int piece, char const* data, int flags = 0);
         // TODO: 禁用磁盘读写
+		//void add_piece(int piece, char const* data, int flags = 0);
 		//void on_disk_write_complete(int ret, disk_io_job const& j
 		//	, peer_request p);
 		//void on_disk_cache_complete(int ret, disk_io_job const& j);
@@ -240,7 +240,7 @@ namespace libtorrent
 
 		ptime started() const { return m_started; }
 
-		bool is_paused() const;
+		//bool is_paused() const;
 		bool allows_peers() const { return m_allow_peers; }
 		bool is_torrent_paused() const { return !m_allow_peers || m_graceful_pause_mode; }
         // TODO: 禁用完整性检测
@@ -742,8 +742,8 @@ namespace libtorrent
 		void set_apply_ip_filter(bool b);
 		bool apply_ip_filter() const { return m_apply_ip_filter; }
 
-		void queue_torrent_check();
-		void dequeue_torrent_check();
+		//void queue_torrent_check();
+		//void dequeue_torrent_check();
 
 		void clear_in_state_update()
 		{ m_in_state_updates = false; }

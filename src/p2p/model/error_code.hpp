@@ -311,26 +311,6 @@ namespace boost { namespace system {
 
 namespace libtorrent
 {
-
-#if BOOST_VERSION < 103500
-	typedef asio::error_code error_code;
-	inline asio::error::error_category get_posix_category() { return asio::error::system_category; }
-	inline asio::error::error_category get_system_category() { return asio::error::system_category; }
-
-	boost::system::error_category const& get_libtorrent_category()
-	{
-		static ::asio::error::error_category libtorrent_category(20);
-		return libtorrent_category;
-	}
-
-	boost::system::error_category const& get_http_category()
-	{
-		static ::asio::error::error_category http_category(21);
-		return http_category;
-	}
-
-#else
-
 	struct TORRENT_EXPORT libtorrent_error_category : boost::system::error_category
 	{
 		virtual const char* name() const BOOST_SYSTEM_NOEXCEPT;
@@ -385,7 +365,6 @@ namespace libtorrent
 #else
 	{ return boost::system::generic_category(); }
 #endif // BOOST_VERSION < 103600
-#endif // BOOST_VERSION < 103500
 
 #ifndef BOOST_NO_EXCEPTIONS
 	struct TORRENT_EXPORT libtorrent_exception: std::exception

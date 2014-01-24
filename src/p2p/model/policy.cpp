@@ -480,9 +480,9 @@ namespace libtorrent
 	{
 		INVARIANT_CHECK;
 
-		int max_peerlist_size = m_torrent->is_paused()
+		int max_peerlist_size = /*m_torrent->is_paused()
 			? m_torrent->settings().max_paused_peerlist_size
-			: m_torrent->settings().max_peerlist_size;
+			:*/ m_torrent->settings().max_peerlist_size;
 
 		if (max_peerlist_size == 0 || m_peers.empty()) return;
 
@@ -647,9 +647,9 @@ namespace libtorrent
 		if (m_round_robin >= int(m_peers.size())) m_round_robin = 0;
 
 
-		int max_peerlist_size = m_torrent->is_paused()
+		int max_peerlist_size = /*m_torrent->is_paused()
 			?m_torrent->settings().max_paused_peerlist_size
-			:m_torrent->settings().max_peerlist_size;
+			:*/m_torrent->settings().max_peerlist_size;
 
 		for (int iterations = (std::min)(int(m_peers.size()), 300);
 			iterations > 0; --iterations)
@@ -740,7 +740,7 @@ namespace libtorrent
 		// override at a time
 		error_code ec;
 		TORRENT_ASSERT(c.remote() == c.get_socket()->remote_endpoint(ec) || ec);
-		TORRENT_ASSERT(!m_torrent->is_paused());
+		//TORRENT_ASSERT(!m_torrent->is_paused());
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		if (c.remote().address() == m_torrent->current_tracker().address())
@@ -1113,9 +1113,9 @@ namespace libtorrent
 		TORRENT_ASSERT(p);
 		TORRENT_ASSERT(p->in_use);
 
-		int max_peerlist_size = m_torrent->is_paused()
+		int max_peerlist_size = /*m_torrent->is_paused()
 			?m_torrent->settings().max_paused_peerlist_size
-			:m_torrent->settings().max_peerlist_size;
+			:*/m_torrent->settings().max_peerlist_size;
 
 		if (max_peerlist_size
 			&& int(m_peers.size()) >= max_peerlist_size)

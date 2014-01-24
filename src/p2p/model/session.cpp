@@ -319,6 +319,7 @@ namespace libtorrent
 		e->signal_all(l);
 	}
 
+#if 0
 #define TORRENT_ASYNC_CALL(x) \
 	m_impl->m_io_service.dispatch(boost::bind(&session_impl:: x, m_impl.get()))
 
@@ -380,6 +381,7 @@ namespace libtorrent
 	type r; \
 	m_impl->m_io_service.dispatch(boost::bind(&fun_ret<type>, &r, &done, &m_impl->cond, &m_impl->mut, boost::function<type(void)>(boost::bind(&session_impl:: x, m_impl.get(), a1, a2, a3)))); \
 	TORRENT_WAIT
+#endif
 
 #ifndef TORRENT_CFG
 #error TORRENT_CFG is not defined!
@@ -406,7 +408,6 @@ namespace libtorrent
 		{
 			start_upnp();
 			start_natpmp();
-			start_lsd();
 		}
 	}
 
@@ -421,65 +422,70 @@ namespace libtorrent
 		// of the proxy to syncronize
 		if (!m_impl.unique())
 		{
-			TORRENT_ASYNC_CALL(abort);
+            //m_impl->abort();
+			//TORRENT_ASYNC_CALL(abort);
 		}
 	}
 
 	void session::save_state(entry& e, boost::uint32_t flags) const
 	{
-		TORRENT_SYNC_CALL2(save_state, &e, flags);
+        m_impl->save_state(&e, flags);
+		//TORRENT_SYNC_CALL2(save_state, &e, flags);
 	}
 
 	void session::load_state(lazy_entry const& e)
 	{
 		// this needs to be synchronized since the lifespan
 		// of e is tied to the caller
-		TORRENT_SYNC_CALL1(load_state, &e);
+		m_impl->load_state(&e);
+	//	TORRENT_SYNC_CALL1(load_state, &e);
 	}
 
 	peer_id session::id() const
 	{
-		TORRENT_SYNC_CALL_RET(peer_id, get_peer_id);
+		peer_id r = m_impl->get_peer_id();
+		//TORRENT_SYNC_CALL_RET(peer_id, get_peer_id);
 		return r;
-	}
-
-	io_service& session::get_io_service()
-	{
-		return m_impl->m_io_service;
 	}
 
 	void session::set_key(int key)
 	{
-		TORRENT_ASYNC_CALL1(set_key, key);
+        m_impl->set_key(key);
+		//TORRENT_ASYNC_CALL1(set_key, key);
 	}
 
 	void session::get_torrent_status(std::vector<torrent_status>* ret
 		, boost::function<bool(torrent_status const&)> const& pred
 		, boost::uint32_t flags) const
 	{
-		TORRENT_SYNC_CALL3(get_torrent_status, ret, boost::ref(pred), flags);
+        m_impl->get_torrent_status(ret, boost::ref(pred), flags);
+		//TORRENT_SYNC_CALL3(get_torrent_status, ret, boost::ref(pred), flags);
 	}
 
 	void session::refresh_torrent_status(std::vector<torrent_status>* ret
 		, boost::uint32_t flags) const
 	{
-		TORRENT_SYNC_CALL2(refresh_torrent_status, ret, flags);
+        m_impl->refresh_torrent_status(ret, flags);
+		//TORRENT_SYNC_CALL2(refresh_torrent_status, ret, flags);
 	}
 
 	void session::post_torrent_updates()
 	{
-		TORRENT_ASYNC_CALL(post_torrent_updates);
+        m_impl->post_torrent_updates();
+		//TORRENT_ASYNC_CALL(post_torrent_updates);
 	}
 
 	std::vector<torrent_handle> session::get_torrents() const
 	{
-		TORRENT_SYNC_CALL_RET(std::vector<torrent_handle>, get_torrents);
+        std::vector<torrent_handle> r = m_impl->get_torrents();
+		//TORRENT_SYNC_CALL_RET(std::vector<torrent_handle>, get_torrents);
 		return r;
 	}
 	
 	torrent_handle session::find_torrent(sha1_hash const& info_hash) const
 	{
-		TORRENT_SYNC_CALL_RET1(torrent_handle, find_torrent_handle, info_hash);
+        torrent_handle r = m_impl->find_torrent_handle(info_hash);
+		//TORRENT_SYNC_CALL_RET1(torrent_handle, find_torrent_handle, info_hash);
 		return r;
 	}
 
@@ -527,24 +533,27 @@ namespace libtorrent
 		, error_code& ec
 		, const char* net_interface, int flags)
 	{
-		TORRENT_SYNC_CALL4(listen_on, port_range, boost::ref(ec), net_interface, flags);
+		m_impl->listen_on(port_range, boost::ref(ec), net_interface, flags);
 	}
 
 	unsigned short session::listen_port() const
 	{
-		TORRENT_SYNC_CALL_RET(unsigned short, listen_port);
+        unsigned short r = m_impl->listen_port();
+		//TORRENT_SYNC_CALL_RET(unsigned short, listen_port);
 		return r;
 	}
 
 	unsigned short session::ssl_listen_port() const
 	{
-		TORRENT_SYNC_CALL_RET(unsigned short, ssl_listen_port);
+        unsigned short r = m_impl->ssl_listen_port();
+		//TORRENT_SYNC_CALL_RET(unsigned short, ssl_listen_port);
 		return r;
 	}
 
 	session_status session::status() const
 	{
-		TORRENT_SYNC_CALL_RET(session_status, status);
+        session_status r = m_impl->status();
+		//TORRENT_SYNC_CALL_RET(session_status, status);
 		return r;
 	}
 
@@ -565,50 +574,41 @@ namespace libtorrent
 		return r;
 	}*/
 
-	void session::get_cache_info(sha1_hash const& ih
-		, std::vector<cached_piece_info>& ret) const
-	{
-		m_impl->m_disk_thread.get_cache_info(ih, ret);
-	}
-
-	cache_status session::get_cache_status() const
-	{
-		return m_impl->m_disk_thread.status();
-	}
-
 	bool session::is_listening() const
 	{
-		TORRENT_SYNC_CALL_RET(bool, is_listening);
+        bool r = m_impl->is_listening();
+		//TORRENT_SYNC_CALL_RET(bool, is_listening);
 		return r;
 	}
 
 	session_settings session::settings() const
 	{
-		TORRENT_SYNC_CALL_RET(session_settings, settings);
+        session_settings r = m_impl->settings();
+		//TORRENT_SYNC_CALL_RET(session_settings, settings);
 		return r;
 	}
 
 	void session::set_proxy(proxy_settings const& s)
 	{
-		TORRENT_ASYNC_CALL1(set_proxy, s);
+		m_impl->set_proxy(s);
 	}
 
 	proxy_settings session::proxy() const
 	{
-		TORRENT_SYNC_CALL_RET(proxy_settings, proxy);
+		proxy_settings r = m_impl->proxy();
 		return r;
 	}
 
 #ifdef TORRENT_STATS
 	void session::enable_stats_logging(bool s)
 	{
-		TORRENT_ASYNC_CALL1(enable_stats_logging, s);
+		m_impl->enable_stats_logging(s);
 	}
 #endif
 
 	void session::set_alert_dispatch(boost::function<void(std::auto_ptr<alert>)> const& fun)
 	{
-		TORRENT_ASYNC_CALL1(set_alert_dispatch, fun);
+		m_impl->set_alert_dispatch(fun);
 	}
 
 	std::auto_ptr<alert> session::pop_alert()
@@ -632,29 +632,33 @@ namespace libtorrent
 
 	void session::set_alert_mask(boost::uint32_t m)
 	{
-		TORRENT_ASYNC_CALL1(set_alert_mask, m);
+		m_impl->set_alert_mask(m);
 	}
 
 	natpmp* session::start_natpmp()
 	{
-		TORRENT_SYNC_CALL_RET(natpmp*, start_natpmp);
+        natpmp* r = m_impl->start_natpmp();
+		//TORRENT_SYNC_CALL_RET(natpmp*, start_natpmp);
 		return r;
 	}
 	
 	upnp* session::start_upnp()
 	{
-		TORRENT_SYNC_CALL_RET(upnp*, start_upnp);
+        upnp* r = m_impl->start_upnp();
+		//TORRENT_SYNC_CALL_RET(upnp*, start_upnp);
 		return r;
 	}
 	
 	void session::stop_natpmp()
 	{
-		TORRENT_ASYNC_CALL(stop_natpmp);
+        m_impl->stop_natpmp();
+		//TORRENT_ASYNC_CALL(stop_natpmp);
 	}
 	
 	void session::stop_upnp()
 	{
-		TORRENT_ASYNC_CALL(stop_upnp);
+        m_impl->stop_upnp();
+		//TORRENT_ASYNC_CALL(stop_upnp);
 	}
 	
 	connection_queue& session::get_connection_queue()
@@ -722,7 +726,6 @@ namespace libtorrent
 		, active_seeds(5)
 		, active_dht_limit(88) // don't announce more than once every 40 seconds
 		, active_tracker_limit(1600) // don't announce to trackers more than once every 1.125 seconds
-		, active_lsd_limit(60) // don't announce to local network more than once every 5 seconds
 		, active_limit(15)
 		, auto_manage_prefer_seeds(false)
 		, dont_count_slow_torrents(true)
@@ -770,7 +773,6 @@ namespace libtorrent
 		, max_suggest_pieces(10)
 		, drop_skipped_requests(false)
 		, low_prio_disk(true)
-		, local_service_announce_interval(5 * 60)
 		, dht_announce_interval(15 * 60)
 		, udp_tracker_token_expiry(60)
 		, volatile_read_cache(false)
@@ -784,7 +786,6 @@ namespace libtorrent
 		, incoming_starts_queued_torrents(false)
 		, report_true_downloaded(false)
 		, strict_end_game_mode(true)
-		, broadcast_lsd(true)
 		, enable_outgoing_utp(true)
 		, enable_incoming_utp(true)
 		, enable_outgoing_tcp(true)

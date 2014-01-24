@@ -130,7 +130,7 @@ namespace libtorrent
 		int num_want;
 		std::string ipv6;
 		std::string ipv4;
-		address bind_ip;
+		ns3::InetSocketAddress bind_ip;
 		bool send_stats;
 		bool apply_ip_filter;
 #ifdef TORRENT_USE_OPENSSL
@@ -150,14 +150,14 @@ namespace libtorrent
 			, int /*downloaders*/) {}
 		virtual void tracker_response(
 			tracker_request const& req
-			, address const& tracker_ip
-			, std::list<address> const& ip_list
+			, ns3::InetSocketAddress const& tracker_ip
+			, std::list<ns3::InetSocketAddress> const& ip_list
 			, std::vector<peer_entry>& peers
 			, int interval
 			, int min_interval
 			, int complete
 			, int incomplete
-			, address const& external_ip
+			, ns3::InetSocketAddress const& external_ip
 			, std::string const& trackerid) = 0;
 		virtual void tracker_request_error(
 			tracker_request const& req
@@ -236,7 +236,7 @@ namespace libtorrent
 			, int interval = 0, int min_interval = 0);
 		virtual void start() = 0;
 		virtual void close();
-		address const& bind_interface() const { return m_req.bind_ip; }
+		ns3::InetSocketAddress const& bind_interface() const { return m_req.bind_ip; }
 		void sent_bytes(int bytes);
 		void received_bytes(int bytes);
 		virtual bool on_receive(error_code const& ec, udp::endpoint const& ep

@@ -35,7 +35,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/config.hpp"
 #include <string>
-
 #if defined TORRENT_USE_BOOST_DATE_TIME
 
 #include <boost/assert.hpp>

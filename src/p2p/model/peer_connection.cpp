@@ -1129,7 +1129,7 @@ namespace libtorrent
 			return;
 		}
 
-		if (t->is_paused() && (!t->is_auto_managed()
+		if (/*t->is_paused() &&*/ (!t->is_auto_managed()
 			|| !m_ses.m_settings.incoming_starts_queued_torrents))
 		{
 			// paused torrents will not accept
@@ -2193,19 +2193,15 @@ namespace libtorrent
 
 	void peer_connection::incoming_piece(peer_request const& p, char const* data)
 	{
-		char* buffer = m_ses.allocate_disk_buffer("receive buffer");
+		/*char* buffer = m_ses.allocate_disk_buffer("receive buffer");
 		if (buffer == 0)
 		{
 			disconnect(errors::no_memory);
 			return;
 		}
 		disk_buffer_holder holder(m_ses, buffer);
-		std::memcpy(buffer, data, p.length);
-		incoming_piece(p, holder);
-	}
+		std::memcpy(buffer, data, p.length);*/
 
-	void peer_connection::incoming_piece(peer_request const& p, disk_buffer_holder& data)
-	{
 		INVARIANT_CHECK;
 
 		boost::shared_ptr<torrent> t = m_torrent.lock();
@@ -2221,7 +2217,7 @@ namespace libtorrent
 		// corrupt all pieces from certain peers
 		if ((m_remote.GetIpv4().to_ulong() & 0xf) == 0)
 		{
-			data.get()[0] = ~data.get()[0];
+			data[0] = ~data[0];
 		}
 #endif
 
@@ -2243,7 +2239,7 @@ namespace libtorrent
 
 #ifdef TORRENT_VERBOSE_LOGGING
 		hasher h;
-		h.update(data.get(), p.length);
+		h.update(data, p.length);
 		peer_log("<== PIECE        [ piece: %d | s: %d | l: %d | ds: %d | qs: %d | q: %d | hash: %s ]"
 			, p.piece, p.start, p.length, statistics().download_rate()
 			, int(m_desired_queue_size), int(m_download_queue.size())
@@ -2491,66 +2487,66 @@ namespace libtorrent
 		send_block_requests();
 	}
 
-	void peer_connection::on_disk_write_complete(int ret, disk_io_job const& j
-		, peer_request p, boost::shared_ptr<torrent> t)
-	{
-#ifdef TORRENT_STATS
-		++m_ses.m_num_messages[aux::session_impl::on_disk_write_counter];
-#endif
-		TORRENT_ASSERT(m_ses.is_network_thread());
-
-		// flush send buffer at the end of this scope
-		// TODO: peers should really be corked/uncorked outside of
-		// all completed disk operations
-		cork _c(*this);
-
-		INVARIANT_CHECK;
-
-		m_outstanding_writing_bytes -= p.length;
-		TORRENT_ASSERT(m_outstanding_writing_bytes >= 0);
-
-#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
-//		(*m_ses.m_logger) << time_now_string() << " *** DISK_WRITE_COMPLETE [ p: "
-//			<< p.piece << " o: " << p.start << " ]\n";
-#endif
-
-		if (!t)
-		{
-			disconnect(j.error);
-			return;
-		}
-
-		// in case the outstanding bytes just dropped down
-		// to allow to receive more data
-		setup_receive(read_async);
-
-		piece_block block_finished(p.piece, p.start / t->block_size());
-
-		if (ret == -1)
-		{
-			// handle_disk_error may disconnect us
-			t->handle_disk_error(j, this);
-			return;
-		}
-
-		if (t->is_seed()) return;
-
-		piece_picker& picker = t->picker();
-
-		TORRENT_ASSERT(p.piece == j.piece);
-		TORRENT_ASSERT(p.start == j.offset);
-		TORRENT_ASSERT(picker.num_peers(block_finished) == 0);
-		picker.mark_as_finished(block_finished, peer_info_struct());
-
-        // TODO: 禁用alert
-		/*if (t->alerts().should_post<block_finished_alert>())
-		{
-			t->alerts().post_alert(block_finished_alert(t->get_handle(), 
-				remote(), pid(), block_finished.block_index, block_finished.piece_index));
-		}*/
-
-		if (t->is_aborted()) return;
-	}
+//	void peer_connection::on_disk_write_complete(int ret, disk_io_job const& j
+//		, peer_request p, boost::shared_ptr<torrent> t)
+//	{
+//#ifdef TORRENT_STATS
+//		++m_ses.m_num_messages[aux::session_impl::on_disk_write_counter];
+//#endif
+//		TORRENT_ASSERT(m_ses.is_network_thread());
+//
+//		// flush send buffer at the end of this scope
+//		// TODO: peers should really be corked/uncorked outside of
+//		// all completed disk operations
+//		cork _c(*this);
+//
+//		INVARIANT_CHECK;
+//
+//		m_outstanding_writing_bytes -= p.length;
+//		TORRENT_ASSERT(m_outstanding_writing_bytes >= 0);
+//
+//#if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
+////		(*m_ses.m_logger) << time_now_string() << " *** DISK_WRITE_COMPLETE [ p: "
+////			<< p.piece << " o: " << p.start << " ]\n";
+//#endif
+//
+//		if (!t)
+//		{
+//			disconnect(j.error);
+//			return;
+//		}
+//
+//		// in case the outstanding bytes just dropped down
+//		// to allow to receive more data
+//		setup_receive(read_async);
+//
+//		piece_block block_finished(p.piece, p.start / t->block_size());
+//
+//		if (ret == -1)
+//		{
+//			// handle_disk_error may disconnect us
+//			t->handle_disk_error(j, this);
+//			return;
+//		}
+//
+//		if (t->is_seed()) return;
+//
+//		piece_picker& picker = t->picker();
+//
+//		TORRENT_ASSERT(p.piece == j.piece);
+//		TORRENT_ASSERT(p.start == j.offset);
+//		TORRENT_ASSERT(picker.num_peers(block_finished) == 0);
+//		picker.mark_as_finished(block_finished, peer_info_struct());
+//
+//        // TODO: 禁用alert
+//		/*if (t->alerts().should_post<block_finished_alert>())
+//		{
+//			t->alerts().post_alert(block_finished_alert(t->get_handle(), 
+//				remote(), pid(), block_finished.block_index, block_finished.piece_index));
+//		}*/
+//
+//		if (t->is_aborted()) return;
+//	}
 
 	// -----------------------------
 	// ---------- CANCEL -----------
@@ -3746,16 +3742,16 @@ namespace libtorrent
 		}
 
 		// first free the old buffer
-		m_disk_recv_buffer.reset();
+		//m_disk_recv_buffer.reset();
 		// then allocate a new one
 
-		m_disk_recv_buffer.reset(m_ses.allocate_disk_buffer("receive buffer"));
-		if (!m_disk_recv_buffer)
+		//m_disk_recv_buffer.reset(m_ses.allocate_disk_buffer("receive buffer"));
+		/*if (!m_disk_recv_buffer)
 		{
 			disconnect(errors::no_memory);
 			return false;
 		}
-		m_disk_recv_buffer_size = disk_buffer_size;
+		m_disk_recv_buffer_size = disk_buffer_size;*/
 		return true;
 	}
 
@@ -4363,67 +4359,67 @@ namespace libtorrent
 			t->recalc_share_mode();
 	}
 
-	void peer_connection::on_disk_read_complete(int ret, disk_io_job const& j, peer_request r)
-	{
-		// flush send buffer at the end of this scope
-		// TODO: peers should really be corked/uncorked outside of
-		// all completed disk operations
-		cork _c(*this);
-
-#ifdef TORRENT_STATS
-		++m_ses.m_num_messages[aux::session_impl::on_disk_read_counter];
-#endif
-		TORRENT_ASSERT(m_ses.is_network_thread());
-
-		m_reading_bytes -= r.length;
-
-		disk_buffer_holder buffer(m_ses, j.buffer);
-#if TORRENT_DISK_STATS
-		if (j.buffer) m_ses.m_disk_thread.rename_buffer(j.buffer, "received send buffer");
-#endif
-
-		boost::shared_ptr<torrent> t = m_torrent.lock();
-		if (!t)
-		{
-			disconnect(j.error);
-			return;
-		}
-		
-		if (ret != r.length)
-		{
-			if (ret == -3)
-			{
-#if defined TORRENT_VERBOSE_LOGGING
-				peer_log("==> REJECT_PIECE [ piece: %d s: %d l: %d ]"
-					, r.piece , r.start , r.length);
-#endif
-				write_reject_request(r);
-				if (t->seed_mode()) t->leave_seed_mode(false);
-			}
-			else
-			{
-				// handle_disk_error may disconnect us
-				t->handle_disk_error(j, this);
-			}
-			return;
-		}
-
-		if (t)
-		{
-			if (t->seed_mode() && t->all_verified())
-				t->leave_seed_mode(true);
-		}
-
-#if defined TORRENT_VERBOSE_LOGGING
-		peer_log("==> PIECE   [ piece: %d s: %d l: %d ]"
-			, r.piece, r.start, r.length);
-#endif
-
-#if TORRENT_DISK_STATS
-		if (j.buffer) m_ses.m_disk_thread.rename_buffer(j.buffer, "dispatched send buffer");
-#endif
-		write_piece(r, buffer);
-	}
+//	void peer_connection::on_disk_read_complete(int ret, disk_io_job const& j, peer_request r)
+//	{
+//		// flush send buffer at the end of this scope
+//		// TODO: peers should really be corked/uncorked outside of
+//		// all completed disk operations
+//		cork _c(*this);
+//
+//#ifdef TORRENT_STATS
+//		++m_ses.m_num_messages[aux::session_impl::on_disk_read_counter];
+//#endif
+//		TORRENT_ASSERT(m_ses.is_network_thread());
+//
+//		m_reading_bytes -= r.length;
+//		disk_buffer_holder buffer(m_ses, j.buffer);
+//
+//#if TORRENT_DISK_STATS
+//		if (j.buffer) m_ses.m_disk_thread.rename_buffer(j.buffer, "received send buffer");
+//#endif
+//
+//		boost::shared_ptr<torrent> t = m_torrent.lock();
+//		if (!t)
+//		{
+//			disconnect(j.error);
+//			return;
+//		}
+//		
+//		if (ret != r.length)
+//		{
+//			if (ret == -3)
+//			{
+//#if defined TORRENT_VERBOSE_LOGGING
+//				peer_log("==> REJECT_PIECE [ piece: %d s: %d l: %d ]"
+//					, r.piece , r.start , r.length);
+//#endif
+//				write_reject_request(r);
+//				if (t->seed_mode()) t->leave_seed_mode(false);
+//			}
+//			else
+//			{
+//				// handle_disk_error may disconnect us
+//				t->handle_disk_error(j, this);
+//			}
+//			return;
+//		}
+//
+//		if (t)
+//		{
+//			if (t->seed_mode() && t->all_verified())
+//				t->leave_seed_mode(true);
+//		}
+//
+//#if defined TORRENT_VERBOSE_LOGGING
+//		peer_log("==> PIECE   [ piece: %d s: %d l: %d ]"
+//			, r.piece, r.start, r.length);
+//#endif
+//
+//#if TORRENT_DISK_STATS
+//		if (j.buffer) m_ses.m_disk_thread.rename_buffer(j.buffer, "dispatched send buffer");
+//#endif
+//		write_piece(r, buffer);
+//	}
 
 	void peer_connection::assign_bandwidth(int channel, int amount)
 	{
@@ -5093,7 +5089,7 @@ namespace libtorrent
 		if (!bw_limit) return false;
 
 		bool disk = m_ses.settings().max_queued_disk_bytes == 0
-			|| m_ses.can_write_to_disk()
+			/*|| m_ses.can_write_to_disk()*/
 			// don't block this peer because of disk saturation
 			// if we're not downloading any pieces from it
 			|| m_outstanding_bytes == 0;
