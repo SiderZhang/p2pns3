@@ -70,7 +70,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/alert_types.hpp"
 #include "libtorrent/aux_/session_impl.hpp"
 #include "libtorrent/assert.hpp"
-#include "libtorrent/kademlia/dht_tracker.hpp"
 #include "libtorrent/enum_net.hpp"
 #include "libtorrent/gzip.hpp" // for inflate_gzip
 #include "libtorrent/random.hpp"
@@ -81,15 +80,18 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/struct_debug.hpp"
 #endif
 
-#if TORRENT_USE_IOSTREAM
 #include <iostream>
-#endif
+#include "ns3/log.h"
 
 using namespace libtorrent;
+using namespace ns3;
+using namespace std;
 using boost::tuples::tuple;
 using boost::tuples::get;
 using boost::tuples::make_tuple;
 using libtorrent::aux::session_impl;
+
+NS_LOG_COMPONENT_DEFINE ("Torrent");
 
 namespace
 {
@@ -169,8 +171,8 @@ namespace
 		
 		bool operator()(session_impl::connection_map::value_type const& c) const
 		{
-            ns3::InetSocketAddress const& sender = c->remote();
-			if (sender.GetIpv4() != ip.GetIpv4()) return false;
+            ns3::Ipv4EndPoint const& sender = c->remote();
+			if (sender.GetPeerAddress() != ip.GetIpv4()) return false;
 			if (tor != c->associated_torrent().lock().get()) return false;
 			return true;
 		}
@@ -702,7 +704,7 @@ namespace libtorrent
 		m_upload_mode = b;
 
 		state_updated();
-		send_upload_only();
+		//send_upload_only();
 
 		if (m_upload_mode)
 		{
@@ -1030,7 +1032,8 @@ namespace libtorrent
 		{
 			peer_connection* p = *i;
 			if (p->type() != peer_connection::bittorrent_connection) continue;
-			if (p->remote() == ep) return (bt_peer_connection*)p;
+            // TODO:这里只比较了IP地址，没有比较端口
+			if (p->remote().GetPeerAddress() == ep.GetIpv4()) return (bt_peer_connection*)p;
 		}
 		return 0;
 	}
@@ -1103,7 +1106,7 @@ namespace libtorrent
 	}
 
 	void torrent::announce_with_tracker(tracker_request::event_t e
-		, address const& bind_interface)
+		, ns3::Address const& bind_interface)
 	{
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		INVARIANT_CHECK;
@@ -1130,18 +1133,24 @@ namespace libtorrent
 
 		TORRENT_ASSERT(m_allow_peers || e == tracker_request::stopped);
 
-		if (e == tracker_request::none && is_finished() && !is_seed())
-			e = tracker_request::paused;
+		//if (e == tracker_request::none && is_finished() && !is_seed())
+		//	e = tracker_request::paused;
 
 		tracker_request req;
-		req.apply_ip_filter = m_apply_ip_filter && m_ses.m_settings.apply_ip_filter_to_trackers;
+		//req.apply_ip_filter = m_apply_ip_filter && m_ses.m_settings.apply_ip_filter_to_trackers;
 		req.info_hash = m_torrent_file->info_hash();
 		req.pid = m_ses.get_peer_id();
 		req.downloaded = m_stat.total_payload_download() - m_total_failed_bytes;
 		req.uploaded = m_stat.total_payload_upload();
 		req.corrupt = m_total_failed_bytes;
-		req.left = bytes_left();
-		if (req.left == -1) req.left = 16*1024;
+        try
+        {
+		    req.left = bytes_left();
+        }
+        catch(exception& ex)
+        {
+		    req.left = 16*1024;
+        }
 
 		// exclude redundant bytes if we should
 		if (!settings().report_true_downloaded)
@@ -1197,7 +1206,7 @@ namespace libtorrent
 			debug_log(msg);
 #endif
 			// if trackerid is not specified for tracker use default one, probably set explicitly
-			req.trackerid = ae.trackerid.empty() ? m_trackerid : ae.trackerid;
+			//req.trackerid = ae.trackerid.empty() ? m_trackerid : ae.trackerid;
 			if (settings().announce_to_all_tiers
 				&& !settings().announce_to_all_trackers
 				&& sent_announce
@@ -1225,38 +1234,8 @@ namespace libtorrent
             // TODO: 禁用IP识别
 			//if (!is_any(bind_interface)) req.bind_ip = bind_interface;
 			//else 
-                req.bind_ip = m_ses.m_listen_interface();
+                req.bind_ip = m_ses.m_listen_interface.GetPeerAddress().ConvertTo();
 
-			if (settings().anonymous_mode)
-			{
-				// in anonymous_mode we don't talk directly to trackers
-				// we only allow trackers if there is a proxy and issue
-				// a warning if there isn't one
-				std::string protocol = req.url.substr(0, req.url.find(':'));
-				int proxy_type = m_ses.m_proxy.type;
-	
-				// http can run over any proxy, so as long as one is used
-				// it's OK. If no proxy is configured, skip this tracker
-				if ((protocol == "http" || protocol == "https")
-					&& proxy_type == proxy_settings::none)
-				{
-					ae.next_announce = now + minutes(10);
-
-					continue;
-				}
-
-				// for UDP, only socks5 and i2p proxies will work.
-				// if we're not using one of those proxues with a UDP
-				// tracker, skip it
-				if (protocol == "udp"
-					&& proxy_type != proxy_settings::socks5
-					&& proxy_type != proxy_settings::socks5_pw
-					&& proxy_type != proxy_settings::i2p_proxy)
-				{
-					ae.next_announce = now + minutes(10);
-					continue;
-				}
-			}
             // TODO: 禁用boost::asio
             /*
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
@@ -1305,11 +1284,11 @@ namespace libtorrent
 		if (i == -1) i = 0;
 		
 		tracker_request req;
-		req.apply_ip_filter = m_apply_ip_filter && m_ses.m_settings.apply_ip_filter_to_trackers;
+		//req.apply_ip_filter = m_apply_ip_filter && m_ses.m_settings.apply_ip_filter_to_trackers;
 		req.info_hash = m_torrent_file->info_hash();
 		req.kind = tracker_request::scrape_request;
 		req.url = m_trackers[i].url;
-		req.bind_ip = m_ses.m_listen_interface.address();
+		req.bind_ip = m_ses.m_listen_interface.GetPeerAddress().ConvertTo();
             // TODO: 禁用boost::asio
 		//m_ses.m_tracker_manager.queue_request(m_ses.m_io_service, m_ses.m_half_open, req
 		//	, tracker_login(), shared_from_this());
@@ -1343,14 +1322,14 @@ namespace libtorrent
  
 	void torrent::tracker_response(
 		tracker_request const& r
-		, address const& tracker_ip // this is the IP we connected to
-		, std::list<address> const& tracker_ips // these are all the IPs it resolved to
+		, ns3::Address const& tracker_ip // this is the IP we connected to
+		, std::list<ns3::Address> const& tracker_ips // these are all the IPs it resolved to
 		, std::vector<peer_entry>& peer_list
 		, int interval
 		, int min_interval
 		, int complete
 		, int incomplete
-		, address const& external_ip
+		, ns3::Address const& external_ip
 		, const std::string& trackerid)
 	{
 		TORRENT_ASSERT(m_ses.is_network_thread());
@@ -1358,7 +1337,7 @@ namespace libtorrent
 		INVARIANT_CHECK;
 		TORRENT_ASSERT(r.kind == tracker_request::announce_request);
 
-		if (external_ip != address() && !tracker_ips.empty())
+		if (external_ip != ns3::Address() && !tracker_ips.empty())
 			m_ses.set_external_address(external_ip, aux::session_impl::source_tracker
 				, *tracker_ips.begin());
 
@@ -1464,29 +1443,31 @@ namespace libtorrent
 		// announce was the second one
 		// don't connect twice just to tell it we're stopping
 
-		/*if (((!is_any(m_ses.m_ipv6_interface.address()) && tracker_ip.is_v4())
-			|| (!is_any(m_ses.m_ipv4_interface.address()) && tracker_ip.is_v6()))
-			&& r.bind_ip != m_ses.m_ipv4_interface.address()
-			&& r.bind_ip != m_ses.m_ipv6_interface.address()
-			&& r.event != tracker_request::stopped)*/
-        if (r.event != tracker_request::stopped)
+		if (r.bind_ip != m_ses.m_ipv4_interface.GetPeerAddress()
+			&& r.event != tracker_request::stopped)
 		{
-			std::list<address>::const_iterator i = std::find_if(tracker_ips.begin()
-				, tracker_ips.end(), boost::bind(&address::is_v4, _1) != tracker_ip.is_v4());
+			//std::list<ns3::Address>::const_iterator i = std::find_if(tracker_ips.begin()
+			//	, trac_ips.end(), boost::bind(&Address::is_v4, _1) != tracker_ip.is_v4());
+            
+            std::list<ns3::Address>::const_iterator i;
+            for (;i != tracker_ips.end();++i)
+            {
+                if ((*i) == tracker_ip )
+                    break;
+            }
+
 			if (i != tracker_ips.end())
 			{
 				// the tracker did resolve to a different type of address, so announce
 				// to that as well
 
 				// tell the tracker to bind to the opposite protocol type
-				address bind_interface = tracker_ip.is_v4()
-					?m_ses.m_ipv6_interface.address()
-					:m_ses.m_ipv4_interface.address();
+                ns3::Address bind_interface = m_ses.m_ipv4_interface.GetPeerAddress();
 				announce_with_tracker(r.event, bind_interface);
-#if (defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING) && TORRENT_USE_IOSTREAM
-				debug_log("announce again using %s as the bind interface"
-					, print_address(bind_interface).c_str());
-#endif
+                ostringstream ostr;
+                //char* pstr = print_address(bind_interface).c_str();
+                ostr<<"announce again using "<<" as the bind interface";
+                NS_LOG_INFO(ostr.str().c_str());
 			}
 		}
 
@@ -1580,7 +1561,9 @@ namespace libtorrent
 	{
 		// if we don't have the metadata yet, we
 		// cannot tell how big the torrent is.
-		if (!valid_metadata()) return -1;
+		if (!valid_metadata())
+            throw exception();
+
 		return m_torrent_file->total_size()
 			- quantized_bytes_done();
 	}
@@ -3549,7 +3532,7 @@ namespace libtorrent
 				if (i->info[j].peer == 0)
 				{
                     // TODO: 禁用ASIO
-					bi.set_peer(ns3::InetSocketAddress());
+					bi.set_peer(ns3::Ipv4EndPoint());
 					bi.bytes_progress = complete ? bi.block_size : 0;
 				}
 				else
@@ -3618,7 +3601,7 @@ namespace libtorrent
 		TORRENT_ASSERT(want_more_peers() || ignore_limit);
 		TORRENT_ASSERT(m_ses.num_connections() < m_ses.settings().connections_limit || ignore_limit);
 
-		ns3::InetSocketAddress a(peerinfo->ip());
+		ns3::Ipv4EndPoint a(peerinfo->ip());
 		//TORRENT_ASSERT(!m_apply_ip_filter
 		//	|| (m_ses.m_ip_filter.access(peerinfo->address()) & ip_filter::blocked) == 0);
 
@@ -3982,7 +3965,7 @@ namespace libtorrent
 		// to make sure we're cleared the piece picker
 		if (is_seed()) completed();
 
-		send_upload_only();
+		//send_upload_only();
 
 		state_updated();
 
@@ -4040,7 +4023,7 @@ namespace libtorrent
 
 		m_completed_time = 0;
 
-		send_upload_only();
+		//send_upload_only();
 	}
 
 	// called when torrent is complete (all pieces downloaded)
@@ -4498,7 +4481,7 @@ namespace libtorrent
 		m_need_save_resume_data = true;
 	}
 
-	int torrent::get_peer_upload_limit(ns3::InetSocketAddress ip) const
+	int torrent::get_peer_upload_limit(ns3::Ipv4EndPoint ip) const
 	{
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		const_peer_iterator i = std::find_if(m_connections.begin(), m_connections.end()
@@ -4507,7 +4490,7 @@ namespace libtorrent
 		return (*i)->get_upload_limit();
 	}
 
-	int torrent::get_peer_download_limit(ns3::InetSocketAddress ip) const
+	int torrent::get_peer_download_limit(ns3::Ipv4EndPoint ip) const
 	{
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		const_peer_iterator i = std::find_if(m_connections.begin(), m_connections.end()
@@ -4516,7 +4499,7 @@ namespace libtorrent
 		return (*i)->get_download_limit();
 	}
 
-	void torrent::set_peer_upload_limit(ns3::InetSocketAddress ip, int limit)
+	void torrent::set_peer_upload_limit(ns3::Ipv4EndPoint ip, int limit)
 	{
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		TORRENT_ASSERT(limit >= -1);
@@ -4526,7 +4509,7 @@ namespace libtorrent
 		(*i)->set_upload_limit(limit);
 	}
 
-	void torrent::set_peer_download_limit(ns3::InetSocketAddress ip, int limit)
+	void torrent::set_peer_download_limit(ns3::Ipv4EndPoint ip, int limit)
 	{
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		TORRENT_ASSERT(limit >= -1);
@@ -5352,7 +5335,7 @@ namespace libtorrent
 		// the beginning of the pieces list, and more likely
 		// to be included in this round of cache pieces
 		std::vector<cached_piece_info> ret;
-		m_ses.m_disk_thread.get_cache_info(info_hash(), ret);
+		//m_ses.m_disk_thread.get_cache_info(info_hash(), ret);
 		// remove write cache entries
 		ret.erase(std::remove_if(ret.begin(), ret.end()
 			, boost::bind(&cached_piece_info::kind, _1) == cached_piece_info::write_cache)
@@ -5398,31 +5381,31 @@ namespace libtorrent
 			return;
 		}
 
-		std::vector<cached_piece_info> ret;
-		m_ses.m_disk_thread.get_cache_info(info_hash(), ret);
+//		std::vector<cached_piece_info> ret;
+		//m_ses.m_disk_thread.get_cache_info(info_hash(), ret);
 
 		// remove write cache entries
-		ret.erase(std::remove_if(ret.begin(), ret.end()
-			, boost::bind(&cached_piece_info::kind, _1) == cached_piece_info::write_cache)
-			, ret.end());
+	//	ret.erase(std::remove_if(ret.begin(), ret.end()
+	//		, boost::bind(&cached_piece_info::kind, _1) == cached_piece_info::write_cache)
+	//		, ret.end());
 
-		// sort by how new the cached entry is, new pieces first
-		std::sort(ret.begin(), ret.end()
-			, boost::bind(&cached_piece_info::last_use, _1)
-			< boost::bind(&cached_piece_info::last_use, _2));
+	//	// sort by how new the cached entry is, new pieces first
+	//	std::sort(ret.begin(), ret.end()
+	//		, boost::bind(&cached_piece_info::last_use, _1)
+	//		< boost::bind(&cached_piece_info::last_use, _2));
 
 		// cut off the oldest pieces that we don't want to suggest
 		// if we have an explicit cache, it's much more likely to
 		// stick around, so we should suggest all pieces
-		int num_pieces_to_suggest = int(ret.size());
-		if (num_pieces_to_suggest == 0) return;
+//		int num_pieces_to_suggest = int(ret.size());
+//		if (num_pieces_to_suggest == 0) return;
 
-		if (!settings().explicit_read_cache)
-			num_pieces_to_suggest = (std::max)(1, int(ret.size() / 2));
-		ret.resize(num_pieces_to_suggest);
-
-		std::transform(ret.begin(), ret.end(), std::back_inserter(s)
-			, boost::bind(&cached_piece_info::piece, _1));
+//		if (!settings().explicit_read_cache)
+//			num_pieces_to_suggest = (std::max)(1, int(ret.size() / 2));
+//		ret.resize(num_pieces_to_suggest);
+//
+//		std::transform(ret.begin(), ret.end(), std::back_inserter(s)
+//			, boost::bind(&cached_piece_info::piece, _1));
 	}
 
 	void torrent::add_stats(stat const& s)
@@ -5626,7 +5609,7 @@ namespace libtorrent
 		return ret;
 	}
 
-	void torrent::add_peer(ns3::InetSocketAddress const& adr, int source)
+	void torrent::add_peer(ns3::Ipv4EndPoint const& adr, int source)
 	{
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		peer_id id(0);
@@ -5681,10 +5664,10 @@ namespace libtorrent
 		f(ret);
 	}*/
 
-	ns3::InetSocketAddress torrent::current_tracker() const
+	/*ns3::Ipv4EndPoint torrent::current_tracker() const
 	{
 		return m_tracker_address;
-	}
+	}*/
 
 	announce_entry* torrent::find_tracker(tracker_request const& r)
 	{
@@ -5919,7 +5902,7 @@ namespace libtorrent
 	{
 		INVARIANT_CHECK;
 
-		ptime now = time_now();
+		//ptime now = time_now();
 
 		st->handle = get_handle();
 		st->info_hash = info_hash();
@@ -6004,22 +5987,22 @@ namespace libtorrent
 
 		st->announce_interval = boost::posix_time::seconds(0);
 
-		st->current_tracker.clear();
-		if (m_last_working_tracker >= 0)
-		{
-			TORRENT_ASSERT(m_last_working_tracker < int(m_trackers.size()));
-			st->current_tracker = m_trackers[m_last_working_tracker].url;
-		}
-		else
-		{
-			std::vector<announce_entry>::const_iterator i;
-			for (i = m_trackers.begin(); i != m_trackers.end(); ++i)
-			{
-				if (!i->updating) continue;
-				st->current_tracker = i->url;
-				break;
-			}
-		}
+	//	st->current_tracker.clear();
+	//	if (m_last_working_tracker >= 0)
+	//	{
+	//		TORRENT_ASSERT(m_last_working_tracker < int(m_trackers.size()));
+	//		st->current_tracker = m_trackers[m_last_working_tracker].url;
+	//	}
+	//	else
+	//	{
+	//		std::vector<announce_entry>::const_iterator i;
+	//		for (i = m_trackers.begin(); i != m_trackers.end(); ++i)
+	//		{
+	//			if (!i->updating) continue;
+	//			st->current_tracker = i->url;
+	//			break;
+	//		}
+	//	}
 
 		if ((flags & torrent_handle::query_verified_pieces))
 		{
@@ -6193,7 +6176,7 @@ namespace libtorrent
 
 		}
 		// announce to the next working tracker
-		if ((!m_abort && /*!is_paused()*/) || r.event == tracker_request::stopped)
+		if (/*(!m_abort && !is_paused()) ||*/ r.event == tracker_request::stopped)
 			announce_with_tracker(r.event);
 		update_tracker_timer(time_now());
 	}

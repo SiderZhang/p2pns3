@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2006, Arvid Norberg & Daniel Wallin
+Copyright (c) 2010, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,52 +30,47 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef REFRESH_050324_HPP
-#define REFRESH_050324_HPP
+#include "libtorrent/bloom_filter.hpp"
 
-#include <libtorrent/kademlia/traversal_algorithm.hpp>
-#include <libtorrent/kademlia/node_id.hpp>
-#include <libtorrent/kademlia/find_data.hpp>
-
-#include "ns3/ipv4-end-point.h"
-
-namespace libtorrent { namespace dht
+namespace libtorrent
 {
+	bool has_bits(boost::uint8_t const* k, boost::uint8_t const* bits, int len)
+	{
+		boost::uint32_t idx1 = boost::uint32_t(k[0]) | (boost::uint32_t(k[1]) << 8);
+		boost::uint32_t idx2 = boost::uint32_t(k[2]) | (boost::uint32_t(k[3]) << 8);
+		idx1 %= len * 8;
+		idx2 %= len * 8;
+		return (bits[idx1/8] & (1 << (idx1 & 7))) != 0
+			&& (bits[idx2/8] & (1 << (idx2 & 7))) != 0;
+	}
 
-class routing_table;
-class rpc_manager;
+	void set_bits(boost::uint8_t const* k, boost::uint8_t* bits, int len)
+	{
+		boost::uint32_t idx1 = boost::uint32_t(k[0]) | (boost::uint32_t(k[1]) << 8);
+		boost::uint32_t idx2 = boost::uint32_t(k[2]) | (boost::uint32_t(k[3]) << 8);
+		idx1 %= len * 8;
+		idx2 %= len * 8;
+		bits[idx1/8] |= (1 << (idx1 & 7));
+		bits[idx2/8] |= (1 << (idx2 & 7));
+	}
 
-class refresh : public find_data
-{
-public:
-	typedef find_data::nodes_callback done_callback;
-
-	refresh(node_impl& node, node_id target
-		, done_callback const& callback);
-
-	virtual char const* name() const;
-
-protected:
-
-	observer_ptr new_observer(void* ptr, ns3::Ipv4EndPoint const& ep, node_id const& id);
-	virtual bool invoke(observer_ptr o);
-};
-
-class bootstrap : public refresh
-{
-public:
-	bootstrap(node_impl& node, node_id target
-		, done_callback const& callback);
-
-	virtual char const* name() const;
-
-protected:
-
-	virtual void done();
-
-};
-
-} } // namespace libtorrent::dht
-
-#endif // REFRESH_050324_HPP
+	int count_zero_bits(boost::uint8_t const* bits, int len)
+	{
+		// number of bits _not_ set in a nibble
+		boost::uint8_t bitcount[16] =
+		{
+			// 0000, 0001, 0010, 0011, 0100, 0101, 0110, 0111,
+			// 1000, 1001, 1010, 1011, 1100, 1101, 1110, 1111
+			4, 3, 3, 2, 3, 2, 2, 1,
+			3, 2, 2, 1, 2, 1, 1, 0
+		};
+		int ret = 0;
+		for (int i = 0; i < len; ++i)
+		{
+			ret += bitcount[bits[i] & 0xf];
+			ret += bitcount[(bits[i] >> 4) & 0xf];
+		}
+		return ret;
+	}
+}
 

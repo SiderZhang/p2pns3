@@ -56,7 +56,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/extensions/smart_ban.hpp"
 #include "libtorrent/peer_id.hpp"
 #include "libtorrent/torrent_info.hpp"
-#include "libtorrent/tracker_manager.hpp"
 #include "libtorrent/bencode.hpp"
 #include "libtorrent/hasher.hpp"
 #include "libtorrent/entry.hpp"
@@ -67,13 +66,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/invariant_check.hpp"
 #include "libtorrent/file.hpp"
 #include "libtorrent/bt_peer_connection.hpp"
-#include "libtorrent/ip_filter.hpp"
 #include "libtorrent/socket.hpp"
 #include "libtorrent/aux_/session_impl.hpp"
-#include "libtorrent/kademlia/dht_tracker.hpp"
-#include "libtorrent/natpmp.hpp"
-#include "libtorrent/upnp.hpp"
 #include "libtorrent/magnet_uri.hpp"
+
+#include "libtorrent/tracker_manager.hpp"
 
 using boost::shared_ptr;
 using boost::weak_ptr;
@@ -302,22 +299,22 @@ namespace libtorrent
 
 	// wrapper around a function that's executed in the network thread
 	// ans synchronized in the client thread
-	template <class R>
-	void fun_ret(R* ret, bool* done, condition* e, mutex* m, boost::function<R(void)> f)
-	{
-		*ret = f();
-		mutex::scoped_lock l(*m);
-		*done = true;
-		e->signal_all(l);
-	}
-
-	void fun_wrap(bool* done, condition* e, mutex* m, boost::function<void(void)> f)
-	{
-		f();
-		mutex::scoped_lock l(*m);
-		*done = true;
-		e->signal_all(l);
-	}
+//	template <class R>
+//	void fun_ret(R* ret, bool* done, condition* e, mutex* m, boost::function<R(void)> f)
+//	{
+//		*ret = f();
+//		mutex::scoped_lock l(*m);
+//		*done = true;
+//		e->signal_all(l);
+//	}
+//
+//	void fun_wrap(bool* done, condition* e, mutex* m, boost::function<void(void)> f)
+//	{
+//		f();
+//		mutex::scoped_lock l(*m);
+//		*done = true;
+//		e->signal_all(l);
+//	}
 
 #if 0
 #define TORRENT_ASYNC_CALL(x) \
@@ -406,8 +403,8 @@ namespace libtorrent
 
 		if (flags & start_default_features)
 		{
-			start_upnp();
-			start_natpmp();
+		//	start_upnp();
+		//	start_natpmp();
 		}
 	}
 
@@ -427,19 +424,19 @@ namespace libtorrent
 		}
 	}
 
-	void session::save_state(entry& e, boost::uint32_t flags) const
-	{
-        m_impl->save_state(&e, flags);
-		//TORRENT_SYNC_CALL2(save_state, &e, flags);
-	}
-
-	void session::load_state(lazy_entry const& e)
-	{
-		// this needs to be synchronized since the lifespan
-		// of e is tied to the caller
-		m_impl->load_state(&e);
-	//	TORRENT_SYNC_CALL1(load_state, &e);
-	}
+//	void session::save_state(entry& e, boost::uint32_t flags) const
+//	{
+//        m_impl->save_state(&e, flags);
+//		//TORRENT_SYNC_CALL2(save_state, &e, flags);
+//	}
+//
+//	void session::load_state(lazy_entry const& e)
+//	{
+//		// this needs to be synchronized since the lifespan
+//		// of e is tied to the caller
+//		m_impl->load_state(&e);
+//	//	TORRENT_SYNC_CALL1(load_state, &e);
+//	}
 
 	peer_id session::id() const
 	{
@@ -588,17 +585,6 @@ namespace libtorrent
 		return r;
 	}
 
-	void session::set_proxy(proxy_settings const& s)
-	{
-		m_impl->set_proxy(s);
-	}
-
-	proxy_settings session::proxy() const
-	{
-		proxy_settings r = m_impl->proxy();
-		return r;
-	}
-
 #ifdef TORRENT_STATS
 	void session::enable_stats_logging(bool s)
 	{
@@ -606,60 +592,60 @@ namespace libtorrent
 	}
 #endif
 
-	void session::set_alert_dispatch(boost::function<void(std::auto_ptr<alert>)> const& fun)
-	{
-		m_impl->set_alert_dispatch(fun);
-	}
-
-	std::auto_ptr<alert> session::pop_alert()
-	{
-		return m_impl->pop_alert();
-	}
-
-	void session::pop_alerts(std::deque<alert*>* alerts)
-	{
-		for (std::deque<alert*>::iterator i = alerts->begin()
-			, end(alerts->end()); i != end; ++i)
-			delete *i;
-		alerts->clear();
-		m_impl->pop_alerts(alerts);
-	}
-
-	alert const* session::wait_for_alert(time_duration max_wait)
-	{
-		return m_impl->wait_for_alert(max_wait);
-	}
-
-	void session::set_alert_mask(boost::uint32_t m)
-	{
-		m_impl->set_alert_mask(m);
-	}
-
-	natpmp* session::start_natpmp()
-	{
-        natpmp* r = m_impl->start_natpmp();
-		//TORRENT_SYNC_CALL_RET(natpmp*, start_natpmp);
-		return r;
-	}
-	
-	upnp* session::start_upnp()
-	{
-        upnp* r = m_impl->start_upnp();
-		//TORRENT_SYNC_CALL_RET(upnp*, start_upnp);
-		return r;
-	}
-	
-	void session::stop_natpmp()
-	{
-        m_impl->stop_natpmp();
-		//TORRENT_ASYNC_CALL(stop_natpmp);
-	}
-	
-	void session::stop_upnp()
-	{
-        m_impl->stop_upnp();
-		//TORRENT_ASYNC_CALL(stop_upnp);
-	}
+//	void session::set_alert_dispatch(boost::function<void(std::auto_ptr<alert>)> const& fun)
+//	{
+//		m_impl->set_alert_dispatch(fun);
+//	}
+//
+//	std::auto_ptr<alert> session::pop_alert()
+//	{
+//		return m_impl->pop_alert();
+//	}
+//
+//	void session::pop_alerts(std::deque<alert*>* alerts)
+//	{
+//		for (std::deque<alert*>::iterator i = alerts->begin()
+//			, end(alerts->end()); i != end; ++i)
+//			delete *i;
+//		alerts->clear();
+//		m_impl->pop_alerts(alerts);
+//	}
+//
+//	alert const* session::wait_for_alert(time_duration max_wait)
+//	{
+//		return m_impl->wait_for_alert(max_wait);
+//	}
+//
+//	void session::set_alert_mask(boost::uint32_t m)
+//	{
+//		m_impl->set_alert_mask(m);
+//	}
+//
+//	natpmp* session::start_natpmp()
+//	{
+//        natpmp* r = m_impl->start_natpmp();
+//		//TORRENT_SYNC_CALL_RET(natpmp*, start_natpmp);
+//		return r;
+//	}
+//	
+//	upnp* session::start_upnp()
+//	{
+//        upnp* r = m_impl->start_upnp();
+//		//TORRENT_SYNC_CALL_RET(upnp*, start_upnp);
+//		return r;
+//	}
+//	
+//	void session::stop_natpmp()
+//	{
+//        m_impl->stop_natpmp();
+//		//TORRENT_ASYNC_CALL(stop_natpmp);
+//	}
+//	
+//	void session::stop_upnp()
+//	{
+//        m_impl->stop_upnp();
+//		//TORRENT_ASYNC_CALL(stop_upnp);
+//	}
 	
 	connection_queue& session::get_connection_queue()
 	{

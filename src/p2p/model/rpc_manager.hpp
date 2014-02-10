@@ -48,6 +48,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/ptime.hpp"*/
 
+#include "ns3/ipv4-end-point.h"
+
 namespace libtorrent { namespace aux { struct session_impl; } }
 
 namespace libtorrent { namespace dht
@@ -60,7 +62,7 @@ TORRENT_DECLARE_LOG(rpc);
 struct null_observer : public observer
 {
 	null_observer(boost::intrusive_ptr<traversal_algorithm> const& a
-		, udp::endpoint const& ep, node_id const& id): observer(a, ep, id) {}
+		, ns3::Ipv4EndPoint const& ep, node_id const& id): observer(a, ep, id) {}
 	virtual void reply(msg const&) { flags |= flag_done; }
 };
 
@@ -69,21 +71,21 @@ class routing_table;
 class TORRENT_EXTRA_EXPORT rpc_manager
 {
 public:
-	typedef bool (*send_fun)(void* userdata, entry&, udp::endpoint const&, int);
+	typedef bool (*send_fun)(void* userdata, entry&, ns3::Ipv4EndPoint const&, int);
 
 	rpc_manager(node_id const& our_id
 		, routing_table& table, send_fun const& sf
 		, void* userdata);
 	~rpc_manager();
 
-	void unreachable(udp::endpoint const& ep);
+	void unreachable(ns3::Ipv4EndPoint const& ep);
 
 	// returns true if the node needs a refresh
 	// if so, id is assigned the node id to refresh
 	bool incoming(msg const&, node_id* id);
 	time_duration tick();
 
-	bool invoke(entry& e, udp::endpoint target
+	bool invoke(entry& e, ns3::Ipv4EndPoint target
 		, observer_ptr o);
 
 	void add_our_id(entry& e);
@@ -102,7 +104,7 @@ public:
 
 private:
 
-	boost::uint32_t calc_connection_id(udp::endpoint addr);
+	boost::uint32_t calc_connection_id(ns3::Ipv4EndPoint addr);
 
 	mutable boost::pool<> m_pool_allocator;
 

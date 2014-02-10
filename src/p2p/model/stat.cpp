@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2006, Arvid Norberg & Daniel Wallin
+Copyright (c) 2003, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,52 +30,23 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef REFRESH_050324_HPP
-#define REFRESH_050324_HPP
+#include "libtorrent/pch.hpp"
 
-#include <libtorrent/kademlia/traversal_algorithm.hpp>
-#include <libtorrent/kademlia/node_id.hpp>
-#include <libtorrent/kademlia/find_data.hpp>
+#include <numeric>
+#include <algorithm>
 
-#include "ns3/ipv4-end-point.h"
+#include "libtorrent/stat.hpp"
 
-namespace libtorrent { namespace dht
+namespace libtorrent {
+
+void stat_channel::second_tick(int tick_interval_ms)
 {
+	int sample = int(size_type(m_counter) * 1000 / tick_interval_ms);
+	TORRENT_ASSERT(sample >= 0);
+	m_5_sec_average = size_type(m_5_sec_average) * 4 / 5 + sample / 5;
+	m_30_sec_average = size_type(m_30_sec_average) * 29 / 30 + sample / 30;
+	m_counter = 0;
+}
 
-class routing_table;
-class rpc_manager;
-
-class refresh : public find_data
-{
-public:
-	typedef find_data::nodes_callback done_callback;
-
-	refresh(node_impl& node, node_id target
-		, done_callback const& callback);
-
-	virtual char const* name() const;
-
-protected:
-
-	observer_ptr new_observer(void* ptr, ns3::Ipv4EndPoint const& ep, node_id const& id);
-	virtual bool invoke(observer_ptr o);
-};
-
-class bootstrap : public refresh
-{
-public:
-	bootstrap(node_impl& node, node_id target
-		, done_callback const& callback);
-
-	virtual char const* name() const;
-
-protected:
-
-	virtual void done();
-
-};
-
-} } // namespace libtorrent::dht
-
-#endif // REFRESH_050324_HPP
+}
 

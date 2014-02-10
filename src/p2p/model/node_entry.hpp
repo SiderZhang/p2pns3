@@ -34,6 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define KADEMLIA_NODE_ENTRY_HPP
 
 #include "node_id.hpp"
+#include "ns3/ipv4-end-point.h"
 //TODO:
 //#include "libtorrent/socket.hpp"
 //#include "libtorrent/address.hpp"
@@ -43,7 +44,7 @@ namespace libtorrent { namespace dht
 
 struct node_entry
 {
-	node_entry(node_id const& id_, udp::endpoint ep, bool pinged = false)
+	node_entry(node_id const& id_, ns3::Ipv4EndPoint ep, bool pinged = false)
 		: addr(ep.address())
 		, port(ep.port())
 		, timeout_count(pinged ? 0 : 0xffff)
@@ -54,7 +55,7 @@ struct node_entry
 #endif
 	}
 
-	node_entry(udp::endpoint ep)
+	node_entry(ns3::Ipv4EndPoint ep)
 		: addr(ep.address())
 		, port(ep.port())
 		, timeout_count(0xffff)
@@ -79,7 +80,7 @@ struct node_entry
 	void timed_out() { if (pinged()) ++timeout_count; }
 	int fail_count() const { return pinged() ? timeout_count : 0; }
 	void reset_fail_count() { if (pinged()) timeout_count = 0; }
-	udp::endpoint ep() const { return udp::endpoint(addr, port); }
+	ns3::Ipv4EndPoint ep() const { return ns3::Ipv4EndPoint(addr, port); }
 	bool confirmed() const { return timeout_count == 0; }
 
 	// TODO: replace with a union of address_v4 and address_v6

@@ -47,6 +47,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/function/function1.hpp>
 #include <boost/function/function2.hpp>
 
+#include "ns3/ipv4-end-point.h"
+
 namespace libtorrent { namespace dht
 {
 
@@ -61,10 +63,10 @@ class node_impl;
 class find_data : public traversal_algorithm
 {
 public:
-	typedef boost::function<void(std::vector<tcp::endpoint> const&)> data_callback;
+	typedef boost::function<void(std::vector<ns3::Ipv4EndPoint> const&)> data_callback;
 	typedef boost::function<void(std::vector<std::pair<node_entry, std::string> > const&, bool)> nodes_callback;
 
-	void got_peers(std::vector<tcp::endpoint> const& peers);
+	void got_peers(std::vector<ns3::Ipv4EndPoint> const& peers);
 	void got_write_token(node_id const& n, std::string const& write_token)
 	{ m_write_tokens[n] = write_token; }
 
@@ -80,7 +82,7 @@ public:
 protected:
 
 	void done();
-	observer_ptr new_observer(void* ptr, udp::endpoint const& ep, node_id const& id);
+	observer_ptr new_observer(void* ptr, ns3::Ipv4EndPoint const& ep, node_id const& id);
 	virtual bool invoke(observer_ptr o);
 
 private:
@@ -99,7 +101,7 @@ class find_data_observer : public observer
 public:
 	find_data_observer(
 		boost::intrusive_ptr<traversal_algorithm> const& algorithm
-		, udp::endpoint const& ep, node_id const& id)
+		, ns3::Ipv4EndPoint const& ep, node_id const& id)
 		: observer(algorithm, ep, id)
 	{}
 	void reply(msg const&);

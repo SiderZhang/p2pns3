@@ -38,7 +38,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "error_code.hpp"
 #include "session_settings.hpp"
 #include "buffer.hpp"
-#include "thread.hpp"
 #include "deadline_timer.hpp"
 
 #include <deque>
@@ -52,7 +51,7 @@ namespace libtorrent
 	{
 	public:
 		typedef boost::function<void(error_code const& ec
-			, udp::endpoint const&, char const* buf, int size)> callback_t;
+			, ns3::Ipv4EndPoint const&, char const* buf, int size)> callback_t;
 		typedef boost::function<void(error_code const& ec
 			, char const*, char const* buf, int size)> callback2_t;
 
@@ -74,8 +73,8 @@ namespace libtorrent
 		// this is only valid when using a socks5 proxy
 		void send_hostname(char const* hostname, int port, char const* p, int len, error_code& ec);
 
-		void send(udp::endpoint const& ep, char const* p, int len, error_code& ec, int flags = 0);
-		void bind(udp::endpoint const& ep, error_code& ec);
+		void send(ns3::Ipv4EndPoint const& ep, char const* p, int len, error_code& ec, int flags = 0);
+		void bind(ns3::Ipv4EndPoint const& ep, error_code& ec);
 		void bind(int port);
 		void close();
 		int local_port() const { return m_bind_port; }
@@ -85,10 +84,10 @@ namespace libtorrent
 		void set_force_proxy(bool f) { m_force_proxy = f; }
 
 		bool is_closed() const { return m_abort; }
-		tcp::endpoint local_endpoint(error_code& ec) const
+		ns3::Ipv4EndPoint local_endpoint(error_code& ec) const
 		{
-			udp::endpoint ep = m_ipv4_sock.local_endpoint(ec);
-			return tcp::endpoint(ep.address(), ep.port());
+			ns3::Ipv4EndPoint ep = m_ipv4_sock.local_endpoint(ec);
+			return ns3::Ipv4EndPoint(ep.address(), ep.port());
 		}
 
 		void set_buf_size(int s);
@@ -108,13 +107,13 @@ namespace libtorrent
 			m_ipv4_sock.get_option(opt, ec);
 		}
 
-		udp::endpoint proxy_addr() const { return m_proxy_addr; }
+		ns3::Ipv4EndPoint proxy_addr() const { return m_proxy_addr; }
 
 	protected:
 
 		struct queued_packet
 		{
-			udp::endpoint ep;
+			ns3::Ipv4EndPoint ep;
 			char* hostname;
 			buffer buf;
 			int flags;
@@ -160,7 +159,7 @@ namespace libtorrent
 
 		void drain_queue();
 
-		void wrap(udp::endpoint const& ep, char const* p, int len, error_code& ec);
+		void wrap(ns3::Ipv4EndPoint const& ep, char const* p, int len, error_code& ec);
 		void wrap(char const* hostname, int port, char const* p, int len, error_code& ec);
 		void unwrap(error_code const& e, char const* buf, int size);
 
@@ -183,7 +182,7 @@ namespace libtorrent
 #endif
 
 		udp::socket m_ipv4_sock;
-		udp::endpoint m_v4_ep;
+		ns3::Ipv4EndPoint m_v4_ep;
 		int m_v4_buf_size;
 		char* m_v4_buf;
 		// this is set to true to indicate that the
@@ -194,7 +193,7 @@ namespace libtorrent
 
 #if TORRENT_USE_IPV6
 		udp::socket m_ipv6_sock;
-		udp::endpoint m_v6_ep;
+		ns3::Ipv4EndPoint m_v6_ep;
 		int m_v6_buf_size;
 		char* m_v6_buf;
 		// this is set to true to indicate that the
@@ -225,12 +224,12 @@ namespace libtorrent
 		// when performing a UDP associate, we get another
 		// endpoint (presumably on the same IP) where we're
 		// supposed to send UDP packets.
-		udp::endpoint m_proxy_addr;
+		ns3::Ipv4EndPoint m_proxy_addr;
 
 		// this is where UDP packets that are to be forwarded
 		// are sent. The result from UDP ASSOCIATE is stored
 		// in here.
-		udp::endpoint m_udp_proxy_addr;
+		ns3::Ipv4EndPoint m_udp_proxy_addr;
 
 		// while we're connecting to the proxy
 		// we have to queue the packets, we'll flush
@@ -257,7 +256,7 @@ namespace libtorrent
 	{
 		rate_limited_udp_socket(io_service& ios, callback_t const& c, callback2_t const& c2, connection_queue& cc);
 		void set_rate_limit(int limit) { m_rate_limit = limit; }
-		bool send(udp::endpoint const& ep, char const* p, int len, error_code& ec, int flags = 0);
+		bool send(ns3::Ipv4EndPoint const& ep, char const* p, int len, error_code& ec, int flags = 0);
 
 	private:
 

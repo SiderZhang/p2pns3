@@ -52,25 +52,22 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/peer_id.hpp"
 #include "libtorrent/torrent_info.hpp"
-#include "libtorrent/tracker_manager.hpp"
 #include "libtorrent/bencode.hpp"
 #include "libtorrent/hasher.hpp"
 #include "libtorrent/entry.hpp"
 #include "libtorrent/session.hpp"
 #include "libtorrent/fingerprint.hpp"
 #include "libtorrent/entry.hpp"
+#include "libtorrent/socket_io.hpp"
 #include "libtorrent/alert_types.hpp"
 #include "libtorrent/invariant_check.hpp"
 #include "libtorrent/file.hpp"
 #include "libtorrent/bt_peer_connection.hpp"
-#include "libtorrent/ip_filter.hpp"
 #include "libtorrent/socket.hpp"
 #include "libtorrent/aux_/session_impl.hpp"
 #include "libtorrent/enum_net.hpp"
 #include "libtorrent/config.hpp"
 #include "libtorrent/utf8.hpp"
-#include "libtorrent/upnp.hpp"
-#include "libtorrent/natpmp.hpp"
 #include "libtorrent/instantiate_connection.hpp"
 #include "libtorrent/peer_info.hpp"
 #include "libtorrent/settings.hpp"
@@ -78,6 +75,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/extensions.hpp"
 #include "libtorrent/random.hpp"
 #include "libtorrent/magnet_uri.hpp"
+
+#include "libtorrent/tracker_manager.hpp"
 
 #include <string>
 #include <ostream>
@@ -112,9 +111,14 @@ mutex logger::file_mutex;
 #endif
 using namespace ns3;
 
+#include "libtorrent/broadcast_socket.hpp"
+
 #include "ns3/simulator.h"
 #include "ns3/event-id.h"
 #include "ns3/adapter.h"
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE ("Session_Impl");
 
 #ifdef TORRENT_USE_GCRYPT
 
@@ -486,7 +490,7 @@ namespace aux {
 #endif
 		, m_files(40)
 		//, m_io_service()
-		, m_alerts(m_settings.alert_queue_size, alert_mask)
+		//, m_alerts(m_settings.alert_queue_size, alert_mask)
 		//, m_disk_thread(m_io_service, boost::bind(&session_impl::on_disk_queue, this), m_files)
 		//, m_half_open(m_io_service)
 		, m_download_rate(peer_connection::download_channel)
@@ -495,7 +499,7 @@ namespace aux {
 #else
 		, m_upload_rate(peer_connection::upload_channel)
 #endif
-		, m_tracker_manager(*this, m_proxy)
+		, m_tracker_manager(*this)
 		, m_key(0)
 		, m_listen_port_retries(listen_port_range.second - listen_port_range.first)
 		//, m_abort(false)
@@ -571,7 +575,7 @@ namespace aux {
 		m_next_disk_peer = m_connections.begin();
 
 		if (!listen_interface) listen_interface = "0.0.0.0";
-		m_listen_interface = ns3::InetSocketAddress(listen_interface, listen_port_range.first);
+		m_listen_interface = ns3::Ipv4EndPoint(ns3::Ipv4Address(listen_interface), listen_port_range.first);
 		TORRENT_ASSERT_VAL(!ec, ec);
 
 		m_tcp_mapping[0] = -1;
@@ -712,10 +716,10 @@ namespace aux {
 		(*m_logger) << "sizeof(utp_socket_impl): " << socket_impl_size() << "\n";
 
 		PRINT_SIZEOF(file_entry)
-		PRINT_SIZEOF(internal_file_entry)
-		PRINT_OFFSETOF(internal_file_entry, name)
-		PRINT_OFFSETOF(internal_file_entry, path_index)
-		PRINT_OFFSETOF_END(internal_file_entry)
+//RINT_SIZEOF(internal_file_entry)
+//		PRINT_OFFSETOF(internal_file_entry, name)
+//		PRINT_OFFSETOF(internal_file_entry, path_index)
+//		PRINT_OFFSETOF_END(internal_file_entry)
 
 		PRINT_SIZEOF(file_storage)
 		PRINT_OFFSETOF(file_storage, m_files)
@@ -1156,66 +1160,54 @@ namespace aux {
 #endif
 	}
 
-	void session_impl::save_state(entry* eptr, boost::uint32_t flags) const
-	{
-		TORRENT_ASSERT(is_network_thread());
-
-		entry& e = *eptr;
-
-		all_default_values def;
-
-		for (int i = 0; i < int(sizeof(all_settings)/sizeof(all_settings[0])); ++i)
-		{
-			session_category const& c = all_settings[i];
-			if ((flags & c.flag) == 0) continue;
-			save_struct(e[c.name], reinterpret_cast<char const*>(this) + c.offset
-				, c.map, c.num_entries, reinterpret_cast<char const*>(&def) + c.default_offset);
-		}
-	}
+//	void session_impl::save_state(entry* eptr, boost::uint32_t flags) const
+//	{
+//		TORRENT_ASSERT(is_network_thread());
+//
+//		entry& e = *eptr;
+//
+//		all_default_values def;
+//
+//		for (int i = 0; i < int(sizeof(all_settings)/sizeof(all_settings[0])); ++i)
+//		{
+//			session_category const& c = all_settings[i];
+//			if ((flags & c.flag) == 0) continue;
+//			//save_struct(e[c.name], reinterpret_cast<char const*>(this) + c.offset
+//			//	, c.map, c.num_entries, reinterpret_cast<char const*>(&def) + c.default_offset);
+//		}
+//	}
 	
-	void session_impl::set_proxy(proxy_settings const& s)
-	{
-		TORRENT_ASSERT(is_network_thread());
-
-		m_proxy = s;
-		// in case we just set a socks proxy, we might have to
-		// open the socks incoming connection
-		if (!m_socks_listen_socket) open_new_incoming_socks_connection();
-        // TODO: 注意转换为NS3的版本
-		//m_udp_socket.set_proxy_settings(m_proxy);
-	}
-
-	void session_impl::load_state(lazy_entry const* e)
-	{
-		TORRENT_ASSERT(is_network_thread());
-
-		lazy_entry const* settings;
-	  
-		if (e->type() != lazy_entry::dict_t) return;
-
-		for (int i = 0; i < int(sizeof(all_settings)/sizeof(all_settings[0])); ++i)
-		{
-			session_category const& c = all_settings[i];
-			settings = e->dict_find_dict(c.name);
-			if (!settings) continue;
-			load_struct(*settings, reinterpret_cast<char*>(this) + c.offset, c.map, c.num_entries);
-		}
-		
-		update_rate_settings();
-		update_connections_limit();
-		update_unchoke_limit();
-		m_alerts.set_alert_queue_size_limit(m_settings.alert_queue_size);
-
-		// in case we just set a socks proxy, we might have to
-		// open the socks incoming connection
-		if (!m_socks_listen_socket) open_new_incoming_socks_connection();
-        // TODO: 注意转换为NS3的版本
-		//m_udp_socket.set_proxy_settings(m_proxy);
-
- 		if (m_settings.connection_speed < 0) m_settings.connection_speed = 200;
-
-		update_disk_thread_settings();
-	}
+//	void session_impl::load_state(lazy_entry const* e)
+//	{
+//		TORRENT_ASSERT(is_network_thread());
+//
+//		lazy_entry const* settings;
+//	  
+//		if (e->type() != lazy_entry::dict_t) return;
+//
+//		for (int i = 0; i < int(sizeof(all_settings)/sizeof(all_settings[0])); ++i)
+//		{
+//			session_category const& c = all_settings[i];
+//			settings = e->dict_find_dict(c.name);
+//			if (!settings) continue;
+//			load_struct(*settings, reinterpret_cast<char*>(this) + c.offset, c.map, c.num_entries);
+//		}
+//		
+//		update_rate_settings();
+//		update_connections_limit();
+//		update_unchoke_limit();
+//		//m_alerts.set_alert_queue_size_limit(m_settings.alert_queue_size);
+//
+//		// in case we just set a socks proxy, we might have to
+//		// open the socks incoming connection
+//		//_socks_listen_socket) open_new_incoming_socks_connection();
+//        // TODO: 注意转换为NS3的版本
+//		//m_udp_socket.set_proxy_settings(m_proxy);
+//
+// 		if (m_settings.connection_speed < 0) m_settings.connection_speed = 200;
+//
+//		update_disk_thread_settings();
+//	}
 
 	void session_impl::abort()
 	{
@@ -1228,8 +1220,8 @@ namespace aux {
 		// abort the main thread
 		//m_abort = true;
 		error_code ec;
-		stop_upnp();
-		stop_natpmp();
+		//stop_upnp();
+		//stop_natpmp();
         ns3::Simulator::Cancel(timerId);
 		//m_timer.cancel(ec);
 
@@ -1240,12 +1232,12 @@ namespace aux {
 			i->sock->Close();
 		}
 		m_listen_sockets.clear();
-		if (m_socks_listen_socket && m_socks_listen_socket->is_open())
-		{
-			m_socks_listen_socket->close(ec);
-			TORRENT_ASSERT(!ec);
-		}
-		m_socks_listen_socket.reset();
+	//	if (m_socks_listen_socket && m_socks_listen_socket->is_open())
+	//	{
+	//		m_socks_listen_socket->close(ec);
+	//		TORRENT_ASSERT(!ec);
+	//	}
+	//	m_socks_listen_socket.reset();
 
 #if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
 		(*m_logger) << time_now_string() << " aborting all torrents (" << m_torrents.size() << ")\n";
@@ -1498,7 +1490,7 @@ namespace aux {
 		return m_ipv4_interface;
 	}
 
-	void session_impl::setup_listener(listen_socket_t* s, ns3::InetSocketAddress addr
+	void session_impl::setup_listener(listen_socket_t* s, ns3::Ipv4EndPoint addr
             , int& retries, bool v6_only, int flags, error_code& ec)
 	{
 		// SO_REUSEADDR on windows is a bit special. It actually allows
@@ -1506,32 +1498,22 @@ namespace aux {
 		// may end up binding to the same socket as some other random
 		// application. Don't do it!
 
-		s->sock->Bind(addr);
+		s->sock->Bind(addr.GetPeerAddress().ConvertTo());
 		while (ec && retries > 0)
 		{
 			ec.clear();
 			TORRENT_ASSERT_VAL(!ec, ec);
 			--retries;
-			addr.SetPort(addr.GetPort() + 1);
-			s->sock->Bind(addr);
-		}
-		if (ec && !(flags & session::listen_no_system_port))
-		{
-			// instead of giving up, trying
-			// let the OS pick a port
-			addr.SetPort(0);
-			ec = error_code();
-			s->sock->Bind(addr, ec);
+			addr.SetPeer(addr.GetPeerAddress() ,addr.GetPeerPort() + 1);
+			s->sock->Bind(addr.GetPeerAddress().ConvertTo());
 		}
 		if (ec)
 		{
 			// not even that worked, give up
-			if (m_alerts.should_post<listen_failed_alert>())
-				m_alerts.post_alert(listen_failed_alert(ep, ec));
             NS_LOG_ERROR("cannot bind to interface ");
 			return;
 		}
-		s->external_port = addr.GetPort();
+		s->external_port = addr.GetPeerPort();
 		if (!ec) 
         {
             //s->sock->listen(m_settings.listen_queue_size, ec);
@@ -1550,9 +1532,10 @@ namespace aux {
 		//	ep.port(s->sock->local_endpoint(ec).port());
 
         std::ostringstream ostr;
-		ostr << time_now_string() << " listening on: " << ep
+		ostr << time_now_string() << " listening on: " << addr.GetPeerAddress().Get()
 			<< " external port: " << s->external_port << "\n";
-        NS_LOG_INFO(ostr.str().c_str());
+        const char* msg = ostr.str().c_str();
+        NS_LOG_INFO(msg);
 	}
 	
 	void session_impl::open_listen_port(int flags, error_code& ec)
@@ -1573,11 +1556,11 @@ retry:
 
 		//if (m_abort) return;
 
-		m_ipv4_interface = ns3::InetSocketAddress();
+		m_ipv4_interface = ns3::Ipv4EndPoint();
 	
-		bool bAny = 
+		bool bAny = is_any(m_listen_interface.GetPeerAddress());
 
-        NS_ASSERT(is_any(m_listen_interface.GetPeerAddress()));
+        NS_ASSERT(bAny);
 		
 		// we should only open a single listen socket, that
 		// binds to the given interface
@@ -1594,30 +1577,30 @@ retry:
 		}
 
         // TODO: 注意转换为NS3的版本
-		//m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.port()), ec);
+		//m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.GetPeerPort()), ec);
 		if (ec)
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			char msg[200];
-			snprintf(msg, sizeof(msg), "cannot bind to UDP interface \"%s\": %s"
-				, print_endpoint(m_listen_interface).c_str(), ec.message().c_str());
-			(*m_logger) << msg << "\n";
+		//	char msg[200];
+		//	snprintf(msg, sizeof(msg), "cannot bind to UDP interface \"%s\": %s"
+		//		, print_endpoint(m_listen_interface).c_str(), ec.message().c_str());
+		//	(*m_logger) << msg << "\n";
 #endif
 			if (m_listen_port_retries > 0)
 			{
-				m_listen_interface.port(m_listen_interface.port() + 1);
+				m_listen_interface.SetPeer(m_listen_interface.GetPeerAddress(), m_listen_interface.GetPeerPort() + 1);
 				--m_listen_port_retries;
 				goto retry;
 			}
-			if (m_alerts.should_post<listen_failed_alert>())
-				m_alerts.post_alert(listen_failed_alert(m_listen_interface, ec));
 		}
 		else
 		{
         // TODO: 注意转换为NS3的版本
+        // TODO: 注意不使用upnp和natmap
 			//m_external_udp_port = m_udp_socket.local_port();
-			maybe_update_udp_mapping(0, m_listen_interface.port(), m_listen_interface.port());
-			maybe_update_udp_mapping(1, m_listen_interface.port(), m_listen_interface.port());
+			//maybe_update_udp_mapping(0, m_listen_interface.GetPeerPort(), m_listen_interface.GetPeerPort());
+            // 不使用natmap
+			//maybe_update_udp_mapping(1, m_listen_interface.GetPeerPort(), m_listen_interface.GetPeerPort());
 		}
 
         // TODO: 注意转换为NS3的版本
@@ -1630,9 +1613,9 @@ retry:
 		// initiate accepting on the listen sockets
 		for (std::list<listen_socket_t>::iterator i = m_listen_sockets.begin()
 			, end(m_listen_sockets.end()); i != end; ++i)
-			async_accept(i->sock, i->ssl);
+			async_accept(i->sock);
 
-		open_new_incoming_socks_connection();
+		//open_new_incoming_socks_connection();
 
         // TODO: 不明代码
 //		if (!m_listen_sockets.empty())
@@ -1646,48 +1629,46 @@ retry:
 #endif
 	}
 
-	void session_impl::remap_tcp_ports(boost::uint32_t mask, int tcp_port, int ssl_port)
-	{
-		if ((mask & 1) && m_natpmp.get())
-		{
-			if (m_tcp_mapping[0] != -1) m_natpmp->delete_mapping(m_tcp_mapping[0]);
-			m_tcp_mapping[0] = m_natpmp->add_mapping(natpmp::tcp, tcp_port, tcp_port);
-		}
-		if ((mask & 2) && m_upnp.get())
-		{
-			if (m_tcp_mapping[1] != -1) m_upnp->delete_mapping(m_tcp_mapping[1]);
-			m_tcp_mapping[1] = m_upnp->add_mapping(upnp::tcp, tcp_port, tcp_port);
-		}
-	}
+//	void session_impl::remap_tcp_ports(boost::uint32_t mask, int tcp_port, int ssl_port)
+//	{
+//		if ((mask & 1) && m_natpmp.get())
+//		{
+//			if (m_tcp_mapping[0] != -1) m_natpmp->delete_mapping(m_tcp_mapping[0]);
+//			m_tcp_mapping[0] = m_natpmp->add_mapping(natpmp::tcp, tcp_port, tcp_port);
+//		}
+//		if ((mask & 2) && m_upnp.get())
+//		{
+//			if (m_tcp_mapping[1] != -1) m_upnp->delete_mapping(m_tcp_mapping[1]);
+//			m_tcp_mapping[1] = m_upnp->add_mapping(upnp::tcp, tcp_port, tcp_port);
+//		}
+//	}
 
-	void session_impl::open_new_incoming_socks_connection()
-	{
-		if (m_proxy.type != proxy_settings::socks5
-			&& m_proxy.type != proxy_settings::socks5_pw
-			&& m_proxy.type != proxy_settings::socks4)
-			return;
-		
-        // TODO: 暂时注释掉IO_Service相关的代码
-		/*if (m_socks_listen_socket) return;
-
-		m_socks_listen_socket = boost::shared_ptr<socket_type>(new socket_type(m_io_service));
-		bool ret = instantiate_connection(m_io_service, m_proxy
-			, *m_socks_listen_socket);
-		TORRENT_ASSERT_VAL(ret, ret);
-
-#if defined TORRENT_ASIO_DEBUGGING
-		add_outstanding_async("session_impl::on_socks_accept");
-#endif
-		socks5_stream& s = *m_socks_listen_socket->get<socks5_stream>();
-		s.set_command(2); // 2 means BIND (as opposed to CONNECT)
-		m_socks_listen_port = m_listen_interface.port();
-		if (m_socks_listen_port == 0) m_socks_listen_port = 2000 + random() % 60000;
-		s.async_connect(ns3::InetSocketAddress(address_v4::any(), m_socks_listen_port)
-			, boost::bind(&session_impl::on_socks_accept, this, m_socks_listen_socket, _1));*/
-	}
+//	void session_impl::open_new_incoming_socks_connection()
+//	{
+//		if (m_proxy.type != proxy_settings::socks5
+//			&& m_proxy.type != proxy_settings::socks5_pw
+//			&& m_proxy.type != proxy_settings::socks4)
+//			return;
+//		
+//        // TODO: 暂时注释掉IO_Service相关的代码
+//		if (m_socks_listen_socket) return;
+//
+//		m_socks_listen_socket = boost::shared_ptr<socket_type>(new socket_type(m_io_service));
+//		bool ret = instantiate_connection(m_io_service, m_proxy
+//			, *m_socks_listen_socket);
+//		TORRENT_ASSERT_VAL(ret, ret);
+//
+//        NS_LOG_FUNCTION(this);
+//
+//		socks5_stream& s = *m_socks_listen_socket->get<socks5_stream>();
+//		s.set_command(2); // 2 means BIND (as opposed to CONNECT)
+//		m_socks_listen_port = m_listen_interface.GetPeerPort();
+//		s.async_connect(ns3::InetSocketAddress(address_v4::any(), m_socks_listen_port)
+//			, boost::bind(&session_impl::on_socks_accept, this, m_socks_listen_socket, _1));
+//	}
 
 	void session_impl::on_receive_udp(error_code const& e
-		, udp::endpoint const& ep, char const* buf, int len)
+		, ns3::Ipv4EndPoint const& ep, char const* buf, int len)
 	{
 #ifdef TORRENT_STATS
 		++m_num_messages[on_udp_counter];
@@ -1718,9 +1699,9 @@ retry:
 #endif
 
 			// don't bubble up operation aborted errors to the user
-			if (e != asio::error::operation_aborted
-				&& m_alerts.should_post<udp_error_alert>())
-				m_alerts.post_alert(udp_error_alert(ep, e));
+			//if (e != asio::error::operation_aborted
+				//&& m_alerts.should_post<udp_error_alert>())
+				//m_alerts.post_alert(udp_error_alert(ep, e));
 
 			return;
 		}
@@ -1747,7 +1728,7 @@ retry:
     void session_impl::async_accept(ns3::Ptr<ns3::Socket> const& listener)
 	{
 		NS_LOG_INFO("session_impl::on_accept_connection");
-        listener->SetRecvCallback(MakeCallback (session_impl,boost::bind());
+        listener->SetRecvCallback(MakeCallback (&session_impl::on_accept_connection, this));
 		//listener->async_accept(*str
 		//	, boost::bind(&session_impl::on_accept_connection, this, c
 		//	, boost::weak_ptr<socket_acceptor>(listener), _1, ssl));
@@ -1769,7 +1750,7 @@ retry:
 
 		error_code ec;
 		// we got a connection request!
-		ns3::Ipv4EndPoint endp = s->GetIpv4EndPoint();
+		ns3::Ipv4EndPoint* endp = s->GetIpv4EndPoint();
 
 		// local addresses do not count, since it's likely
 		// coming from our own client through local service discovery
@@ -1819,10 +1800,11 @@ retry:
 		  	return;
 		}
 
-		setup_socket_buffers(*s);
+        // TODO: NS3的Socket不需要
+		//setup_socket_buffers(*s);
 
 		boost::intrusive_ptr<peer_connection> c(
-			new bt_peer_connection(*this, s, endp.getPeerAddress(), 0));
+			new bt_peer_connection(*this, s, *endp, 0));
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 		c->m_in_constructor = false;
 #endif
@@ -1836,7 +1818,7 @@ retry:
 		}
 	}
 
-	void session_impl::setup_socket_buffers(socket_type& s)
+	/*void session_impl::setup_socket_buffers(ns3::Ptr<ns3::Socket> s)
 	{
 		error_code ec;
 		if (m_settings.send_socket_buffer_size)
@@ -1851,24 +1833,15 @@ retry:
 				m_settings.recv_socket_buffer_size);
 			s.set_option(option, ec);
 		}
-	}
+	}*/
 
-	void session_impl::on_socks_accept(boost::shared_ptr<socket_type> const& s
-		, error_code const& e)
+	void session_impl::on_socks_accept(ns3::Ptr<ns3::Socket> const& s)
 	{
 #if defined TORRENT_ASIO_DEBUGGING
 		complete_async("session_impl::on_socks_accept");
 #endif
-		m_socks_listen_socket.reset();
-		if (e == asio::error::operation_aborted) return;
-		if (e)
-		{
-			if (m_alerts.should_post<listen_failed_alert>())
-				m_alerts.post_alert(listen_failed_alert(ns3::InetSocketAddress(
-					address_v4::any(), m_listen_interface.port()), e));
-			return;
-		}
-		open_new_incoming_socks_connection();
+		//m_socks_listen_socket.reset();
+		//open_new_incoming_socks_connection();
 		incoming_connection(s);
 	}
 
@@ -1953,34 +1926,34 @@ retry:
 	// write jobs to it. It will go through all peer
 	// connections that are blocked on the disk and
 	// wake them up
-	void session_impl::on_disk_queue()
-	{
-#ifdef TORRENT_STATS
-		++m_num_messages[on_disk_queue_counter];
-#endif
-		TORRENT_ASSERT(is_network_thread());
-
-		// just to play it safe
-		if (m_next_disk_peer == m_connections.end()) m_next_disk_peer = m_connections.begin();
-
-		// never loop more times than there are connections
-		// keep in mind that connections may disconnect
-		// while we're looping, that's why this is a reliable
-		// way of limiting it
-		int limit = m_connections.size();
-
-		while (m_next_disk_peer != m_connections.end() && limit > 0 && can_write_to_disk())
-		{
-			--limit;
-			peer_connection* p = m_next_disk_peer->get();
-			++m_next_disk_peer;
-			if (m_next_disk_peer == m_connections.end()) m_next_disk_peer = m_connections.begin();
-			if ((p->m_channel_state[peer_connection::download_channel]
-				& peer_info::bw_disk) == 0) continue;
-			p->on_disk();
-		}
-
-	}
+//	void session_impl::on_disk_queue()
+//	{
+//#ifdef TORRENT_STATS
+//		++m_num_messages[on_disk_queue_counter];
+//#endif
+//		TORRENT_ASSERT(is_network_thread());
+//
+//		// just to play it safe
+//		if (m_next_disk_peer == m_connections.end()) m_next_disk_peer = m_connections.begin();
+//
+//		// never loop more times than there are connections
+//		// keep in mind that connections may disconnect
+//		// while we're looping, that's why this is a reliable
+//		// way of limiting it
+//		int limit = m_connections.size();
+//
+//		while (m_next_disk_peer != m_connections.end() && limit > 0 /*&& can_write_to_disk()*/)
+//		{
+//			--limit;
+//			peer_connection* p = m_next_disk_peer->get();
+//			++m_next_disk_peer;
+//			if (m_next_disk_peer == m_connections.end()) m_next_disk_peer = m_connections.begin();
+//			if ((p->m_channel_state[peer_connection::download_channel]
+//				& peer_info::bw_disk) == 0) continue;
+//			p->on_disk();
+//		}
+//
+//	}
 
 	// used to cache the current time
 	// every 100 ms. This is cheaper
@@ -2039,7 +2012,8 @@ retry:
 		error_code ec;
 		//m_timer.expires_at(now + milliseconds(m_settings.tick_interval), ec);
 		//m_timer.async_wait(bind(&session_impl::on_tick, this, _1));
-        ns3::Time time = boostTimeConvert(now + milliseconds(m_settings.tick_interval));
+        ptime interv = now + milliseconds(m_settings.tick_interval);
+        ns3::Time time = boostTimeConvert(interv);
         timerId = Simulator::Schedule(time, &session_impl::on_tick, this, ec);
 
 		m_download_rate.update_quotas(now - m_last_tick);
@@ -2106,7 +2080,6 @@ retry:
 						peer_connection& p = *(*i);
 						if (p.in_handshake()) continue;
 						int protocol = 0;
-						if (is_utp(*p.get_socket())) protocol = 1;
 
 						if (p.download_queue().size() + p.request_queue().size() > 0)
 							++num_peers[protocol][peer_connection::download_channel];
@@ -2197,18 +2170,7 @@ retry:
 				++uncongested_torrents;
 
 			if (t.state() == torrent_status::checking_files) ++num_checking;
-			else if (t.state() == torrent_status::queued_for_checking && !t.is_paused()) ++num_queued;
-
-			if (t.is_auto_managed() && t.is_paused() && !t.has_error())
-			{
-				++num_paused_auto_managed;
-				if (least_recently_scraped == m_torrents.end()
-					|| least_recently_scraped->second->seconds_since_last_scrape()
-						< t.seconds_since_last_scrape())
-				{
-					least_recently_scraped = i;
-				}
-			}
+			else if (t.state() == torrent_status::queued_for_checking) ++num_queued;
 
 			if (t.is_finished())
 			{
@@ -2232,24 +2194,24 @@ retry:
 			m_upload_channel.use_quota(
 				m_stat.upload_tracker());
 
-			int up_limit = m_upload_channel.throttle();
-			int down_limit = m_download_channel.throttle();
+	//		int up_limit = m_upload_channel.throttle();
+	//		int down_limit = m_download_channel.throttle();
 
-			if (down_limit > 0
-				&& m_stat.download_ip_overhead() >= down_limit
-				&& m_alerts.should_post<performance_alert>())
-			{
-				m_alerts.post_alert(performance_alert(torrent_handle()
-					, performance_alert::download_limit_too_low));
-			}
+		//	if (down_limit > 0
+		//		&& m_stat.download_ip_overhead() >= down_limit
+		//		&& m_alerts.should_post<performance_alert>())
+		//	{
+		//		m_alerts.post_alert(performance_alert(torrent_handle()
+		//			, performance_alert::download_limit_too_low));
+		//	}
 
-			if (up_limit > 0
-				&& m_stat.upload_ip_overhead() >= up_limit
-				&& m_alerts.should_post<performance_alert>())
-			{
-				m_alerts.post_alert(performance_alert(torrent_handle()
-					, performance_alert::upload_limit_too_low));
-			}
+		//	if (up_limit > 0
+		//		&& m_stat.upload_ip_overhead() >= up_limit
+		//		&& m_alerts.should_post<performance_alert>())
+		//	{
+		//		m_alerts.post_alert(performance_alert(torrent_handle()
+		//			, performance_alert::upload_limit_too_low));
+		//	}
 		}
 
 		m_peak_up_rate = (std::max)(m_stat.upload_rate(), m_peak_up_rate);
@@ -2258,8 +2220,7 @@ retry:
 		m_stat.second_tick(tick_interval_ms);
 
 		TORRENT_ASSERT(least_recently_scraped == m_torrents.end()
-			|| (least_recently_scraped->second->is_paused()
-			&& least_recently_scraped->second->is_auto_managed()));
+			|| (least_recently_scraped->second->is_auto_managed()));
 
 #ifdef TORRENT_STATS
 
@@ -2273,20 +2234,17 @@ retry:
 		// scrape paused torrents that are auto managed
 		// (unless the session is paused)
 		// --------------------------------------------------------------
-		if (!is_paused())
+		--m_auto_scrape_time_scaler;
+		if (m_auto_scrape_time_scaler <= 0)
 		{
-			--m_auto_scrape_time_scaler;
-			if (m_auto_scrape_time_scaler <= 0)
-			{
-				m_auto_scrape_time_scaler = m_settings.auto_scrape_interval
-					/ (std::max)(1, num_paused_auto_managed);
-				if (m_auto_scrape_time_scaler < m_settings.auto_scrape_min_interval)
-					m_auto_scrape_time_scaler = m_settings.auto_scrape_min_interval;
+			m_auto_scrape_time_scaler = m_settings.auto_scrape_interval
+				/ (std::max)(1, num_paused_auto_managed);
+			if (m_auto_scrape_time_scaler < m_settings.auto_scrape_min_interval)
+				m_auto_scrape_time_scaler = m_settings.auto_scrape_min_interval;
 
-				if (least_recently_scraped != m_torrents.end())
-				{
-					least_recently_scraped->second->scrape_tracker();
-				}
+			if (least_recently_scraped != m_torrents.end())
+			{
+				least_recently_scraped->second->scrape_tracker();
 			}
 		}
 
@@ -2618,30 +2576,15 @@ retry:
 				++error_torrents;
 			else
 			{
-				if (t->is_paused())
-				{
-					if (!t->is_auto_managed())
-						++stopped_torrents;
-					else
-					{
-						if (t->is_seed())
-							++queued_seed_torrents;
-						else
-							++queued_download_torrents;
-					}
-				}
+				if (i->second->state() == torrent_status::checking_files
+					|| i->second->state() == torrent_status::queued_for_checking)
+					++checking_torrents;
+				else if (i->second->is_seed())
+					++seeding_torrents;
+				else if (i->second->is_upload_only())
+					++upload_only_torrents;
 				else
-				{
-					if (i->second->state() == torrent_status::checking_files
-						|| i->second->state() == torrent_status::queued_for_checking)
-						++checking_torrents;
-					else if (i->second->is_seed())
-						++seeding_torrents;
-					else if (i->second->is_upload_only())
-						++upload_only_torrents;
-					else
-						++downloading_torrents;
-				}
+					++downloading_torrents;
 			}
 
 			dq.clear();
@@ -3043,10 +2986,9 @@ retry:
 
 			--dht_limit;
 			--tracker_limit;
-			t->set_announce_to_dht(dht_limit >= 0);
 			t->set_announce_to_trackers(tracker_limit >= 0);
 
-			if (!t->is_paused() && !is_active(t, settings())
+			if (!is_active(t, settings())
 				&& hard_limit > 0)
 			{
 				--hard_limit;
@@ -3110,7 +3052,6 @@ retry:
 			if (t->state() == torrent_status::checking_files
 				|| t->state() == torrent_status::queued_for_checking)
 			{
-				if (t->is_auto_managed() && t->is_paused()) t->resume();
 				continue;
 			}
 			if (t->is_auto_managed() && !t->has_error())
@@ -3122,21 +3063,6 @@ retry:
 					seeds.push_back(t);
 				else
 					downloaders.push_back(t);
-			}
-			else if (!t->is_paused())
-			{
-				TORRENT_ASSERT(t->m_resume_data_loaded || !t->valid_metadata());
-				--hard_limit;
-			  	if (is_active(t, settings()))
-				{
-					// this is not an auto managed torrent,
-					// if it's running and active, decrease the
-					// counters.
-					if (t->is_finished())
-						--num_seeds;
-					else
-						--num_downloaders;
-				}
 			}
 		}
 
@@ -3186,7 +3112,6 @@ retry:
 			if (pi->web_seed) continue;
 			torrent* t = p->associated_torrent().lock().get();
 			if (!t) continue;
-			if (t->is_paused()) continue;
 
 			if (pi->optimistically_unchoked)
 			{
@@ -3267,7 +3192,7 @@ retry:
 		INVARIANT_CHECK;
 
 		ptime now = time_now();
-		time_duration unchoke_interval = now - m_last_choke;
+		//time_duration unchoke_interval = now - m_last_choke;
 		m_last_choke = now;
 
 		// build list of all peers that are
@@ -3282,27 +3207,28 @@ retry:
 			torrent* t = p->associated_torrent().lock().get();
 			policy::peer* pi = p->peer_info_struct();
 
-			if (p->ignore_unchoke_slots() || t == 0 || pi == 0 || pi->web_seed || t->is_paused())
+			if (p->ignore_unchoke_slots() || t == 0 || pi == 0 || pi->web_seed)
 				continue;
 
-			if (m_settings.choking_algorithm == session_settings::bittyrant_choker)
-			{
-				if (!p->is_choked() && p->is_interesting())
-				{
-					if (!p->has_peer_choked())
-					{
-						// we're unchoked, we may want to lower our estimated
-						// reciprocation rate
-						p->decrease_est_reciprocation_rate();
-					}
-					else
-					{
-						// we've unchoked this peer, and it hasn't reciprocated
-						// we may want to increase our estimated reciprocation rate
-						p->increase_est_reciprocation_rate();
-					}
-				}
-			}
+            // TODO: 不使用bittyrant阻塞算法
+	//		if (m_settings.choking_algorithm == session_settings::bittyrant_choker)
+	//		{
+	//			if (!p->is_choked() && p->is_interesting())
+	//			{
+	//				if (!p->has_peer_choked())
+	//				{
+	//					// we're unchoked, we may want to lower our estimated
+	//					// reciprocation rate
+	//					p->decrease_est_reciprocation_rate();
+	//				}
+	//				else
+	//				{
+	//					// we've unchoked this peer, and it hasn't reciprocated
+	//					// we may want to increase our estimated reciprocation rate
+	//					p->increase_est_reciprocation_rate();
+	//				}
+	//			}
+	//		}
 
 			if (!p->is_peer_interested()
 				|| p->is_disconnecting()
@@ -3325,92 +3251,92 @@ retry:
 			peers.push_back(p.get());
 		}
 
-		if (m_settings.choking_algorithm == session_settings::rate_based_choker)
-		{
-			m_allowed_upload_slots = 0;
-			std::sort(peers.begin(), peers.end()
-				, boost::bind(&peer_connection::upload_rate_compare, _1, _2));
+//		if (m_settings.choking_algorithm == session_settings::rate_based_choker)
+//		{
+//			m_allowed_upload_slots = 0;
+//			std::sort(peers.begin(), peers.end()
+//				, boost::bind(&peer_connection::upload_rate_compare, _1, _2));
+//
+//#ifdef TORRENT_DEBUG
+//			for (std::vector<peer_connection*>::const_iterator i = peers.begin()
+//				, end(peers.end()), prev(peers.end()); i != end; ++i)
+//			{
+//				if (prev != end)
+//				{
+//					boost::shared_ptr<torrent> t1 = (*prev)->associated_torrent().lock();
+//					TORRENT_ASSERT(t1);
+//					boost::shared_ptr<torrent> t2 = (*i)->associated_torrent().lock();
+//					TORRENT_ASSERT(t2);
+//					TORRENT_ASSERT((*prev)->uploaded_in_last_round() * 1000
+//						* (1 + t1->priority()) / total_milliseconds(unchoke_interval)
+//						>= (*i)->uploaded_in_last_round() * 1000
+//						* (1 + t2->priority()) / total_milliseconds(unchoke_interval));
+//				}
+//				prev = i;
+//			}
+//#endif
+//
+//			// TODO: make configurable
+//			int rate_threshold = 1024;
+//
+//			for (std::vector<peer_connection*>::const_iterator i = peers.begin()
+//				, end(peers.end()); i != end; ++i)
+//			{
+//				peer_connection const& p = **i;
+//				int rate = int(p.uploaded_in_last_round()
+//					* 1000 / total_milliseconds(unchoke_interval));
+//
+//				if (rate < rate_threshold) break;
+//
+//				++m_allowed_upload_slots;
+//
+//				// TODO: make configurable
+//				rate_threshold += 1024;
+//			}
+//			// allow one optimistic unchoke
+//			++m_allowed_upload_slots;
+//		}
 
-#ifdef TORRENT_DEBUG
-			for (std::vector<peer_connection*>::const_iterator i = peers.begin()
-				, end(peers.end()), prev(peers.end()); i != end; ++i)
-			{
-				if (prev != end)
-				{
-					boost::shared_ptr<torrent> t1 = (*prev)->associated_torrent().lock();
-					TORRENT_ASSERT(t1);
-					boost::shared_ptr<torrent> t2 = (*i)->associated_torrent().lock();
-					TORRENT_ASSERT(t2);
-					TORRENT_ASSERT((*prev)->uploaded_in_last_round() * 1000
-						* (1 + t1->priority()) / total_milliseconds(unchoke_interval)
-						>= (*i)->uploaded_in_last_round() * 1000
-						* (1 + t2->priority()) / total_milliseconds(unchoke_interval));
-				}
-				prev = i;
-			}
-#endif
-
-			// TODO: make configurable
-			int rate_threshold = 1024;
-
-			for (std::vector<peer_connection*>::const_iterator i = peers.begin()
-				, end(peers.end()); i != end; ++i)
-			{
-				peer_connection const& p = **i;
-				int rate = int(p.uploaded_in_last_round()
-					* 1000 / total_milliseconds(unchoke_interval));
-
-				if (rate < rate_threshold) break;
-
-				++m_allowed_upload_slots;
-
-				// TODO: make configurable
-				rate_threshold += 1024;
-			}
-			// allow one optimistic unchoke
-			++m_allowed_upload_slots;
-		}
-
-		if (m_settings.choking_algorithm == session_settings::bittyrant_choker)
-		{
-			// if we're using the bittyrant choker, sort peers by their return
-			// on investment. i.e. download rate / upload rate
-			std::sort(peers.begin(), peers.end()
-				, boost::bind(&peer_connection::bittyrant_unchoke_compare, _1, _2));
-		}
-		else
-		{
+		//if (m_settings.choking_algorithm == session_settings::bittyrant_choker)
+		//{
+		//	// if we're using the bittyrant choker, sort peers by their return
+		//	// on investment. i.e. download rate / upload rate
+		//	std::sort(peers.begin(), peers.end()
+		//		, boost::bind(&peer_connection::bittyrant_unchoke_compare, _1, _2));
+		//}
+		//else
+		//{
 			// sorts the peers that are eligible for unchoke by download rate and secondary
 			// by total upload. The reason for this is, if all torrents are being seeded,
 			// the download rate will be 0, and the peers we have sent the least to should
 			// be unchoked
 			std::sort(peers.begin(), peers.end()
 				, boost::bind(&peer_connection::unchoke_compare, _1, _2));
-		}
+		//}
 
 		// auto unchoke
-		int upload_limit = m_bandwidth_channel[peer_connection::upload_channel]->throttle();
-		if (m_settings.choking_algorithm == session_settings::auto_expand_choker
-			&& upload_limit > 0)
-		{
-			// if our current upload rate is less than 90% of our 
-			// limit AND most torrents are not "congested", i.e.
-			// they are not holding back because of a per-torrent
-			// limit
-			if (m_stat.upload_rate() < upload_limit * 0.9f
-				&& m_allowed_upload_slots <= m_num_unchoked + 1
-				&& congested_torrents < uncongested_torrents
-				&& m_upload_rate.queue_size() < 2)
-			{
-				++m_allowed_upload_slots;
-			}
-			else if (m_upload_rate.queue_size() > 1
-				&& m_allowed_upload_slots > m_settings.unchoke_slots_limit
-				&& m_settings.unchoke_slots_limit >= 0)
-			{
-				--m_allowed_upload_slots;
-			}
-		}
+		//int upload_limit = m_bandwidth_channel[peer_connection::upload_channel]->throttle();
+	//	if (m_settings.choking_algorithm == session_settings::auto_expand_choker
+	//		&& upload_limit > 0)
+	//	{
+	//		// if our current upload rate is less than 90% of our 
+	//		// limit AND most torrents are not "congested", i.e.
+	//		// they are not holding back because of a per-torrent
+	//		// limit
+	//		if (m_stat.upload_rate() < upload_limit * 0.9f
+	//			&& m_allowed_upload_slots <= m_num_unchoked + 1
+	//			&& congested_torrents < uncongested_torrents
+	//			&& m_upload_rate.queue_size() < 2)
+	//		{
+	//			++m_allowed_upload_slots;
+	//		}
+	//		else if (m_upload_rate.queue_size() > 1
+	//			&& m_allowed_upload_slots > m_settings.unchoke_slots_limit
+	//			&& m_settings.unchoke_slots_limit >= 0)
+	//		{
+	//			--m_allowed_upload_slots;
+	//		}
+	//	}
 
 		int num_opt_unchoke = m_settings.num_optimistic_unchoke_slots;
 		if (num_opt_unchoke == 0) num_opt_unchoke = (std::max)(1, m_allowed_upload_slots / 5);
@@ -3418,21 +3344,21 @@ retry:
 		// reserve some upload slots for optimistic unchokes
 		int unchoke_set_size = m_allowed_upload_slots - num_opt_unchoke;
 
-		int upload_capacity_left = 0;
-		if (m_settings.choking_algorithm == session_settings::bittyrant_choker)
-		{
-			upload_capacity_left = m_upload_channel.throttle();
-			if (upload_capacity_left == 0)
-			{
-				// we don't know at what rate we can upload. If we have a
-				// measurement of the peak, use that + 10kB/s, otherwise
-				// assume 20 kB/s
-				upload_capacity_left = (std::max)(20000, m_peak_up_rate + 10000);
-				if (m_alerts.should_post<performance_alert>())
-					m_alerts.post_alert(performance_alert(torrent_handle()
-						, performance_alert::bittyrant_with_no_uplimit));
-			}
-		}
+		//int upload_capacity_left = 0;
+	//	if (m_settings.choking_algorithm == session_settings::bittyrant_choker)
+	//	{
+	//		upload_capacity_left = m_upload_channel.throttle();
+	//		if (upload_capacity_left == 0)
+	//		{
+	//			// we don't know at what rate we can upload. If we have a
+	//			// measurement of the peak, use that + 10kB/s, otherwise
+	//			// assume 20 kB/s
+	//			upload_capacity_left = (std::max)(20000, m_peak_up_rate + 10000);
+	//			if (m_alerts.should_post<performance_alert>())
+	//				m_alerts.post_alert(performance_alert(torrent_handle()
+	//					, performance_alert::bittyrant_with_no_uplimit));
+	//		}
+	//	}
 
 		m_num_unchoked = 0;
 		// go through all the peers and unchoke the first ones and choke
@@ -3454,18 +3380,19 @@ retry:
 			// if this peer should be unchoked depends on different things
 			// in different unchoked schemes
 			bool unchoke = false;
-			if (m_settings.choking_algorithm == session_settings::bittyrant_choker)
-			{
-				unchoke = p->est_reciprocation_rate() <= upload_capacity_left;
-			}
-			else
+		//	if (m_settings.choking_algorithm == session_settings::bittyrant_choker)
+		//	{
+		//		unchoke = p->est_reciprocation_rate() <= upload_capacity_left;
+		//	}
+		//	else
 			{
 				unchoke = unchoke_set_size > 0;
 			}
 
 			if (unchoke)
 			{
-				upload_capacity_left -= p->est_reciprocation_rate();
+                // TODO: 不使用bittyrant阻塞算法
+			//	upload_capacity_left -= p->est_reciprocation_rate();
 
 				// yes, this peer should be unchoked
 				if (p->is_choked())
@@ -3633,7 +3560,7 @@ retry:
 		}
 		m_state_updates.clear();
 
-		m_alerts.post_alert_ptr(alert.release());
+		//m_alerts.post_alert_ptr(alert.release());
 	}
 
 	std::vector<torrent_handle> session_impl::get_torrents() const
@@ -3881,30 +3808,31 @@ retry:
 	{
 		INVARIANT_CHECK;
 
-		ns3::InetSocketAddress new_interface;
+		ns3::Ipv4EndPoint new_interface;
 		if (net_interface && std::strlen(net_interface) > 0)
 		{
-			new_interface = ns3::InetSocketAddress(address::from_string(net_interface, ec), port_range.first);
-			if (ec)
-			{
+			new_interface = ns3::Ipv4EndPoint(ns3::Ipv4Address(net_interface), port_range.first);
+		//	if (ec)
+		//	{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-				(*m_logger) << time_now_string() << "listen_on: " << net_interface
-					<< " failed: " << ec.message() << "\n";
+		//		(*m_logger) << time_now_string() << "listen_on: " << net_interface
+		//			<< " failed: " << ec.message() << "\n";
 #endif
-				return;
-			}
+		//		return;
+		//	}
 		}
 		else
 		{
-			new_interface = ns3::InetSocketAddress(address_v4::any(), port_range.first);
+			new_interface = ns3::Ipv4EndPoint(ns3::Ipv4Address::GetAny(), port_range.first);
 		}
 
 		m_listen_port_retries = port_range.second - port_range.first;
 
 		// if the interface is the same and the socket is open
 		// don't do anything
-		if (new_interface == m_listen_interface
-			&& !m_listen_sockets.empty())
+		if (new_interface.GetPeerPort() == m_listen_interface.GetPeerPort() && 
+            new_interface.GetPeerAddress() == m_listen_interface.GetPeerAddress() &&
+			!m_listen_sockets.empty())
 			return;
 
 		m_listen_interface = new_interface;
@@ -3917,14 +3845,14 @@ retry:
 #endif
 	}
 
-	address session_impl::listen_address() const
+    ns3::Address session_impl::listen_address() const
 	{
 		for (std::list<listen_socket_t>::const_iterator i = m_listen_sockets.begin()
 			, end(m_listen_sockets.end()); i != end; ++i)
 		{
-			if (i->external_address != address()) return i->external_address;
+			if (i->external_address != ns3::Address()) return i->external_address;
 		}
-		return address();
+		return ns3::Address();
 	}
 
 	boost::uint16_t session_impl::listen_port() const
@@ -3932,8 +3860,8 @@ retry:
 		// if peer connections are set up to be received over a socks
 		// proxy, and it's the same one as we're using for the tracker
 		// just tell the tracker the socks5 port we're listening on
-		if (m_socks_listen_socket && m_socks_listen_socket->is_open())
-			return m_socks_listen_port;
+		//if (m_socks_listen_socket && m_socks_listen_socket->is_open())
+			//return m_socks_listen_port;
 
 		// if not, don't tell the tracker anything if we're in anonymous
 		// mode. We don't want to leak our listen port since it can
@@ -3958,55 +3886,56 @@ retry:
 		m_upnp_log << time_now_string() << " "
 			<< transport_names[map_transport] << ": " << msg;
 #endif
-		if (m_alerts.should_post<portmap_log_alert>())
-			m_alerts.post_alert(portmap_log_alert(map_transport, msg));
+//		if (m_alerts.should_post<portmap_log_alert>())
+//			m_alerts.post_alert(portmap_log_alert(map_transport, msg));
 	}
 
-	void session_impl::on_port_mapping(int mapping, address const& ip, int port
-		, error_code const& ec, int map_transport)
-	{
-		TORRENT_ASSERT(is_network_thread());
-
-		TORRENT_ASSERT(map_transport >= 0 && map_transport <= 1);
-
-		if (mapping == m_udp_mapping[map_transport] && port != 0)
-		{
-			m_external_udp_port = port;
-			if (m_alerts.should_post<portmap_alert>())
-				m_alerts.post_alert(portmap_alert(mapping, port
-					, map_transport));
-			return;
-		}
-
-		if (mapping == m_tcp_mapping[map_transport] && port != 0)
-		{
-			// TODO: report the proper address of the router
-			if (ip != address()) set_external_address(ip, source_router
-				, address());
-
-			if (!m_listen_sockets.empty()) {
-				m_listen_sockets.front().external_address = ip;
-				m_listen_sockets.front().external_port = port;
-			}
-			if (m_alerts.should_post<portmap_alert>())
-				m_alerts.post_alert(portmap_alert(mapping, port
-					, map_transport));
-			return;
-		}
-
-		if (ec)
-		{
-			if (m_alerts.should_post<portmap_error_alert>())
-				m_alerts.post_alert(portmap_error_alert(mapping
-					, map_transport, ec));
-		}
-		else
-		{
-			if (m_alerts.should_post<portmap_alert>())
-				m_alerts.post_alert(portmap_alert(mapping, port
-					, map_transport));
-		}
-	}
+    // TODO: 只有Upmp与natmap用到这个函数
+//	void session_impl::on_port_mapping(int mapping, ns3::Address const& ip, int port
+//		, error_code const& ec, int map_transport)
+//	{
+//		TORRENT_ASSERT(is_network_thread());
+//
+//		TORRENT_ASSERT(map_transport >= 0 && map_transport <= 1);
+//
+//		if (mapping == m_udp_mapping[map_transport] && port != 0)
+//		{
+//			m_external_udp_port = port;
+//			if (m_alerts.should_post<portmap_alert>())
+//				m_alerts.post_alert(portmap_alert(mapping, port
+//					, map_transport));
+//			return;
+//		}
+//
+//		if (mapping == m_tcp_mapping[map_transport] && port != 0)
+//		{
+//			// TODO: report the proper address of the router
+//			if (ip != ns3::Address()) set_external_address(ip, source_router
+//				, ns3::Address());
+//
+//			if (!m_listen_sockets.empty()) {
+//				m_listen_sockets.front().external_address = ip;
+//				m_listen_sockets.front().external_port = port;
+//			}
+//			if (m_alerts.should_post<portmap_alert>())
+//				m_alerts.post_alert(portmap_alert(mapping, port
+//					, map_transport));
+//			return;
+//		}
+//
+//		if (ec)
+//		{
+//			if (m_alerts.should_post<portmap_error_alert>())
+//				m_alerts.post_alert(portmap_error_alert(mapping
+//					, map_transport, ec));
+//		}
+//		else
+//		{
+//			if (m_alerts.should_post<portmap_alert>())
+//				m_alerts.post_alert(portmap_alert(mapping, port
+//					, map_transport));
+//		}
+//	}
 
 	session_status session_impl::status() const
 	{
@@ -4094,42 +4023,42 @@ retry:
 		return s;
 	}
 
-	void session_impl::maybe_update_udp_mapping(int nat, int local_port, int external_port)
-	{
-		int local, external, protocol;
-		if (nat == 0 && m_natpmp.get())
-		{
-			if (m_udp_mapping[nat] != -1)
-			{
-				if (m_natpmp->get_mapping(m_udp_mapping[nat], local, external, protocol))
-				{
-					// we already have a mapping. If it's the same, don't do anything
-					if (local == local_port && external == external_port && protocol == natpmp::udp)
-						return;
-				}
-				m_natpmp->delete_mapping(m_udp_mapping[nat]);
-			}
-			m_udp_mapping[nat] = m_natpmp->add_mapping(natpmp::udp
-				, local_port, external_port);
-			return;
-		}
-		else if (nat == 1 && m_upnp.get())
-		{
-			if (m_udp_mapping[nat] != -1)
-			{
-				if (m_upnp->get_mapping(m_udp_mapping[nat], local, external, protocol))
-				{
-					// we already have a mapping. If it's the same, don't do anything
-					if (local == local_port && external == external_port && protocol == natpmp::udp)
-						return;
-				}
-				m_upnp->delete_mapping(m_udp_mapping[nat]);
-			}
-			m_udp_mapping[nat] = m_upnp->add_mapping(upnp::udp
-				, local_port, external_port);
-			return;
-		}
-	}
+//	void session_impl::maybe_update_udp_mapping(int nat, int local_port, int external_port)
+//	{
+//		int local, external, protocol;
+//		if (nat == 0 && m_natpmp.get())
+//		{
+//			if (m_udp_mapping[nat] != -1)
+//			{
+//				if (m_natpmp->get_mapping(m_udp_mapping[nat], local, external, protocol))
+//				{
+//					// we already have a mapping. If it's the same, don't do anything
+//					if (local == local_port && external == external_port && protocol == natpmp::udp)
+//						return;
+//				}
+//				m_natpmp->delete_mapping(m_udp_mapping[nat]);
+//			}
+//			m_udp_mapping[nat] = m_natpmp->add_mapping(natpmp::udp
+//				, local_port, external_port);
+//			return;
+//		}
+	//	else if (nat == 1 && m_upnp.get())
+	//	{
+	//		if (m_udp_mapping[nat] != -1)
+	//		{
+	//			if (m_upnp->get_mapping(m_udp_mapping[nat], local, external, protocol))
+	//			{
+	//				// we already have a mapping. If it's the same, don't do anything
+	//				if (local == local_port && external == external_port && protocol == natpmp::udp)
+	//					return;
+	//			}
+	//			m_upnp->delete_mapping(m_udp_mapping[nat]);
+	//		}
+	//		m_udp_mapping[nat] = m_upnp->add_mapping(upnp::udp
+	//			, local_port, external_port);
+	//		return;
+	//	}
+//	}
 
 	bool session_impl::is_listening() const
 	{
@@ -4140,7 +4069,7 @@ retry:
 	{
 		//m_io_service.post(boost::bind(&session_impl::abort, this));
 
-		// we need to wait for the disk-io thread to
+	// we need to wait for the disk-io thread to
 		// die first, to make sure it won't post any
 		// more messages to the io_service containing references
 		// to disk_io_pool inside the disk_io_thread. Once
@@ -4182,9 +4111,9 @@ retry:
 
 		if (m_settings.num_optimistic_unchoke_slots >= m_allowed_upload_slots / 2)
 		{
-			if (m_alerts.should_post<performance_alert>())
-				m_alerts.post_alert(performance_alert(torrent_handle()
-					, performance_alert::too_many_optimistic_unchoke_slots));
+	//		if (m_alerts.should_post<performance_alert>())
+	//			m_alerts.post_alert(performance_alert(torrent_handle()
+	//				, performance_alert::too_many_optimistic_unchoke_slots));
 		}
 	}
 
@@ -4285,114 +4214,117 @@ retry:
 		}
 	}
 
-	void session_impl::set_alert_dispatch(boost::function<void(std::auto_ptr<alert>)> const& fun)
-	{
-		m_alerts.set_dispatch_function(fun);
-	}
+//	void session_impl::set_alert_dispatch(boost::function<void(std::auto_ptr<alert>)> const& fun)
+//	{
+//		m_alerts.set_dispatch_function(fun);
+//	}
+//
+//	std::auto_ptr<alert> session_impl::pop_alert()
+//	{
+//		return m_alerts.get();
+//	}
+//	
+//	void session_impl::pop_alerts(std::deque<alert*>* alerts)
+//	{
+//		m_alerts.get_all(alerts);
+//	}
+//
+//	alert const* session_impl::wait_for_alert(time_duration max_wait)
+//	{
+//		return m_alerts.wait_for_alert(max_wait);
+//	}
+//
+//	void session_impl::set_alert_mask(boost::uint32_t m)
+//	{
+//		m_alerts.set_alert_mask(m);
+//	}
 
-	std::auto_ptr<alert> session_impl::pop_alert()
-	{
-		return m_alerts.get();
-	}
-	
-	void session_impl::pop_alerts(std::deque<alert*>* alerts)
-	{
-		m_alerts.get_all(alerts);
-	}
+    // TODO: 暂时关闭nat映射
+//	natpmp* session_impl::start_natpmp()
+//	{
+//		INVARIANT_CHECK;
+//
+//		if (m_natpmp) return m_natpmp.get();
+//
+//		// the natpmp constructor may fail and call the callbacks
+//		// into the session_impl.
+//		/*natpmp* n = new (std::nothrow) natpmp(m_io_service
+//			, m_listen_interface.address()
+//			, boost::bind(&session_impl::on_port_mapping
+//				, this, _1, _2, _3, _4, 0)
+//			, boost::bind(&session_impl::on_port_map_log
+//				, this, _1, 0));*/
+//		//if (n == 0) return 0;
+//
+//		m_natpmp = n;
+//
+//		if (m_listen_interface.GetPeerPort() > 0)
+//		{
+//			remap_tcp_ports(1, m_listen_interface.GetPeerPort(), ssl_listen_port());
+//		}
+//        // TODO: 注意转换为NS3的版本
+//		//if (m_udp_socket.is_open())
+//		{
+//			m_udp_mapping[0] = m_natpmp->add_mapping(natpmp::udp
+//				, m_listen_interface.GetPeerPort(), m_listen_interface.GetPeerPort());
+//		}
+//		return n;
+//	}
 
-	alert const* session_impl::wait_for_alert(time_duration max_wait)
-	{
-		return m_alerts.wait_for_alert(max_wait);
-	}
+    // TODO: 暂时关闭upnp
+//  upnp* session_impl::start_upnp()
+//	{
+//		INVARIANT_CHECK;
+//
+//		if (m_upnp) return m_upnp.get();
+//
+//		// the upnp constructor may fail and call the callbacks
+//		/*upnp* u = new (std::nothrow) upnp(m_io_service
+//			, m_half_open
+//			, m_listen_interface.address()
+//			, m_settings.user_agent
+//			, boost::bind(&session_impl::on_port_mapping
+//				, this, _1, _2, _3, _4, 1)
+//			, boost::bind(&session_impl::on_port_map_log
+//				, this, _1, 1)
+//			, m_settings.upnp_ignore_nonrouters);*/
+//
+//		if (u == 0) return 0;
+//
+//		m_upnp = u;
+//
+//		m_upnp->discover_device();
+//		if (m_listen_interface.GetPeerPort() > 0 || ssl_listen_port() > 0)
+//		{
+//			remap_tcp_ports(2, m_listen_interface.GetPeerPort(), ssl_listen_port());
+//		}
+//        // TODO: 注意转换为NS3的版本
+//		//if (m_udp_socket.is_open())
+//		{
+//			m_udp_mapping[1] = m_upnp->add_mapping(upnp::udp
+//				, m_listen_interface.GetPeerPort(), m_listen_interface.GetPeerPort());
+//		}
+//		return u;
+//	}
 
-	void session_impl::set_alert_mask(boost::uint32_t m)
-	{
-		m_alerts.set_alert_mask(m);
-	}
-
-	natpmp* session_impl::start_natpmp()
-	{
-		INVARIANT_CHECK;
-
-		if (m_natpmp) return m_natpmp.get();
-
-		// the natpmp constructor may fail and call the callbacks
-		// into the session_impl.
-		/*natpmp* n = new (std::nothrow) natpmp(m_io_service
-			, m_listen_interface.address()
-			, boost::bind(&session_impl::on_port_mapping
-				, this, _1, _2, _3, _4, 0)
-			, boost::bind(&session_impl::on_port_map_log
-				, this, _1, 0));*/
-		if (n == 0) return 0;
-
-		m_natpmp = n;
-
-		if (m_listen_interface.port() > 0)
-		{
-			remap_tcp_ports(1, m_listen_interface.port(), ssl_listen_port());
-		}
-        // TODO: 注意转换为NS3的版本
-		//if (m_udp_socket.is_open())
-		{
-			m_udp_mapping[0] = m_natpmp->add_mapping(natpmp::udp
-				, m_listen_interface.port(), m_listen_interface.port());
-		}
-		return n;
-	}
-
-	upnp* session_impl::start_upnp()
-	{
-		INVARIANT_CHECK;
-
-		if (m_upnp) return m_upnp.get();
-
-		// the upnp constructor may fail and call the callbacks
-		/*upnp* u = new (std::nothrow) upnp(m_io_service
-			, m_half_open
-			, m_listen_interface.address()
-			, m_settings.user_agent
-			, boost::bind(&session_impl::on_port_mapping
-				, this, _1, _2, _3, _4, 1)
-			, boost::bind(&session_impl::on_port_map_log
-				, this, _1, 1)
-			, m_settings.upnp_ignore_nonrouters);*/
-
-		if (u == 0) return 0;
-
-		m_upnp = u;
-
-		m_upnp->discover_device();
-		if (m_listen_interface.port() > 0 || ssl_listen_port() > 0)
-		{
-			remap_tcp_ports(2, m_listen_interface.port(), ssl_listen_port());
-		}
-        // TODO: 注意转换为NS3的版本
-		//if (m_udp_socket.is_open())
-		{
-			m_udp_mapping[1] = m_upnp->add_mapping(upnp::udp
-				, m_listen_interface.port(), m_listen_interface.port());
-		}
-		return u;
-	}
-
-	void session_impl::stop_natpmp()
-	{
-		if (m_natpmp.get())
-			m_natpmp->close();
-		m_natpmp = 0;
-	}
-	
-	void session_impl::stop_upnp()
-	{
-		if (m_upnp.get())
-		{
-			m_upnp->close();
-			m_udp_mapping[1] = -1;
-			m_tcp_mapping[1] = -1;
-		}
-		m_upnp = 0;
-	}
+    // TODO: 关闭natpmp相关功能
+//	void session_impl::stop_natpmp()
+//	{
+//		if (m_natpmp.get())
+//			m_natpmp->close();
+//		m_natpmp = 0;
+//	}
+//	
+//	void session_impl::stop_upnp()
+//	{
+//		if (m_upnp.get())
+//		{
+//			m_upnp->close();
+//			m_udp_mapping[1] = -1;
+//			m_tcp_mapping[1] = -1;
+//		}
+//		m_upnp = 0;
+//	}
 	
 	bool session_impl::external_ip_t::add_vote(sha1_hash const& k, int type)
 	{
@@ -4403,17 +4335,17 @@ retry:
 		return true;
 	}
 
-	void session_impl::set_external_address(address const& ip
-		, int source_type, address const& source)
+	void session_impl::set_external_address(Address const& ip
+		, int source_type, Address const& source)
 	{
 		if (is_any(ip)) return;
 		if (is_local(ip)) return;
 		if (is_loopback(ip)) return;
 
-#if defined TORRENT_VERBOSE_LOGGING
-		(*m_logger) << time_now_string() << ": set_external_address(" << print_address(ip)
-			<< ", " << source_type << ", " << print_address(source) << ")\n";
-#endif
+//#if defined TORRENT_VERBOSE_LOGGING
+//		(*m_logger) << time_now_string() << ": set_external_address(" << print_address(ip)
+//			<< ", " << source_type << ", " << print_address(source) << ")\n";
+//#endif
 		// this is the key to use for the bloom filters
 		// it represents the identity of the voter
 		sha1_hash k;
@@ -4448,11 +4380,11 @@ retry:
 				// of votes. This makes sense because the oldest
 				// entry has had the longest time to receive more
 				// votes to be bumped up
-#if defined TORRENT_VERBOSE_LOGGING
-				(*m_logger) << "  More than 20 slots, dopping "
-					<< print_address(m_external_addresses.front().addr)
-					<< " (" << m_external_addresses.front().num_votes << ")\n";
-#endif
+//#if defined TORRENT_VERBOSE_LOGGING
+//				(*m_logger) << "  More than 20 slots, dopping "
+//					<< print_address(m_external_addresses.front().addr)
+//					<< " (" << m_external_addresses.front().num_votes << ")\n";
+//#endif
 				m_external_addresses.erase(m_external_addresses.begin());
 			}
 			m_external_addresses.push_back(external_ip_t());
@@ -4465,15 +4397,15 @@ retry:
 		i = std::max_element(m_external_addresses.begin(), m_external_addresses.end());
 		TORRENT_ASSERT(i != m_external_addresses.end());
 
-#if defined TORRENT_VERBOSE_LOGGING
-		for (std::vector<external_ip_t>::iterator j = m_external_addresses.begin()
-			, end(m_external_addresses.end()); j != end; ++j)
-		{
-			(*m_logger) << ((j == i)?"-->":"   ")
-				<< print_address(j->addr) << " votes: "
-				<< j->num_votes << "\n";
-		}
-#endif
+//#if defined TORRENT_VERBOSE_LOGGING
+//		for (std::vector<external_ip_t>::iterator j = m_external_addresses.begin()
+//			, end(m_external_addresses.end()); j != end; ++j)
+//		{
+//			(*m_logger) << ((j == i)?"-->":"   ")
+//				<< print_address(j->addr) << " votes: "
+//				<< j->num_votes << "\n";
+//		}
+//#endif
 		if (i->addr == m_external_address) return;
 
 #if defined TORRENT_VERBOSE_LOGGING
@@ -4482,8 +4414,8 @@ retry:
 		m_external_address = i->addr;
 		m_external_address_voters.clear();
 
-		if (m_alerts.should_post<external_ip_alert>())
-			m_alerts.post_alert(external_ip_alert(ip));
+		//if (m_alerts.should_post<external_ip_alert>())
+			//m_alerts.post_alert(external_ip_alert(ip));
 	}
 
 	void session_impl::free_disk_buffer(char* buf)
@@ -4595,8 +4527,8 @@ retry:
 
 		std::set<peer_connection*> unique_peers;
 		TORRENT_ASSERT(m_settings.connections_limit > 0);
-		if (m_settings.choking_algorithm == session_settings::auto_expand_choker)
-			TORRENT_ASSERT(m_allowed_upload_slots >= m_settings.unchoke_slots_limit);
+		//if (m_settings.choking_algorithm == session_settings::auto_expand_choker)
+		//	TORRENT_ASSERT(m_allowed_upload_slots >= m_settings.unchoke_slots_limit);
 		int unchokes = 0;
 		int num_optimistic = 0;
 		int disk_queue[2] = {0, 0};

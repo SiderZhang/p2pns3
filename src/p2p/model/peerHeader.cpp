@@ -27,6 +27,11 @@ TypeId PeerHeader::GetTypeId()
     return tid;
 }
 
+TypeId PeerHeader::GetInstanceTypeId (void) const
+{
+    return GetTypeId();
+}
+
 uint32_t PeerHeader::GetSerializedSize() const
 {
     NS_LOG_FUNCTION (this);

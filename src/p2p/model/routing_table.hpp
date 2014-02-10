@@ -51,6 +51,8 @@ POSSIBILITY OF SUCH DAMAGE.
 //#include "assert.hpp"
 //#include "ptime.hpp"
 
+#include "ns3/ipv4-end-point.h"
+
 namespace libtorrent
 {
 	struct session_status;
@@ -91,14 +93,14 @@ public:
 
 	void status(session_status& s) const;
 
-	void node_failed(node_id const& id, udp::endpoint const& ep);
+	void node_failed(node_id const& id, ns3::Ipv4EndPoint const& ep);
 	
 	// adds an endpoint that will never be added to
 	// the routing table
-	void add_router_node(udp::endpoint router);
+	void add_router_node(ns3::Ipv4EndPoint router);
 
 	// iterates over the router nodes added
-	typedef std::set<udp::endpoint>::const_iterator router_iterator;
+	typedef std::set<ns3::Ipv4EndPoint>::const_iterator router_iterator;
 	router_iterator router_begin() const { return m_router_nodes.begin(); }
 	router_iterator router_end() const { return m_router_nodes.end(); }
 
@@ -108,12 +110,12 @@ public:
 	// a sign of a node being alive. This node will either
 	// be inserted in the k-buckets or be moved to the top
 	// of its bucket.
-	bool node_seen(node_id const& id, udp::endpoint ep);
+	bool node_seen(node_id const& id, ns3::Ipv4EndPoint ep);
 
 	// this may add a node to the routing table and mark it as
 	// not pinged. If the bucket the node falls into is full,
 	// the node will be ignored.
-	void heard_about(node_id const& id, udp::endpoint const& ep);
+	void heard_about(node_id const& id, ns3::Ipv4EndPoint const& ep);
 	
 	// if any bucket in the routing table needs to be refreshed
 	// this function will return true and set the target to an
@@ -171,7 +173,7 @@ private:
 	// return a pointer the node_entry with the given endpoint
 	// or 0 if we don't have such a node. Both the address and the
 	// port has to match
-	node_entry* find_node(udp::endpoint const& ep, routing_table::table_t::iterator* bucket);
+	node_entry* find_node(ns3::Ipv4EndPoint const& ep, routing_table::table_t::iterator* bucket);
 
 	// constant called k in paper
 	int m_bucket_size;
@@ -204,7 +206,7 @@ private:
 	// been identified as router nodes. They will
 	// be used in searches, but they will never
 	// be added to the routing table.
-	std::set<udp::endpoint> m_router_nodes;
+	std::set<ns3::Ipv4EndPoint> m_router_nodes;
 
 	// these are all the IPs that are in the routing
 	// table. It's used to only allow a single entry

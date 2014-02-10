@@ -45,6 +45,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/extensions.hpp"
 #include <boost/bind.hpp>
 
+#include <exception>
+
+#include "ns3/address.h"
+
+#include <sstream>
+
+using namespace ns3;
+using namespace std;
+
 namespace libtorrent {
 
 	alert::alert() : m_timestamp(time_now()) {}
@@ -54,21 +63,24 @@ namespace libtorrent {
 
 	std::string torrent_alert::message() const
 	{
-		if (!handle.is_valid()) return " - ";
-		if (handle.name().empty())
-		{
-			char msg[41];
-			to_hex((char const*)&handle.info_hash()[0], 20, msg);
-			return msg;
-		}
-		return handle.name();
+		//if (!handle.is_valid()) return " - ";
+		//if (handle.name().empty())
+		//{
+			//char msg[41];
+			//to_hex((char const*)&handle.info_hash()[0], 20, msg);
+			//return msg;
+		//}
+		//return handle.name();
+        throw exception();
 	}
 
 	std::string peer_alert::message() const
 	{
 		error_code ec;
-		return torrent_alert::message() + " peer (" + ip.address().to_string(ec)
-			+ ", " + identify_client(pid) + ")";
+        stringstream ss;
+        ss << torrent_alert::message() << " peer (" << (Address)ip.GetPeerAddress()
+			<< ", " << identify_client(pid) << ")";
+        return ss.str();
 	}
 
 	std::string tracker_alert::message() const
@@ -275,15 +287,15 @@ namespace libtorrent {
 	std::string listen_failed_alert::message() const
 	{
 		char ret[200];
-		snprintf(ret, sizeof(ret), "listening on %s failed: %s"
-			, print_endpoint(endpoint).c_str(), convert_from_native(error.message()).c_str());
+		snprintf(ret, sizeof(ret), "listening on --- failed: %s"
+			, convert_from_native(error.message()).c_str());
 		return ret;
 	}
 
 	std::string listen_succeeded_alert::message() const
 	{
 		char ret[200];
-		snprintf(ret, sizeof(ret), "successfully listening on %s", print_endpoint(endpoint).c_str());
+		snprintf(ret, sizeof(ret), "successfully listening on ---");
 		return ret;
 	}
 
@@ -316,10 +328,9 @@ namespace libtorrent {
 		error_code ec;
 		char ih_hex[41];
 		to_hex((const char*)&info_hash[0], 20, ih_hex);
-		char msg[200];
-		snprintf(msg, sizeof(msg), "incoming dht announce: %s:%u (%s)"
-			, ip.to_string(ec).c_str(), port, ih_hex);
-		return msg;
+        stringstream ss;
+        ss << "incoming dht announce:" << ip << "(" << port << ")" << ih_hex;
+		return ss.str();
 	}
 
 	std::string dht_get_peers_alert::message() const
@@ -353,8 +364,6 @@ namespace libtorrent {
 
 	alert const* alert_manager::wait_for_alert(time_duration max_wait)
 	{
-		mutex::scoped_lock lock(m_mutex);
-
 		if (!m_alerts.empty()) return m_alerts.front();
 		
 //		system_time end = get_system_time()
@@ -370,10 +379,8 @@ namespace libtorrent {
 		// TODO: change this to use an asio timer instead
 		while (m_alerts.empty())
 		{
-			lock.unlock();
             // TODO: 用NS3版本代替
 			//sleep(50);
-			lock.lock();
 			if (time_now_hires() - start >= max_wait) return 0;
 		}
 		return m_alerts.front();
@@ -381,13 +388,10 @@ namespace libtorrent {
 
 	void alert_manager::set_dispatch_function(boost::function<void(std::auto_ptr<alert>)> const& fun)
 	{
-		mutex::scoped_lock lock(m_mutex);
-
 		m_dispatch = fun;
 
 		std::deque<alert*> alerts;
 		m_alerts.swap(alerts);
-		lock.unlock();
 
 		while (!alerts.empty())
 		{
@@ -419,7 +423,6 @@ namespace libtorrent {
 		}
 #endif
 
-		mutex::scoped_lock lock(m_mutex);
 		post_impl(a);
 	}
 
@@ -437,7 +440,6 @@ namespace libtorrent {
 		}
 #endif
 
-		mutex::scoped_lock lock(m_mutex);
 		post_impl(a);
 	}
 		
@@ -465,7 +467,6 @@ namespace libtorrent {
 
 	std::auto_ptr<alert> alert_manager::get()
 	{
-		mutex::scoped_lock lock(m_mutex);
 		
 		if (m_alerts.empty())
 			return std::auto_ptr<alert>(0);
@@ -477,22 +478,17 @@ namespace libtorrent {
 
 	void alert_manager::get_all(std::deque<alert*>* alerts)
 	{
-		mutex::scoped_lock lock(m_mutex);
 		if (m_alerts.empty()) return;
 		m_alerts.swap(*alerts);
 	}
 
 	bool alert_manager::pending() const
 	{
-		mutex::scoped_lock lock(m_mutex);
-		
 		return !m_alerts.empty();
 	}
 
 	size_t alert_manager::set_alert_queue_size_limit(size_t queue_size_limit_)
 	{
-		mutex::scoped_lock lock(m_mutex);
-
 		std::swap(m_queue_size_limit, queue_size_limit_);
 		return queue_size_limit_;
 	}
@@ -604,8 +600,8 @@ namespace libtorrent {
 			"SSL/uTP"
 			};
 		error_code ec;
-		snprintf(msg, sizeof(msg), "incoming connection from %s (%s)"
-			, print_endpoint(ip).c_str(), type_str[socket_type]);
+		snprintf(msg, sizeof(msg), "incoming connection from --- (%s)"
+			, type_str[socket_type]);
 		return msg;
 	}
 

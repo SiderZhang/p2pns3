@@ -44,22 +44,24 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/asio/ip/udp.hpp>
 #endif
 
+#include "ns3/ipv4-end-point.h"
+
 namespace libtorrent {
 namespace dht {
 
 typedef std::vector<char> packet_t;
 typedef std::vector<node_entry> nodes_t;
-typedef std::vector<tcp::endpoint> peers_t;
+typedef std::vector<ns3::Ipv4EndPoint> peers_t;
 
 struct msg
 {
-	msg(lazy_entry const& m, udp::endpoint const& ep): message(m), addr(ep) {}
+	msg(lazy_entry const& m, ns3::Ipv4EndPoint const& ep): message(m), addr(ep) {}
 	// the message
 	lazy_entry const& message;
 
 	// the address of the process sending or receiving
 	// the message.
-	udp::endpoint addr;
+	ns3::Ipv4EndPoint addr;
 };
 
 } }

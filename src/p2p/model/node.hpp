@@ -50,13 +50,13 @@ POSSIBILITY OF SUCH DAMAGE.
 /*#include "io.hpp"
 #include "session_settings.hpp"
 #include "assert.hpp"
-#include "thread.hpp"
 #include "bloom_filter.hpp"*/
 
 #include <boost/cstdint.hpp>
 #include <boost/ref.hpp>
 
 #include "socket.hpp"
+#include "ns3/ipv4-end-point.h"
 
 namespace libtorrent {
 	class alert_manager;
@@ -105,7 +105,7 @@ struct key_desc_t
 // to remove stale peers
 struct peer_entry
 {
-	tcp::endpoint addr;
+	ns3::Ipv4EndPoint addr;
 	ptime added;
 	bool seed;
 };
@@ -162,7 +162,7 @@ class announce_observer : public observer
 {
 public:
 	announce_observer(boost::intrusive_ptr<traversal_algorithm> const& algo
-		, udp::endpoint const& ep, node_id const& id)
+		, ns3::Ipv4EndPoint const& ep, node_id const& id)
 		: observer(algo, ep, id)
 	{}
 
@@ -190,7 +190,7 @@ public:
 	typedef boost::function3<void, address, int, address> external_ip_fun;
 
 	node_impl(libtorrent::alert_manager& alerts
-		, bool (*f)(void*, entry&, udp::endpoint const&, int)
+		, bool (*f)(void*, entry&, ns3::Ipv4EndPoint const&, int)
 		, dht_settings const& settings, node_id nid, address const& external_address
 		, external_ip_fun ext_ip, void* userdata);
 
@@ -198,11 +198,11 @@ public:
 
 	void tick();
 	void refresh(node_id const& id, find_data::nodes_callback const& f);
-	void bootstrap(std::vector<udp::endpoint> const& nodes
+	void bootstrap(std::vector<ns3::Ipv4EndPoint> const& nodes
 		, find_data::nodes_callback const& f);
-	void add_router_node(udp::endpoint router);
+	void add_router_node(ns3::Ipv4EndPoint router);
 		
-	void unreachable(udp::endpoint const& ep);
+	void unreachable(ns3::Ipv4EndPoint const& ep);
 	void incoming(msg const& m);
 
 	int num_torrents() const { return m_map.size(); }
@@ -229,12 +229,12 @@ public:
 #endif
 
 	void announce(sha1_hash const& info_hash, int listen_port, bool seed
-		, boost::function<void(std::vector<tcp::endpoint> const&)> f);
+		, boost::function<void(std::vector<ns3::Ipv4EndPoint> const&)> f);
 
 	bool verify_token(std::string const& token, char const* info_hash
-		, udp::endpoint const& addr);
+		, ns3::Ipv4EndPoint const& addr);
 
-	std::string generate_token(udp::endpoint const& addr, char const* info_hash);
+	std::string generate_token(ns3::Ipv4EndPoint const& addr, char const* info_hash);
 	
 	// the returned time is the delay until connection_timeout()
 	// should be called again the next time
@@ -246,7 +246,7 @@ public:
 	// pings the given node, and adds it to
 	// the routing table if it respons and if the
 	// bucket is not full.
-	void add_node(udp::endpoint node);
+	void add_node(ns3::Ipv4EndPoint node);
 
 	void replacement_cache(bucket_t& nodes) const
 	{ m_table.replacement_cache(nodes); }
@@ -307,7 +307,7 @@ private:
 	int m_secret[2];
 
 	libtorrent::alert_manager& m_alerts;
-	bool (*m_send)(void*, entry&, udp::endpoint const&, int);
+	bool (*m_send)(void*, entry&, ns3::Ipv4EndPoint const&, int);
 	void* m_userdata;
 };*/
 

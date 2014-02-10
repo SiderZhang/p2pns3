@@ -47,6 +47,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/bind.hpp>
 #include <boost/pool/pool.hpp>
 
+#include "ns3/ipv4-end-point.h"
+
 namespace libtorrent { struct dht_lookup; }
 namespace libtorrent { namespace dht
 {
@@ -60,7 +62,7 @@ class node_impl;
 // this class may not be instantiated as a stack object
 struct traversal_algorithm : boost::noncopyable
 {
-	void traverse(node_id const& id, udp::endpoint addr);
+	void traverse(node_id const& id, ns3::Ipv4EndPoint addr);
 	void finished(observer_ptr o);
 
 	enum flags_t { prevent_request = 1, short_timeout = 2 };
@@ -76,7 +78,7 @@ struct traversal_algorithm : boost::noncopyable
 
 	node_id const& target() const { return m_target; }
 
-	void add_entry(node_id const& id, udp::endpoint addr, unsigned char flags);
+	void add_entry(node_id const& id, ns3::Ipv4EndPoint addr, unsigned char flags);
 
 	traversal_algorithm(node_impl& node, node_id target);
 
@@ -90,7 +92,7 @@ protected:
 	// should construct an algorithm dependent
 	// observer in ptr.
 	virtual observer_ptr new_observer(void* ptr
-		, udp::endpoint const& ep, node_id const& id);
+		, ns3::Ipv4EndPoint const& ep, node_id const& id);
 
 	virtual bool invoke(observer_ptr o) { return false; }
 

@@ -30,8 +30,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "ns3/pch.hpp"
-#include "ns3/tracker_req.hpp"
+#include "libtorrent/pch.hpp"
+#include "libtorrent/tracker_manager.hpp"
+#include "ns3/ipv4-end-point.h"
 
 #include <vector>
 #include <cctype>
@@ -41,6 +42,7 @@ POSSIBILITY OF SUCH DAMAGE.
 using boost::tuples::make_tuple;
 using boost::tuples::tuple;
 using boost::bind;
+using namespace ns3;
 
 namespace
 {
@@ -251,6 +253,34 @@ namespace libtorrent
 		boost::shared_ptr<request_callback> cb = con->requester();
 		if (cb) cb->m_manager = this;
 		con->start();
+	}
+
+	bool tracker_manager::incoming_udp(error_code const& e
+		, Ipv4EndPoint const& ep, char const* buf, int size)
+	{
+		for (tracker_connections_t::iterator i = m_connections.begin();
+			i != m_connections.end();)
+		{
+			boost::intrusive_ptr<tracker_connection> p = *i;
+			++i;
+			// on_receive() may remove the tracker connection from the list
+			if (p->on_receive(e, ep, buf, size)) return true;
+		}
+		return false;
+	}
+
+	bool tracker_manager::incoming_udp(error_code const& e
+		, char const* hostname, char const* buf, int size)
+	{
+		for (tracker_connections_t::iterator i = m_connections.begin();
+			i != m_connections.end();)
+		{
+			boost::intrusive_ptr<tracker_connection> p = *i;
+			++i;
+			// on_receive() may remove the tracker connection from the list
+			if (p->on_receive_hostname(e, hostname, buf, size)) return true;
+		}
+		return false;
 	}
 
 	void tracker_manager::abort_all_requests(bool all)

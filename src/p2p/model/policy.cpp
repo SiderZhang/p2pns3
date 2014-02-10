@@ -58,23 +58,29 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/bt_peer_connection.hpp"
 #endif
 
+#include "ns3/ipv4-end-point.h"
+#include "ns3/address.h"
+#include "ns3/log.h"
+
+using namespace ns3;
+
 namespace
 {
 	using namespace libtorrent;
 
 	struct match_peer_endpoint
 	{
-		match_peer_endpoint(ns3::InetSocketAddress const& ep)
+		match_peer_endpoint(ns3::Ipv4EndPoint const& ep)
 			: m_ep(ep)
 		{}
 
 		bool operator()(policy::peer const* p) const
 		{
 			TORRENT_ASSERT(p->in_use);
-			return p->address() == m_ep.GetIpv4() && p->port == m_ep.GetPort();
+			return p->address() == m_ep.GetPeerAddress() && p->port == m_ep.GetPeerPort();
 		}
 
-		ns3::InetSocketAddress const& m_ep;
+		ns3::Ipv4EndPoint const& m_ep;
 	};
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
@@ -631,12 +637,13 @@ namespace libtorrent
 		TORRENT_ASSERT(m_finished == m_torrent->is_finished());
 
 		int min_reconnect_time = m_torrent->settings().min_reconnect_time;
-		address external_ip = m_torrent->session().external_address();
+		Address external_ip = m_torrent->session().external_address();
 
 		// don't bias any particular peers when seeding
-		if (m_finished || external_ip == address())
+		if (m_finished || external_ip == Address())
 		{
-			// set external_ip to a random value, to
+            NS_ASSERT(false);
+            // set external_ip to a random value, to
 			// radomize which peers we prefer
             // TODO: 待测试
 			/*address_v4::bytes_type bytes;
@@ -755,10 +762,9 @@ namespace libtorrent
 		bool found = false;
 		if (m_torrent->settings().allow_multiple_connections_per_ip)
 		{
-            ns3::Address remote = c.remote();
-            ns3::Ipv4Address remoteV4 = ns3::Ipv4Address::ConvertFrom(remote);
-			std::pair<iterator, iterator> range = find_peers(remoteV4);
-			iter = std::find_if(range.first, range.second, match_peer_endpoint(remoteV4));
+            ns3::Ipv4EndPoint remote = c.remote();
+			std::pair<iterator, iterator> range = find_peers(remote.GetPeerAddress());
+			iter = std::find_if(range.first, range.second, match_peer_endpoint(remote));
 	
 			if (iter != range.second)
 			{
@@ -963,7 +969,7 @@ namespace libtorrent
 
 				m_torrent->session().m_ipv4_peer_pool.set_next_size(500);
 
-				new (p) ipv4_peer(ns3::Ipv4Address::ConvertFrom(c.remote()), false, 0);
+				new (p) ipv4_peer(c.remote(), false, 0);
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 			p->in_use = true;
@@ -1015,8 +1021,8 @@ namespace libtorrent
 
 		if (m_torrent->settings().allow_multiple_connections_per_ip)
 		{
-			ns3::InetSocketAddress remote(p->address(), port);
-			std::pair<iterator, iterator> range = find_peers(remote.GetIpv4());
+			ns3::Ipv4EndPoint remote(p->address(), port);
+			std::pair<iterator, iterator> range = find_peers(remote.GetPeerAddress());
 			iterator i = std::find_if(range.first, range.second
 				, match_peer_endpoint(remote));
 			if (i != range.second)
@@ -1156,15 +1162,15 @@ namespace libtorrent
 	}
 
 	void policy::update_peer(policy::peer* p, int src, int flags
-		, ns3::InetSocketAddress const& remote, char const* destination)
+		, ns3::Ipv4EndPoint const& remote, char const* destination)
 	{
 		bool was_conn_cand = is_connect_candidate(*p, m_finished);
 
 		TORRENT_ASSERT(p->in_use);
 		p->connectable = true;
 
-		TORRENT_ASSERT(p->address() == remote.GetIpv4());
-		p->port = remote.GetPort();
+		TORRENT_ASSERT(p->address() == remote.GetPeerAddress());
+		p->port = remote.GetPeerPort();
 		p->source |= src;
 			
 		// if this peer has failed before, decrease the
@@ -1188,22 +1194,22 @@ namespace libtorrent
 			p->supports_holepunch = true;
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
-		if (p->connection)
-		{
-			// this means we're already connected
-			// to this peer. don't connect to
-			// it again.
-
-			error_code ec;
-			char hex_pid[41];
-			to_hex((char*)&p->connection->pid()[0], 20, hex_pid);
-			char msg[200];
-			snprintf(msg, 200, "already connected to peer: %s %s"
-				, print_endpoint(remote).c_str(), hex_pid);
-			m_torrent->debug_log(msg);
-
-			TORRENT_ASSERT(p->connection->associated_torrent().lock().get() == m_torrent);
-		}
+//		if (p->connection)
+//		{
+//			// this means we're already connected
+//			// to this peer. don't connect to
+//			// it again.
+//
+//			error_code ec;
+//			char hex_pid[41];
+//			to_hex((char*)&p->connection->pid()[0], 20, hex_pid);
+//		    char msg[200];
+//			snprintf(msg, 200, "already connected to peer: %s %s"
+//				, print_endpoint(remote).c_str(), hex_pid);
+//			m_torrent->debug_log(msg);
+//
+//			TORRENT_ASSERT(p->connection->associated_torrent().lock().get() == m_torrent);
+//		}
 #endif
 
 		if (was_conn_cand != is_connect_candidate(*p, m_finished))
@@ -1213,14 +1219,14 @@ namespace libtorrent
 		}
 	}
 
-	policy::peer* policy::add_peer(ns3::InetSocketAddress const& remote, peer_id const& pid
+	policy::peer* policy::add_peer(ns3::Ipv4EndPoint const& remote, peer_id const& pid
 		, int src, char flags)
 	{
 		INVARIANT_CHECK;
 
 		// just ignore the obviously invalid entries
         // TODO: 找出address函数的定义，并修正
-	//	if (remote.GetIpv4() == address() || remote.GetPort() == 0)
+	//	if (remote.GetPeerAddress() == address() || remote.GetPort() == 0)
 	//		return 0;
 
 		//aux::session_impl& ses = m_torrent->session();
@@ -1231,23 +1237,23 @@ namespace libtorrent
 		/*if (pf.access(remote.GetPort()) & port_filter::blocked)
 		{
 			if (ses.m_alerts.should_post<peer_blocked_alert>())
-				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetIpv4()));
+				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetPeerAddress()));
 			return 0;
 		}
 
 		if (ses.m_settings.no_connect_privileged_ports && remote.port() < 1024)
 		{
 			if (ses.m_alerts.should_post<peer_blocked_alert>())
-				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetIpv4()));
+				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetPeerAddress()));
 			return 0;
 		}
 
 		// if the IP is blocked, don't add it
 		if (m_torrent->apply_ip_filter()
-			&& (ses.m_ip_filter.access(remote.GetIpv4()) & ip_filter::blocked))
+			&& (ses.m_ip_filter.access(remote.GetPeerAddress()) & ip_filter::blocked))
 		{
 			if (ses.m_alerts.should_post<peer_blocked_alert>())
-				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetIpv4()));
+				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetPeerAddress()));
 			return 0;
 		}*/
 
@@ -1257,7 +1263,7 @@ namespace libtorrent
 		bool found = false;
 		if (m_torrent->settings().allow_multiple_connections_per_ip)
 		{
-			std::pair<iterator, iterator> range = find_peers(remote.GetIpv4());
+			std::pair<iterator, iterator> range = find_peers(remote.GetPeerAddress());
 			iter = std::find_if(range.first, range.second, match_peer_endpoint(remote));
 			if (iter != range.second) found = true;
 		}
@@ -1265,10 +1271,10 @@ namespace libtorrent
 		{
 			iter = std::lower_bound(
 				m_peers.begin(), m_peers.end()
-				, remote.GetIpv4(), peer_address_compare()
+				, remote.GetPeerAddress(), peer_address_compare()
 			);
 
-			if (iter != m_peers.end() && (*iter)->address() == remote.GetIpv4()) found = true;
+			if (iter != m_peers.end() && (*iter)->address() == remote.GetPeerAddress()) found = true;
 		}
 
 		if (!found)

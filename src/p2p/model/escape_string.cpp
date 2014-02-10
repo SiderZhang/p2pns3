@@ -56,7 +56,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "libtorrent/utf8.hpp"
-#include "libtorrent/thread.hpp"
 
 #if TORRENT_USE_ICONV
 #include <iconv.h>
@@ -558,10 +557,6 @@ namespace libtorrent
 
 	std::string convert_to_native(std::string const& s)
 	{
-		static mutex iconv_mutex;
-		// only one thread can use this handle at a time
-		mutex::scoped_lock l(iconv_mutex);
-
 		// the empty string represents the local dependent encoding
 		static iconv_t iconv_handle = iconv_open("", "UTF-8");
 		if (iconv_handle == iconv_t(-1)) return s;
@@ -570,10 +565,6 @@ namespace libtorrent
 
 	std::string convert_from_native(std::string const& s)
 	{
-		static mutex iconv_mutex;
-		// only one thread can use this handle at a time
-		mutex::scoped_lock l(iconv_mutex);
-
 		// the empty string represents the local dependent encoding
 		static iconv_t iconv_handle = iconv_open("UTF-8", "");
 		if (iconv_handle == iconv_t(-1)) return s;

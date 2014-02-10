@@ -68,7 +68,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace libtorrent
 {
-	
 	bool valid_path_character(char c)
 	{
 #ifdef TORRENT_WINDOWS
@@ -401,23 +400,24 @@ namespace libtorrent
 				++cnt;
 				char suffix[50];
 				snprintf(suffix, sizeof(suffix), "%d%s", cnt, extension(e.path).c_str());
-				replace_extension(e.path, suffix);
+                // TODO: 禁用这个函数
+		//		replace_extension(e.path, suffix);
 			}
 			target.add_file(e, file_hash ? file_hash->string_ptr() + info_ptr_diff : 0);
 
 			// This is a memory optimization! Instead of having
 			// each entry keep a string for its filename, make it
 			// simply point into the info-section buffer
-			internal_file_entry const& fe = *target.rbegin();
-			// TODO: once the filename renaming is removed from here
-			// this check can be removed as well
-			if (fee && fe.filename() == fee->string_value())
-			{
-				// this string pointer does not necessarily point into
-				// the m_info_section buffer.
-				char const* str_ptr = fee->string_ptr() + info_ptr_diff;
-				const_cast<internal_file_entry&>(fe).set_name(str_ptr, fee->string_length());
-			}
+	//		internal_file_entry const& fe = *target.rbegin();
+	//		// TODO: once the filename renaming is removed from here
+	//		// this check can be removed as well
+	//		if (fee && fe.filename() == fee->string_value())
+	//		{
+	//			// this string pointer does not necessarily point into
+	//			// the m_info_section buffer.
+	//			char const* str_ptr = fee->string_ptr() + info_ptr_diff;
+	//			const_cast<internal_file_entry&>(fe).set_name(str_ptr, fee->string_length());
+	//		}
 		}
 		return true;
 	}
@@ -455,23 +455,25 @@ namespace libtorrent
 
 	int load_file(std::string const& filename, std::vector<char>& v, error_code& ec, int limit)
 	{
-		ec.clear();
-		file f;
-		if (!f.open(filename, file::read_only, ec)) return -1;
-		size_type s = f.get_size(ec);
-		if (ec) return -1;
-		if (s > limit)
-		{
-			ec = error_code(errors::metadata_too_large, get_libtorrent_category());
-			return -2;
-		}
-		v.resize(s);
-		if (s == 0) return 0;
-		file::iovec_t b = {&v[0], size_t(s) };
-		size_type read = f.readv(0, &b, 1, ec);
-		if (read != s) return -3;
-		if (ec) return -3;
-		return 0;
+        // TODO: 处理torrent文件的解析
+        return -1;
+//		ec.clear();
+//		file f;
+//		if (!f.open(filename, file::read_only, ec)) return -1;
+//		size_type s = f.get_size(ec);
+//		if (ec) return -1;
+//		if (s > limit)
+//		{
+//			ec = error_code(errors::metadata_too_large, get_libtorrent_category());
+//			return -2;
+//		}
+//		v.resize(s);
+//		if (s == 0) return 0;
+//		file::iovec_t b = {&v[0], size_t(s) };
+//		size_type read = f.readv(0, &b, 1, ec);
+//		if (read != s) return -3;
+//		if (ec) return -3;
+//		return 0;
 	}
 
 	announce_entry::announce_entry(std::string const& u)

@@ -6,8 +6,6 @@ class PeerHeader : public Header
 {
 public:
     PeerHeader();
-    static TypeId GetTypeId (void);
-    virtual TypeId GetInstanceTypeId (void) const;
 
     virtual ~PeerHeader();
 
@@ -19,7 +17,10 @@ public:
     void setBuffer(const uint8_t* buffer, uint32_t size);
     const uint8_t* getBuffer() const;
     int getSize(){return bufSize;}
+
+    static TypeId GetTypeId (void);
 private:
+    virtual TypeId GetInstanceTypeId (void) const;
     uint32_t headerSize;
 
     uint8_t* buffer;

@@ -87,7 +87,7 @@ namespace libtorrent
 		session_impl& ses
 		, boost::weak_ptr<torrent> tor
         , ns3::Ptr<ns3::Socket> s
-        , ns3::InetSocketAddress const& remote
+        , ns3::Ipv4EndPoint const& remote
 		, policy::peer* peerinfo
 		, bool outgoing)
 		: peer_connection(ses, tor, s, remote
@@ -113,7 +113,7 @@ namespace libtorrent
 	bt_peer_connection::bt_peer_connection(
 		session_impl& ses
         , ns3::Ptr<ns3::Socket> s
-        , ns3::InetSocketAddress const& remote
+        , ns3::Ipv4EndPoint const& remote
 		, policy::peer* peerinfo)
 		: peer_connection(ses, s, remote, peerinfo)
 		, m_state(read_protocol_identifier)
@@ -663,11 +663,11 @@ namespace libtorrent
 				}
 
 				TORRENT_ASSERT(!has_disk_receive_buffer());
-				if (!allocate_disk_receive_buffer(packet_size() - 13 - list_size))
-				{
-					m_statistics.received_bytes(0, received);
-					return;
-				}
+			//	if (!allocate_disk_receive_buffer(packet_size() - 13 - list_size))
+			//	{
+			//		m_statistics.received_bytes(0, received);
+			//		return;
+			//	}
 			}
 		}
 		else
@@ -682,11 +682,11 @@ namespace libtorrent
 					return;
 				}
 
-				if (!allocate_disk_receive_buffer(packet_size() - 9))
-				{
-					m_statistics.received_bytes(0, received);
-					return;
-				}
+			//	if (!allocate_disk_receive_buffer(packet_size() - 9))
+			//	{
+			//		m_statistics.received_bytes(0, received);
+			//		return;
+			//	}
 			}
 		}
 		TORRENT_ASSERT(has_disk_receive_buffer() || packet_size() == 9);
@@ -802,8 +802,9 @@ namespace libtorrent
 			}
 		}
 
-		disk_buffer_holder holder(m_ses, release_disk_receive_buffer());
-		incoming_piece(p, holder);
+        // TODO: 禁用磁盘缓存
+		//disk_buffer_holder holder(m_ses, release_disk_receive_buffer());
+		//incoming_piece(p, holder);
 	}
 
 	// -----------------------------
@@ -1400,71 +1401,71 @@ namespace libtorrent
 		send_buffer(msg, sizeof(msg));
 	}
 
-	void bt_peer_connection::write_piece(peer_request const& r, disk_buffer_holder& buffer)
-	{
-		INVARIANT_CHECK;
-
-		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
-
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
-		TORRENT_ASSERT(t);
-
-		bool merkle = t->torrent_file().is_merkle_torrent() && r.start == 0;
-	// the hash piece looks like this:
-	// uint8_t  msg
-	// uint32_t piece index
-	// uint32_t start
-	// uint32_t list len
-	// var      bencoded list
-	// var      piece data
-		char msg[4 + 1 + 4 + 4 + 4];
-		char* ptr = msg;
-		TORRENT_ASSERT(r.length <= 16 * 1024);
-		detail::write_int32(r.length + 1 + 4 + 4, ptr);
-		if (merkle)
-			detail::write_uint8(250, ptr);
-		else
-			detail::write_uint8(msg_piece, ptr);
-		detail::write_int32(r.piece, ptr);
-		detail::write_int32(r.start, ptr);
-
-		// if this is a merkle torrent and the start offset
-		// is 0, we need to include the merkle node hashes
-		if (merkle)
-		{
-			std::vector<char>	piece_list_buf;
-			entry piece_list;
-			entry::list_type& l = piece_list.list();
-			std::map<int, sha1_hash> merkle_node_list = t->torrent_file().build_merkle_list(r.piece);
-			for (std::map<int, sha1_hash>::iterator i = merkle_node_list.begin()
-				, end(merkle_node_list.end()); i != end; ++i)
-			{
-				l.push_back(entry(entry::list_t));
-				l.back().list().push_back(i->first);
-				l.back().list().push_back(i->second.to_string());
-			}
-			bencode(std::back_inserter(piece_list_buf), piece_list);
-			detail::write_int32(piece_list_buf.size(), ptr);
-
-			char* ptr = msg;
-			detail::write_int32(r.length + 1 + 4 + 4 + 4 + piece_list_buf.size(), ptr);
-
-			send_buffer(msg, 17);
-			send_buffer(&piece_list_buf[0], piece_list_buf.size());
-		}
-		else
-		{
-			send_buffer(msg, 13);
-		}
-
-		append_send_buffer(buffer.get(), r.length
-			, boost::bind(&session_impl::free_disk_buffer
-			, boost::ref(m_ses), _1));
-		buffer.release();
-
-		m_payloads.push_back(range(send_buffer_size() - r.length, r.length));
-		setup_send();
-	}
+//	void bt_peer_connection::write_piece(peer_request const& r, disk_buffer_holder& buffer)
+//	{
+//		INVARIANT_CHECK;
+//
+//		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
+//
+//		boost::shared_ptr<torrent> t = associated_torrent().lock();
+//		TORRENT_ASSERT(t);
+//
+//		bool merkle = t->torrent_file().is_merkle_torrent() && r.start == 0;
+//	// the hash piece looks like this:
+//	// uint8_t  msg
+//	// uint32_t piece index
+//	// uint32_t start
+//	// uint32_t list len
+//	// var      bencoded list
+//	// var      piece data
+//		char msg[4 + 1 + 4 + 4 + 4];
+//		char* ptr = msg;
+//		TORRENT_ASSERT(r.length <= 16 * 1024);
+//		detail::write_int32(r.length + 1 + 4 + 4, ptr);
+//		if (merkle)
+//			detail::write_uint8(250, ptr);
+//		else
+//			detail::write_uint8(msg_piece, ptr);
+//		detail::write_int32(r.piece, ptr);
+//		detail::write_int32(r.start, ptr);
+//
+//		// if this is a merkle torrent and the start offset
+//		// is 0, we need to include the merkle node hashes
+//		if (merkle)
+//		{
+//			std::vector<char>	piece_list_buf;
+//			entry piece_list;
+//			entry::list_type& l = piece_list.list();
+//			std::map<int, sha1_hash> merkle_node_list = t->torrent_file().build_merkle_list(r.piece);
+//			for (std::map<int, sha1_hash>::iterator i = merkle_node_list.begin()
+//				, end(merkle_node_list.end()); i != end; ++i)
+//			{
+//				l.push_back(entry(entry::list_t));
+//				l.back().list().push_back(i->first);
+//				l.back().list().push_back(i->second.to_string());
+//			}
+//			bencode(std::back_inserter(piece_list_buf), piece_list);
+//			detail::write_int32(piece_list_buf.size(), ptr);
+//
+//			char* ptr = msg;
+//			detail::write_int32(r.length + 1 + 4 + 4 + 4 + piece_list_buf.size(), ptr);
+//
+//			send_buffer(msg, 17);
+//			send_buffer(&piece_list_buf[0], piece_list_buf.size());
+//		}
+//		else
+//		{
+//			send_buffer(msg, 13);
+//		}
+//
+//		append_send_buffer(buffer.get(), r.length
+//			, boost::bind(&session_impl::free_disk_buffer
+//			, boost::ref(m_ses), _1));
+//		buffer.release();
+//
+//		m_payloads.push_back(range(send_buffer_size() - r.length, r.length));
+//		setup_send();
+//	}
 
 	namespace
 	{
@@ -1480,7 +1481,7 @@ namespace libtorrent
 					&& p->connection
 					&& p->connection->pid() == m_id
 					&& !p->connection->pid().is_all_zeros()
-					&& p->address() == m_pc->remote().GetIpv4();
+					&& p->address() == m_pc->remote().GetPeerAddress();
 			}
 
 			peer_id const& m_id;

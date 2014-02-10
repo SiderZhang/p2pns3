@@ -100,7 +100,7 @@ namespace libtorrent
     // TODO: wait to add callback of this method
 	void udp_tracker_connection::on_receive(Ptr<Packet> p)
             /*error_code const& e
-		, udp::endpoint const& ep, char const* buf, int size)*/
+		, ns3::Ipv4EndPoint const& ep, char const* buf, int size)*/
     {
 		// ignore resposes before we've sent any requests
 		if (m_state == action_error)
@@ -336,7 +336,7 @@ namespace libtorrent
 
         //TODO: Boost的网络管理待更换
 		//std::list<address> ip_list;
-		//for (std::list<udp::endpoint>::const_iterator i = m_endpoints.begin()
+		//for (std::list<ns3::Ipv4EndPoint>::const_iterator i = m_endpoints.begin()
 		//	, end(m_endpoints.end()); i != end; ++i)
 		//{
 		//	ip_list.push_back(i->address());

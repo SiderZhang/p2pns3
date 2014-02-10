@@ -23,7 +23,7 @@
 #include "ns3/header.h"
 #include "ns3/simulator.h"
 #include "udp-p2p-header.h"
-#include "tracker_req.hpp"
+#include "libtorrent/tracker_manager.hpp"
 
 #include <assert.h>
 #include <cstring>

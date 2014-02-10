@@ -23,7 +23,7 @@
 
 #include "ns3/header.h"
 #include "ns3/nstime.h"
-#include "tracker_req.hpp"
+#include "libtorrent/tracker_manager.hpp"
 #include "action.h"
 
 #include <list>

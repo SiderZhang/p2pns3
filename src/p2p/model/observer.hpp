@@ -38,7 +38,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/intrusive_ptr.hpp>
 #include <boost/cstdint.hpp>
 #include <libtorrent/ptime.hpp>
-#include <libtorrent/address.hpp>
+
+#include "ns3/ipv4-end-point.h"
 
 namespace libtorrent {
 namespace dht {
@@ -68,7 +69,7 @@ struct observer : boost::noncopyable
 	friend TORRENT_EXTRA_EXPORT void intrusive_ptr_release(observer const*);
 
 	observer(boost::intrusive_ptr<traversal_algorithm> const& a
-		, udp::endpoint const& ep, node_id const& id)
+		, ns3::Ipv4EndPoint const& ep, node_id const& id)
 		: m_sent()
 		, m_refs(0)
 		, m_algorithm(a)
@@ -109,9 +110,9 @@ struct observer : boost::noncopyable
 
 	ptime sent() const { return m_sent; }
 
-	void set_target(udp::endpoint const& ep);
+	void set_target(ns3::Ipv4EndPoint const& ep);
 	address target_addr() const;
-	udp::endpoint target_ep() const;
+	ns3::Ipv4EndPoint target_ep() const;
 
 	void set_id(node_id const& id) { m_id = id; }
 	node_id const& id() const { return m_id; }
