@@ -3432,7 +3432,6 @@ retry:
 		m_network_thread = pthread_self();
 #endif
 		TORRENT_ASSERT(is_network_thread());
-		eh_initializer();
 
 		// initialize async operations
 		init();
@@ -3595,101 +3594,101 @@ retry:
 //		delete params;
 //	}
 //
-//	torrent_handle session_impl::add_torrent(add_torrent_params const& p
-//		, error_code& ec)
-//	{
-//		TORRENT_ASSERT(!p.save_path.empty());
-//
-//		add_torrent_params params = p;
-//		if (string_begins_no_case("magnet:", params.url.c_str()))
-//		{
-//			parse_magnet_uri(params.url, params, ec);
-//			if (ec) return torrent_handle();
-//			params.url.clear();
-//		}
-//
-//		if (params.ti && params.ti->is_valid() && params.ti->num_files() == 0)
-//		{
-//			ec = errors::no_files_in_torrent;
-//			return torrent_handle();
-//		}
-//
-////		INVARIANT_CHECK;
-//
-//		if (is_aborted())
-//		{
-//			ec = errors::session_is_closing;
-//			return torrent_handle();
-//		}
-//		
-//		// figure out the info hash of the torrent
-//		sha1_hash const* ih = 0;
-//		sha1_hash tmp;
-//		if (params.ti) ih = &params.ti->info_hash();
-//		else if (!params.url.empty())
-//		{
-//			// in order to avoid info-hash collisions, for
-//			// torrents where we don't have an info-hash, but
-//			// just a URL, set the temporary info-hash to the
-//			// hash of the URL. This will be changed once we
-//			// have the actual .torrent file
-//			tmp = hasher(&params.url[0], params.url.size()).final();
-//			ih = &tmp;
-//		}
-//		else ih = &params.info_hash;
-//
-//		// is the torrent already active?
-//		boost::shared_ptr<torrent> torrent_ptr = find_torrent(*ih).lock();
-//		if (!torrent_ptr && !params.uuid.empty()) torrent_ptr = find_torrent(params.uuid).lock();
-//		// TODO: find by url?
-//
-//		if (torrent_ptr)
-//		{
-//			if ((params.flags & add_torrent_params::flag_duplicate_is_error) == 0)
-//			{
-//				if (!params.uuid.empty() && torrent_ptr->uuid().empty())
-//					torrent_ptr->set_uuid(params.uuid);
-//				if (!params.url.empty() && torrent_ptr->url().empty())
-//					torrent_ptr->set_url(params.url);
-//				if (!params.source_feed_url.empty() && torrent_ptr->source_feed_url().empty())
-//					torrent_ptr->set_source_feed_url(params.source_feed_url);
-//				return torrent_handle(torrent_ptr);
-//			}
-//
-//			ec = errors::duplicate_torrent;
-//			return torrent_handle();
-//		}
-//
-//		int queue_pos = 0;
-//		for (torrent_map::const_iterator i = m_torrents.begin()
-//			, end(m_torrents.end()); i != end; ++i)
-//		{
-//			int pos = i->second->queue_position();
-//			if (pos >= queue_pos) queue_pos = pos + 1;
-//		}
-//
-//		torrent_ptr.reset(new torrent(*this, m_listen_interface
-//			, 16 * 1024, queue_pos, params, *ih));
-//		torrent_ptr->start();
-//
-//		m_torrents.insert(std::make_pair(*ih, torrent_ptr));
-//		if (!params.uuid.empty() || !params.url.empty())
-//			m_uuids.insert(std::make_pair(params.uuid.empty()
-//				? params.url : params.uuid, torrent_ptr));
-//
-//		if (m_alerts.should_post<torrent_added_alert>())
-//			m_alerts.post_alert(torrent_added_alert(torrent_ptr->get_handle()));
-//
-//		// recalculate auto-managed torrents sooner (or put it off)
-//		// if another torrent will be added within one second from now
-//		// we want to put it off again anyway. So that while we're adding
-//		// a boat load of torrents, we postpone the recalculation until
-//		// we're done adding them all (since it's kind of an expensive operation)
-//		if (params.flags & add_torrent_params::flag_auto_managed)
-//			m_auto_manage_time_scaler = 2;
-//
-//		return torrent_handle(torrent_ptr);
-//	}
+	torrent_handle session_impl::add_torrent(add_torrent_params const& p
+		, error_code& ec)
+	{
+		TORRENT_ASSERT(!p.save_path.empty());
+
+		add_torrent_params params = p;
+	//	if (string_begins_no_case("magnet:", params.url.c_str()))
+	//	{
+	//		parse_magnet_uri(params.url, params, ec);
+	//		if (ec) return torrent_handle();
+	//		params.url.clear();
+	//	}
+
+		if (params.ti && params.ti->is_valid() && params.ti->num_files() == 0)
+		{
+			ec = errors::no_files_in_torrent;
+			return torrent_handle();
+		}
+
+//		INVARIANT_CHECK;
+
+		if (is_aborted())
+		{
+			ec = errors::session_is_closing;
+			return torrent_handle();
+		}
+		
+		// figure out the info hash of the torrent
+		sha1_hash const* ih = 0;
+		sha1_hash tmp;
+		if (params.ti) ih = &params.ti->info_hash();
+		else if (!params.url.empty())
+		{
+			// in order to avoid info-hash collisions, for
+			// torrents where we don't have an info-hash, but
+			// just a URL, set the temporary info-hash to the
+			// hash of the URL. This will be changed once we
+			// have the actual .torrent file
+			tmp = hasher(&params.url[0], params.url.size()).final();
+			ih = &tmp;
+		}
+		else ih = &params.info_hash;
+
+		// is the torrent already active?
+		boost::shared_ptr<torrent> torrent_ptr = find_torrent(*ih).lock();
+		if (!torrent_ptr && !params.uuid.empty()) torrent_ptr = find_torrent(params.uuid).lock();
+		// TODO: find by url?
+
+		if (torrent_ptr)
+		{
+			if ((params.flags & add_torrent_params::flag_duplicate_is_error) == 0)
+			{
+			//	if (!params.uuid.empty() && torrent_ptr->uuid().empty())
+			//		torrent_ptr->set_uuid(params.uuid);
+			//	if (!params.url.empty() && torrent_ptr->url().empty())
+			//		torrent_ptr->set_url(params.url);
+			//	if (!params.source_feed_url.empty() && torrent_ptr->source_feed_url().empty())
+			//		torrent_ptr->set_source_feed_url(params.source_feed_url);
+				return torrent_handle(torrent_ptr);
+			}
+
+			ec = errors::duplicate_torrent;
+			return torrent_handle();
+		}
+
+		int queue_pos = 0;
+		for (torrent_map::const_iterator i = m_torrents.begin()
+			, end(m_torrents.end()); i != end; ++i)
+		{
+			int pos = i->second->queue_position();
+			if (pos >= queue_pos) queue_pos = pos + 1;
+		}
+
+		torrent_ptr.reset(new torrent(*this, m_listen_interface
+			, 16 * 1024, queue_pos, params, *ih));
+		torrent_ptr->start();
+
+		m_torrents.insert(std::make_pair(*ih, torrent_ptr));
+		if (!params.uuid.empty() || !params.url.empty())
+			m_uuids.insert(std::make_pair(params.uuid.empty()
+				? params.url : params.uuid, torrent_ptr));
+
+		//if (m_alerts.should_post<torrent_added_alert>())
+		//	m_alerts.post_alert(torrent_added_alert(torrent_ptr->get_handle()));
+
+		// recalculate auto-managed torrents sooner (or put it off)
+		// if another torrent will be added within one second from now
+		// we want to put it off again anyway. So that while we're adding
+		// a boat load of torrents, we postpone the recalculation until
+		// we're done adding them all (since it's kind of an expensive operation)
+		if (params.flags & add_torrent_params::flag_auto_managed)
+			m_auto_manage_time_scaler = 2;
+
+		return torrent_handle(torrent_ptr);
+	}
 //
 //	void session_impl::queue_check_torrent(boost::shared_ptr<torrent> const& t)
 //	{

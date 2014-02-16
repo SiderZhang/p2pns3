@@ -658,6 +658,7 @@ namespace libtorrent
 			?m_torrent->settings().max_paused_peerlist_size
 			:*/m_torrent->settings().max_peerlist_size;
 
+            // 张惊：在m_peers列表中，选择一个Peer来作为候选Peer
 		for (int iterations = (std::min)(int(m_peers.size()), 300);
 			iterations > 0; --iterations)
 		{

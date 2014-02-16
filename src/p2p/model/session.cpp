@@ -83,16 +83,6 @@ void stop_malloc_debug();
 
 namespace libtorrent
 {
-#ifdef _MSC_VER
-	namespace aux
-	{
-		eh_initializer::eh_initializer()
-		{
-			::_set_se_translator(straight_to_debugger);
-		}
-	}
-#endif
-
 	TORRENT_EXPORT void TORRENT_LINK_TEST_NAME() {}
 
 	// this function returns a session_settings object
@@ -487,13 +477,14 @@ namespace libtorrent
 	}
 
 //#ifndef BOOST_NO_EXCEPTIONS
-//	torrent_handle session::add_torrent(add_torrent_params const& params)
-//	{
-//		error_code ec;
-//		TORRENT_SYNC_CALL_RET2(torrent_handle, add_torrent, params, boost::ref(ec));
-//		if (ec) throw libtorrent_exception(ec);
-//		return r;
-//	}
+	torrent_handle session::add_torrent(add_torrent_params const& params)
+	{
+		error_code ec;
+        torrent_handle r = m_impl->add_torrent(params, boost::ref(ec));
+		//TORRENT_SYNC_CALL_RET2(torrent_handle, add_torrent, params, boost::ref(ec));
+		if (ec) throw libtorrent_exception(ec);
+		return r;
+	}
 //#endif
 //
 //	torrent_handle session::add_torrent(add_torrent_params const& params, error_code& ec)

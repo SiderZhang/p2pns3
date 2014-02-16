@@ -53,6 +53,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/peer_info.hpp"
 #include "libtorrent/bt_peer_connection.hpp"
 #include "libtorrent/error.hpp"
+#include <sstream>
 
 #include "ns3/packet.h"
 #include "ns3/peerHeader.h"
@@ -66,6 +67,7 @@ using namespace ns3;
 
 //#define TORRENT_CORRUPT_DATA
 
+using namespace std;
 using boost::shared_ptr;
 using libtorrent::aux::session_impl;
 using namespace ns3;
@@ -4674,17 +4676,31 @@ namespace libtorrent
 		m_channel_state[upload_channel] |= peer_info::bw_network;
 	}
 
-	void peer_connection::on_disk()
-	{
-		if ((m_channel_state[download_channel] & peer_info::bw_disk) == 0) return;
-		boost::intrusive_ptr<peer_connection> me(this);
-	
-		m_ses.dec_disk_queue(download_channel);
-		m_channel_state[download_channel] &= ~peer_info::bw_disk;
-		setup_receive(read_async);
-	}
+//	void peer_connection::on_disk()
+//	{
+//		if ((m_channel_state[download_channel] & peer_info::bw_disk) == 0) return;
+//		boost::intrusive_ptr<peer_connection> me(this);
+//	
+//		m_ses.dec_disk_queue(download_channel);
+//		m_channel_state[download_channel] &= ~peer_info::bw_disk;
+//		setup_receive(read_async);
+//	}
+    void peer_connection::setup_packet_receive(Ptr<Socket> socket)
+    {
+		error_code ec;
+		try_read(read_async, ec);
+        ns3::PeerHeader header;
+        Address from;
+        Ptr<ns3::Packet> packet = socket->RecvFrom(from);
+        packet->RemoveHeader(header);
+        const uint8_t* pBuf = header.getBuffer();
+        int bufSize = header.getSize();
+        memcpy(&m_recv_buffer[m_recv_pos], pBuf, bufSize);
 
-	void peer_connection::setup_receive(sync_t sync)
+        on_receive(ec, bufSize);
+    }
+
+	void peer_connection::setup_receive()
 	{
 		INVARIANT_CHECK;
 
@@ -4693,6 +4709,7 @@ namespace libtorrent
 
 		shared_ptr<torrent> t = m_torrent.lock();
 		
+        // 张惊:处理带宽限制相关的代码
 		if (m_quota[download_channel] == 0
 			&& !m_connecting)
 		{
@@ -4753,8 +4770,6 @@ namespace libtorrent
 			// from being at or exceeding the limit down to below the limit
 			return;
 		}
-		error_code ec;
-		try_read(read_async, ec);
 	}
 
 	size_t peer_connection::try_read(sync_t s, error_code& ec)
@@ -4828,6 +4843,7 @@ namespace libtorrent
 			num_bufs = 2;
 		}*/
 
+        // 张惊：这里将原来的同步异步两种读发改为同步一种，为了保持逻辑的一致性，在要求异步的情况下，加入了对on_receiv_data的调用
 		size_t ret = 0;
 
         ns3::PeerHeader header;
@@ -4836,6 +4852,11 @@ namespace libtorrent
         const uint8_t* pBuf = header.getBuffer();
         int bufSize = header.getSize();
         memcpy(&m_recv_buffer[m_recv_pos], pBuf, bufSize);
+
+        if (s == read_async)
+        {
+            on_receive_data(ec, bufSize);
+        }
 
 #ifdef TORRENT_VERBOSE_LOGGING
 		peer_log("<<< SYNC_READ [ max: %d ret: %d e: %s ]", max_receive, ret, ec ? ec.message().c_str() : "");
@@ -4942,7 +4963,6 @@ namespace libtorrent
 		if (index >= num_max) index = num_max - 1;
 		++m_ses.m_recv_buffer_sizes[index];
 #endif
-		TORRENT_ASSERT(m_ses.is_network_thread());
 
 		// keep ourselves alive in until this function exits in
 		// case we disconnect
@@ -4955,14 +4975,10 @@ namespace libtorrent
 
 		INVARIANT_CHECK;
 
-#ifdef TORRENT_VERBOSE_LOGGING
-		peer_log("<<< ON_RECEIVE_DATA [ bytes: %d error: %s ]"
-			, bytes_transferred, error.message().c_str());
-#endif
-#if defined TORRENT_ASIO_DEBUGGING
-		complete_async("peer_connection::on_receive_data");
-#endif
-
+        stringstream ss;
+        ss<<"<<< ON_RECEIVE_DATA [ bytes: "<<bytes_transferred<<" error: " << error.message().c_str()<<" ]";
+        NS_LOG_INFO(ss.str());
+			
 		// leave this bit set until we're done looping, reading from the socket.
 		// that way we don't trigger any async read calls until the end of this
 		// function.
@@ -5069,7 +5085,7 @@ namespace libtorrent
 		TORRENT_ASSERT(m_channel_state[download_channel] & peer_info::bw_network);
 		m_channel_state[download_channel] &= ~peer_info::bw_network;
 
-		setup_receive(read_async);
+		//setup_receive();
 	}
 
 	bool peer_connection::can_write() const
@@ -5300,7 +5316,9 @@ namespace libtorrent
 
 		on_connected();
 		setup_send();
-		setup_receive();
+        
+        m_socket->SetRecvCallback(MakeCallback (&peer_connection::setup_packet_receive, this));
+		//setup_receive();
 	}
 	
 	// --------------------------

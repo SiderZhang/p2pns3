@@ -162,7 +162,8 @@ namespace libtorrent
 	void tracker_connection::fail_timeout()
 	{
 		boost::shared_ptr<request_callback> cb = requester();
-		if (cb) cb->tracker_request_timed_out(m_req);
+        // TODO: 这里多了了一个函数，可能是引用的libtorrent版本不一致
+		//if (cb) cb->tracker_request_timed_out(m_req);
 		close();
 	}
 	

@@ -1121,7 +1121,8 @@ namespace libtorrent
 			return false;
 		}
 
-		buffer::const_interval recv_buffer = receive_buffer();
+        // 张惊：获得接受的数据
+        buffer::const_interval recv_buffer = receive_buffer();
 
 		TORRENT_ASSERT(recv_buffer.left() >= 1);
 		int packet_type = (unsigned char)recv_buffer[0];

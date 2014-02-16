@@ -322,7 +322,7 @@ namespace libtorrent
 
 	torrent::torrent(
 		session_impl& ses
-		, ns3::InetSocketAddress const& net_interface
+		, ns3::Ipv4EndPoint const& net_interface
 		, int block_size
 		, int seq
 		, add_torrent_params const& p
@@ -515,7 +515,7 @@ namespace libtorrent
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 		debug_log("creating torrent: %s", torrent_file().name().c_str());
 #endif
-		m_net_interfaces.push_back(ns3::InetSocketAddress(net_interface.GetIpv4(), 0));
+		m_net_interfaces.push_back(ns3::InetSocketAddress(net_interface.GetPeerAddress(), 0));
 
 		if (p.file_priorities)
 			m_file_priority = *p.file_priorities;
@@ -3577,7 +3577,6 @@ namespace libtorrent
 	
 	bool torrent::connect_to_peer(policy::peer* peerinfo, bool ignore_limit)
 	{
-		TORRENT_ASSERT(m_ses.is_network_thread());
 		INVARIANT_CHECK;
 
 		TORRENT_ASSERT(peerinfo);
@@ -3605,7 +3604,6 @@ namespace libtorrent
 		//TORRENT_ASSERT(!m_apply_ip_filter
 		//	|| (m_ses.m_ip_filter.access(peerinfo->address()) & ip_filter::blocked) == 0);
 
-        // TODO: 张惊-禁用boost::asio相关代码
         ns3::TypeId tid = ns3::TypeId::LookupByName ("ns3::TcpSocketFactory");
         ns3::Ptr<ns3::Socket> s = ns3::Socket::CreateSocket (node, tid);
 
@@ -5603,7 +5601,6 @@ namespace libtorrent
 
 	bool torrent::try_connect_peer()
 	{
-		TORRENT_ASSERT(m_ses.is_network_thread());
 		TORRENT_ASSERT(want_more_peers());
 		bool ret = m_policy.connect_one_peer(m_ses.session_time());
 		return ret;
@@ -6137,9 +6134,10 @@ namespace libtorrent
 	}
 
 	void torrent::tracker_request_error(tracker_request const& r
-		, int response_code, error_code const& ec, const std::string& msg
+		, int response_code, const std::string& msg
 		, int retry_interval)
 	{
+        error_code ec;
 		TORRENT_ASSERT(m_ses.is_network_thread());
 
 		INVARIANT_CHECK;
