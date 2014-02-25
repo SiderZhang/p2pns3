@@ -37,9 +37,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <boost/intrusive_ptr.hpp>
 
-#include "libtorrent/storage_defs.hpp"
-#include "libtorrent/peer_id.hpp" // sha1_hash
-#include "libtorrent/version.hpp"
+#include "ns3/libtorrent/storage_defs.hpp"
+#include "ns3/libtorrent/peer_id.hpp" // sha1_hash
+#include "ns3/libtorrent/version.hpp"
 
 namespace libtorrent
 {

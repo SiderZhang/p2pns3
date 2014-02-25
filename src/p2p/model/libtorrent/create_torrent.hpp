@@ -33,15 +33,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_CREATE_TORRENT_HPP_INCLUDED
 #define TORRENT_CREATE_TORRENT_HPP_INCLUDED
 
-#include "libtorrent/bencode.hpp"
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/file_storage.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/storage.hpp"
-#include "libtorrent/hasher.hpp"
-#include "libtorrent/utf8.hpp"
-#include "libtorrent/allocator.hpp"
-#include "libtorrent/file.hpp" // for combine_path etc.
+#include "ns3/libtorrent/bencode.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/file_storage.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/storage.hpp"
+#include "ns3/libtorrent/hasher.hpp"
+#include "ns3/libtorrent/utf8.hpp"
+#include "ns3/libtorrent/allocator.hpp"
+#include "ns3/libtorrent/file.hpp" // for combine_path etc.
 
 #include <vector>
 #include <string>

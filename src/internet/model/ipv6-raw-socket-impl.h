@@ -257,6 +257,10 @@ public:
   bool Icmpv6FilterWillBlock(uint8_t type);
 
 
+  virtual Ipv4EndPoint* GetIpv4EndPoint (void) const
+  {
+      return NULL;
+  }
 private:
   /**
    * \struct Data

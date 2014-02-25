@@ -66,9 +66,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/shared_ptr.hpp>
 #include <boost/smart_ptr.hpp>
 #include <boost/static_assert.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/utility.hpp>
 #include <boost/version.hpp>

@@ -34,9 +34,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TORRENT_MAGNET_URI_HPP_INCLUDED
 
 #include <string>
-#include "libtorrent/config.hpp"
-#include "libtorrent/torrent_handle.hpp"
-#include "libtorrent/add_torrent_params.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/torrent_handle.hpp"
+#include "ns3/libtorrent/add_torrent_params.hpp"
 
 namespace libtorrent
 {

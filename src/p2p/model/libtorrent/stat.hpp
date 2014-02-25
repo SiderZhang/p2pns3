@@ -38,13 +38,13 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <assert.h>
 #include <cstring>
 
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/invariant_check.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/invariant_check.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-#include "libtorrent/debug.hpp" // for logger
+#include "ns3/libtorrent/debug.hpp" // for logger
 #endif
 
 namespace libtorrent

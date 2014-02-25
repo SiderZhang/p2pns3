@@ -34,8 +34,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TIMESTAMP_HISTORY_HPP
 
 #include "boost/cstdint.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
 
 namespace libtorrent {
 

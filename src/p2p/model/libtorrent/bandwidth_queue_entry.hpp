@@ -34,8 +34,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TORRENT_BANDWIDTH_QUEUE_ENTRY_HPP_INCLUDED
 
 #include <boost/intrusive_ptr.hpp>
-#include "libtorrent/bandwidth_limit.hpp"
-#include "libtorrent/bandwidth_socket.hpp"
+#include "ns3/libtorrent/bandwidth_limit.hpp"
+#include "ns3/libtorrent/bandwidth_socket.hpp"
 
 namespace libtorrent {
 

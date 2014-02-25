@@ -33,9 +33,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_SESSION_SETTINGS_HPP_INCLUDED
 #define TORRENT_SESSION_SETTINGS_HPP_INCLUDED
 
-#include "libtorrent/version.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/version.hpp"
+#include "ns3/libtorrent/version.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/version.hpp"
 
 #include <string>
 

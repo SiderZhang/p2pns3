@@ -78,6 +78,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/tracker_manager.hpp"
 
+#include "ns3/log.h"
+
 #include <string>
 #include <ostream>
 
@@ -99,6 +101,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/udp_tracker_connection.hpp"
 
 #include "libtorrent/debug.hpp"
+#include <iostream>
+
+using namespace ns3;
 
 #if TORRENT_USE_IOSTREAM
 namespace libtorrent {
@@ -476,6 +481,8 @@ namespace aux {
 #endif
 
 	session_impl::session_impl(
+        ns3::Callback<void> callback,
+        ns3::Ptr<ns3::Node> node,
 		std::pair<int, int> listen_port_range
 		, fingerprint const& cl_fprint
 		, char const* listen_interface
@@ -488,6 +495,7 @@ namespace aux {
 #ifndef TORRENT_DISABLE_POOL_ALLOCATOR
 		, m_send_buffers(send_buffer_size)
 #endif
+        , onInitCallback(callback)
 		, m_files(40)
 		//, m_io_service()
 		//, m_alerts(m_settings.alert_queue_size, alert_mask)
@@ -542,6 +550,9 @@ namespace aux {
 		, m_network_thread(0)
 #endif
 	{
+        NS_LOG_FUNCTION(this);
+
+        m_node = node;
 		memset(m_redundant_bytes, 0, sizeof(m_redundant_bytes));
         // TODO: 注意转换为NS3的版本
 		//m_udp_socket.set_rate_limit(m_settings.dht_upload_rate_limit);
@@ -658,10 +669,6 @@ namespace aux {
 
 		m_bandwidth_channel[peer_connection::download_channel] = &m_download_channel;
 		m_bandwidth_channel[peer_connection::upload_channel] = &m_upload_channel;
-
-#ifdef TORRENT_UPNP_LOGGING
-		m_upnp_log.open("upnp.log", std::ios::in | std::ios::out | std::ios::trunc);
-#endif
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 
@@ -853,31 +860,31 @@ namespace aux {
 		m_buffer_allocations = 0;
 #endif
 
-#if defined TORRENT_BSD || defined TORRENT_LINUX
-		// ---- auto-cap open files ----
-
-		struct rlimit rl;
-		if (getrlimit(RLIMIT_NOFILE, &rl) == 0)
-		{
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			(*m_logger) << time_now_string() << " max number of open files: " << rl.rlim_cur << "\n";
-#endif
-
-			// deduct some margin for epoll/kqueue, log files,
-			// futexes, shared objects etc.
-			rl.rlim_cur -= 20;
-
-			// 80% of the available file descriptors should go
-			m_settings.connections_limit = (std::min)(m_settings.connections_limit
-				, int(rl.rlim_cur * 8 / 10));
-			// 20% goes towards regular files
-			m_files.resize((std::min)(m_files.size_limit(), int(rl.rlim_cur * 2 / 10)));
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-			(*m_logger) << time_now_string() << "   max connections: " << m_settings.connections_limit << "\n";
-			(*m_logger) << time_now_string() << "   max files: " << m_files.size_limit() << "\n";
-#endif
-		}
-#endif // TORRENT_BSD || TORRENT_LINUX
+//#if defined TORRENT_BSD || defined TORRENT_LINUX
+//		// ---- auto-cap open files ----
+//
+//		struct rlimit rl;
+//		if (getrlimit(RLIMIT_NOFILE, &rl) == 0)
+//		{
+//#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
+//			(*m_logger) << time_now_string() << " max number of open files: " << rl.rlim_cur << "\n";
+//#endif
+//
+//			// deduct some margin for epoll/kqueue, log files,
+//			// futexes, shared objects etc.
+//			rl.rlim_cur -= 20;
+//
+//			// 80% of the available file descriptors should go
+//			m_settings.connections_limit = (std::min)(m_settings.connections_limit
+//				, int(rl.rlim_cur * 8 / 10));
+//			// 20% goes towards regular files
+//			m_files.resize((std::min)(m_files.size_limit(), int(rl.rlim_cur * 2 / 10)));
+//#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
+//			(*m_logger) << time_now_string() << "   max connections: " << m_settings.connections_limit << "\n";
+//			(*m_logger) << time_now_string() << "   max files: " << m_files.size_limit() << "\n";
+//#endif
+//		}
+//#endif // TORRENT_BSD || TORRENT_LINUX
 
 
 		// ---- generate a peer id ----
@@ -1135,6 +1142,7 @@ namespace aux {
 
 	void session_impl::init()
 	{
+        NS_LOG_FUNCTION(this);
 #if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
 		(*m_logger) << time_now_string() << " *** session thread init\n";
 #endif
@@ -1145,9 +1153,10 @@ namespace aux {
 		// constructor which is called from the main thread
 
 #if defined TORRENT_ASIO_DEBUGGING
-		async_inc_threads();
+		//async_inc_threads();
 		add_outstanding_async("session_impl::on_tick");
 #endif
+        // TODO: 
 		//m_io_service.post(boost::bind(&session_impl::on_tick, this, ec));
 
 #if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
@@ -1493,12 +1502,18 @@ namespace aux {
 	void session_impl::setup_listener(listen_socket_t* s, ns3::Ipv4EndPoint addr
             , int& retries, bool v6_only, int flags, error_code& ec)
 	{
+        NS_LOG_FUNCTION(this);
 		// SO_REUSEADDR on windows is a bit special. It actually allows
 		// two active sockets to bind to the same port. That means we
 		// may end up binding to the same socket as some other random
 		// application. Don't do it!
 
-		s->sock->Bind(addr.GetPeerAddress().ConvertTo());
+        Address add = addr.GetPeerAddress().ConvertTo();
+        TypeId tid = TypeId::LookupByName ("ns3::TcpSocketFactory");
+        s->sock = Socket::CreateSocket (GetNode (), tid);
+        if (s->sock == NULL)
+            NS_LOG_ERROR("asd");
+		s->sock->Bind(add);
 		while (ec && retries > 0)
 		{
 			ec.clear();
@@ -1540,7 +1555,7 @@ namespace aux {
 	
 	void session_impl::open_listen_port(int flags, error_code& ec)
 	{
-		TORRENT_ASSERT(is_network_thread());
+        NS_LOG_FUNCTION(this);
 
 		//TORRENT_ASSERT(!m_abort);
 retry:
@@ -1727,7 +1742,7 @@ retry:
 
     void session_impl::async_accept(ns3::Ptr<ns3::Socket> const& listener)
 	{
-		NS_LOG_INFO("session_impl::on_accept_connection");
+        NS_LOG_FUNCTION(this);
         listener->SetRecvCallback(MakeCallback (&session_impl::on_accept_connection, this));
 		//listener->async_accept(*str
 		//	, boost::bind(&session_impl::on_accept_connection, this, c
@@ -1736,6 +1751,7 @@ retry:
 
 	void session_impl::on_accept_connection(ns3::Ptr<ns3::Socket> listen_socket)
 	{
+        NS_LOG_FUNCTION(this);
 		NS_LOG_INFO("session_impl::on_accept_connection");
 		TORRENT_ASSERT(is_network_thread());
 
@@ -1964,21 +1980,18 @@ retry:
 
 	initialize_timer::initialize_timer()
 	{
-		g_current_time = time_now_hires();
+		g_current_time = time_now_hires();//ns3::Schedule::Now();
 	}
 
 	void session_impl::on_tick(error_code const& e)
 	{
-#if defined TORRENT_ASIO_DEBUGGING
-		complete_async("session_impl::on_tick");
-#endif
 #ifdef TORRENT_STATS
 		++m_num_messages[on_tick_counter];
 #endif
 
 		TORRENT_ASSERT(is_network_thread());
 
-		ptime now = time_now_hires();
+        ptime now = time_now_hires();
 		aux::g_current_time = now;
 
 #if defined TORRENT_VERBOSE_LOGGING
@@ -2025,7 +2038,11 @@ retry:
 		//m_utp_socket_manager.tick(now);
 
 		// only tick the following once per second
-		if (now - m_last_second_tick < seconds(1)) return;
+		if (now - m_last_second_tick < seconds(1)) 
+        {
+            return;
+        }
+        NS_LOG_FUNCTION(this);
 
 		int tick_interval_ms = total_milliseconds(now - m_last_second_tick);
 		m_last_second_tick = now;
@@ -2113,6 +2130,7 @@ retry:
 				break;
 		}
 
+        NS_LOG_INFO("Sec 2");
 		// --------------------------------------------------------------
 		// auto managed torrent
 		// --------------------------------------------------------------
@@ -2159,6 +2177,8 @@ retry:
 
 		int num_checking = 0;
 		int num_queued = 0;
+        NS_LOG_INFO("size for torrent map");
+        NS_LOG_INFO(m_torrents.size());
 		for (torrent_map::iterator i = m_torrents.begin();
 			i != m_torrents.end();)
 		{
@@ -2248,6 +2268,7 @@ retry:
 			}
 		}
 
+        NS_LOG_INFO("Sec 3");
 		// --------------------------------------------------------------
 		// refresh explicit disk read cache
 		// --------------------------------------------------------------
@@ -2402,6 +2423,7 @@ retry:
 			}
 		}
 
+        NS_LOG_INFO("Sec 4");
 		// --------------------------------------------------------------
 		// unchoke set calculations
 		// --------------------------------------------------------------
@@ -3428,6 +3450,7 @@ retry:
 
 	void session_impl::main_thread()
 	{
+        NS_LOG_FUNCTION(this);
 #if (defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS) && defined BOOST_HAS_PTHREADS
 		m_network_thread = pthread_self();
 #endif
@@ -3435,6 +3458,7 @@ retry:
 
 		// initialize async operations
 		init();
+        onInitCallback();
 
 		bool stop_loop = false;
 		while (!stop_loop)
@@ -3454,6 +3478,7 @@ retry:
 
 			//stop_loop = m_abort;
 		}
+        std::cout<<"asd"<<std::endl;
 
 #if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
 		(*m_logger) << time_now_string() << " locking mutex\n";
@@ -3597,6 +3622,7 @@ retry:
 	torrent_handle session_impl::add_torrent(add_torrent_params const& p
 		, error_code& ec)
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(!p.save_path.empty());
 
 		add_torrent_params params = p;
@@ -3610,6 +3636,7 @@ retry:
 		if (params.ti && params.ti->is_valid() && params.ti->num_files() == 0)
 		{
 			ec = errors::no_files_in_torrent;
+            NS_LOG_INFO("failed to find the file");
 			return torrent_handle();
 		}
 
@@ -3617,6 +3644,7 @@ retry:
 
 		if (is_aborted())
 		{
+            NS_LOG_INFO("session is abort");
 			ec = errors::session_is_closing;
 			return torrent_handle();
 		}
@@ -4086,7 +4114,7 @@ retry:
 				, counter, m_half_open.size(), m_half_open.num_connecting(), m_half_open.next_timeout()
 				, m_half_open.max_timeout());
 		}
-		async_dec_threads();
+		//async_dec_threads();
 #endif
 
 		TORRENT_ASSERT(m_torrents.empty());

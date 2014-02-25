@@ -36,7 +36,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <cctype>
 #include <cstring>
 
-#include "libtorrent/escape_string.hpp"
+#include "ns3/libtorrent/escape_string.hpp"
 
 namespace libtorrent
 {

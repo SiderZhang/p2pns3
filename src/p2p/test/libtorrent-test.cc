@@ -1,19 +1,29 @@
-#include "libtorrent/session.h"
+#include "libtorrent-test.h"
 #include "ns3/test.h"
 
 using namespace ns3;
 
-class LoadTorrentTestCase1 : public TestCase
+NS_LOG_COMPONENT_DEFINE ("LibTorrentTest");
+static LibtorrentTestSuite libtorrentTestSuite;
+
+LibtorrentTestSuite::LibtorrentTestSuite()
+        :TestSuite("lib-torrent", UNIT)
 {
-public:
-    LoadTorrentTestCase1();
-    virtual ~LoadTorrentTestCase1();
-private:
-    virtual void DoRun();
+    AddTestCase(new LoadTorrentTestCase1(), TestCase::QUICK);
+}
+
+LoadTorrentTestCase1::LoadTorrentTestCase1()
+    :TestCase ("test libtorrent")
+{
+}
+
+LoadTorrentTestCase1::~LoadTorrentTestCase1()
+{
 }
 
 void LoadTorrentTestCase1::DoRun()
 {
+    LogComponentEnable("PeerPoint", LOG_ALL);
   NodeContainer n;
   n.Create (2);
 
@@ -40,15 +50,21 @@ void LoadTorrentTestCase1::DoRun()
   ObjectFactory factory;
 
   factory.SetTypeId(PeerPoint::GetTypeId());
-  Ptr<PeerPoint> ptrPeerPoint = factory.Create<PeerPoint>();
   ApplicationContainer apps;
-  n.Get(1).Begin()->AddApplication(ptrPeerPoint);
-  apps.Add(apps);
 
-  uint16_t port = 4000;
+    Ptr<PeerPoint> ptrPeerPoint = factory.Create<PeerPoint>();
+  for (NodeContainer::Iterator i = n.Begin (); i != n.End (); ++i)
+  {
+    (*i)->AddApplication(ptrPeerPoint);
+    apps.Add(ptrPeerPoint);
+    break;
+  }
+
   apps.Start (Seconds (1.0));
   apps.Stop (Seconds (10.0));
 
   Simulator::Run ();
   Simulator::Destroy ();
+
+  NS_TEST_ASSERT_MSG_EQ (ptrPeerPoint->isTorrentLoaded(), true, "failed to load the torrent file");
 }

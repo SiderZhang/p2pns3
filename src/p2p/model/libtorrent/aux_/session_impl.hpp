@@ -63,16 +63,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/stat.hpp"
 #include "libtorrent/file_pool.hpp"
 #include "libtorrent/bandwidth_manager.hpp"
-#include "libtorrent/socket_type.hpp"
 #include "libtorrent/connection_queue.hpp"
-//#include "libtorrent/disk_io_thread.hpp"
-#include "libtorrent/udp_socket.hpp"
 #include "libtorrent/assert.hpp"
-#include "libtorrent/thread.hpp"
 #include "libtorrent/policy.hpp" // for policy::peer
 #include "libtorrent/alert.hpp" // for alert_manager
-#include "libtorrent/socket_io.hpp" // for print_address
-#include "libtorrent/address.hpp"
 #include "libtorrent/utp_socket_manager.hpp"
 #include "libtorrent/bloom_filter.hpp"
 #include "libtorrent/rss.hpp"
@@ -93,6 +87,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/ipv4-address.h"
 #include "ns3/socket.h"
 #include "ns3/ptr.h"
+#include "ns3/node.h"
+#include "ns3/callback.h"
+
+#include "ns3/socket.h"
 
 namespace libtorrent
 {
@@ -117,7 +115,7 @@ namespace libtorrent
 
 		// this is typically empty but can be set
 		// to the WAN IP address of NAT-PMP or UPnP router
-        ns3::Ipv4Address external_address;
+        ns3::Address external_address;
 
 		// this is typically set to the same as the local
 		// listen port. In case a NAT port forward was
@@ -179,7 +177,7 @@ namespace libtorrent
 			, boost::enable_shared_from_this<session_impl>
 		{
             // TODO: 完成这个函数，加入获得Node的代码
-            ns3::Ptr<ns3::Node> GetNode() {return NULL;}
+            ns3::Ptr<ns3::Node> GetNode() {return m_node;}
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 			// this needs to be destructed last, since other components may log
@@ -200,6 +198,8 @@ namespace libtorrent
 			typedef std::map<sha1_hash, boost::shared_ptr<torrent> > torrent_map;
 
 			session_impl(
+                ns3::Callback<void> callback,
+                ns3::Ptr<ns3::Node> node,
 				std::pair<int, int> listen_port_range
 				, fingerprint const& cl_fprint
 				, char const* listen_interface
@@ -232,18 +232,13 @@ namespace libtorrent
 
 			void async_accept(ns3::Ptr<ns3::Socket> const& listener);
 			void on_accept_connection(ns3::Ptr<ns3::Socket> listen_socket);
-			void on_socks_accept(boost::shared_ptr<socket_type> const& s
-				, error_code const& e);
+			void on_socks_accept(ns3::Ptr<ns3::Socket> const& e);
 
 			void incoming_connection(ns3::Ptr<ns3::Socket> const& s);
 		
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 			bool is_network_thread() const
 			{
-#if defined BOOST_HAS_PTHREADS
-				if (m_network_thread == 0) return true;
-				return m_network_thread == pthread_self();
-#endif
 				return true;
 			}
 #endif
@@ -263,7 +258,7 @@ namespace libtorrent
 
 			// called when a port mapping is successful, or a router returns
 			// a failure to map a port
-			void on_port_mapping(int mapping, address const& ip, int port
+			void on_port_mapping(int mapping, ns3::Address const& ip, int port
 				, error_code const& ec, int nat_transport);
 
 			bool is_aborted() const { return m_abort; }
@@ -280,8 +275,7 @@ namespace libtorrent
 				, int flags = 0);
 			bool is_listening() const;
 
-            // TODO: 添加torrent的功能要删掉
-			//torrent_handle add_torrent(add_torrent_params const&, error_code& ec);
+			torrent_handle add_torrent(add_torrent_params const&, error_code& ec);
 			//void async_add_torrent(add_torrent_params* params);
 
             // TODO: 删除torrent的功能要删掉
@@ -301,14 +295,14 @@ namespace libtorrent
 			//void queue_check_torrent(boost::shared_ptr<torrent> const& t);
 			//void dequeue_check_torrent(boost::shared_ptr<torrent> const& t);
 
-			void set_alert_mask(boost::uint32_t m);
-			size_t set_alert_queue_size_limit(size_t queue_size_limit_);
-			std::auto_ptr<alert> pop_alert();
-			void pop_alerts(std::deque<alert*>* alerts);
-			void set_alert_dispatch(boost::function<void(std::auto_ptr<alert>)> const&);
-			void post_alert(const alert& alert_);
+	//		void set_alert_mask(boost::uint32_t m);
+	//		size_t set_alert_queue_size_limit(size_t queue_size_limit_);
+	//		std::auto_ptr<alert> pop_alert();
+	//		void pop_alerts(std::deque<alert*>* alerts);
+	//		void set_alert_dispatch(boost::function<void(std::auto_ptr<alert>)> const&);
+	//		void post_alert(const alert& alert_);
 
-			alert const* wait_for_alert(time_duration max_wait);
+	//		alert const* wait_for_alert(time_duration max_wait);
 
 			int num_uploads() const { return m_num_unchoked; }
 			int num_connections() const
@@ -320,7 +314,7 @@ namespace libtorrent
 			session_status status() const;
 			void set_peer_id(peer_id const& id);
 			void set_key(int key);
-			address listen_address() const;
+			ns3::Address listen_address() const;
 			boost::uint16_t listen_port() const;
 			boost::uint16_t ssl_listen_port() const;
 			
@@ -328,14 +322,11 @@ namespace libtorrent
 			
 			torrent_handle find_torrent_handle(sha1_hash const& info_hash);
 
-			void save_state(entry* e, boost::uint32_t flags) const;
-			void load_state(lazy_entry const* e);
+			//void save_state(entry* e, boost::uint32_t flags) const;
+			//void load_state(lazy_entry const* e);
 
-			void set_proxy(proxy_settings const& s);
-			proxy_settings const& proxy() const { return m_proxy; }
-
-			natpmp* start_natpmp();
-			upnp* start_upnp();
+			//natpmp* start_natpmp();
+			//upnp* start_upnp();
 
 			void stop_natpmp();
 			void stop_upnp();
@@ -369,17 +360,17 @@ namespace libtorrent
 				source_router = 8
 			};
 
-			void set_external_address(address const& ip
-				, int source_type, address const& source);
-			address const& external_address() const { return m_external_address; }
+			void set_external_address(ns3::Address const& ip
+				, int source_type, ns3::Address const& source);
+			ns3::Address const& external_address() const { return m_external_address; }
 
 			//bool can_write_to_disk() const
 			//{ return m_disk_thread.can_write(); }
 
 			// used when posting synchronous function
 			// calls to session_impl and torrent objects
-			mutable libtorrent::mutex mut;
-			mutable libtorrent::condition cond;
+			//mutable libtorrent::mutex mut;
+			//mutable libtorrent::condition cond;
 
 			void inc_disk_queue(int channel)
 			{
@@ -416,7 +407,7 @@ namespace libtorrent
 			void update_rate_settings();
 
 			void update_disk_thread_settings();
-			void setup_socket_buffers(boost::asio::ip::tcp::socket& s);
+//		void setup_socket_buffers(ns3::Ptr<ns3::Socket> s);
 
 			// the settings for the client
 			session_settings m_settings;
@@ -464,6 +455,9 @@ namespace libtorrent
 			boost::pool<> m_send_buffers;
 #endif
 
+            // 张惊：这个回调函数在完成初始化的时候调用
+            ns3::Callback<void> onInitCallback;
+
 			// the file pool that all storages in this session's
 			// torrents uses. It sets a limit on the number of
 			// open files by this session.
@@ -473,7 +467,7 @@ namespace libtorrent
 			file_pool m_files;
 
 			// handles delayed alerts
-			alert_manager m_alerts;
+		//	alert_manager m_alerts;
 
 			// handles disk io requests asynchronously
 			// peers have pointers into the disk buffer
@@ -567,16 +561,13 @@ namespace libtorrent
 
 			// when as a socks proxy is used for peers, also
 			// listen for incoming connections on a socks connection
-			boost::shared_ptr<socket_type> m_socks_listen_socket;
+			boost::shared_ptr<ns3::Socket> m_socks_listen_socket;
 			boost::uint16_t m_socks_listen_port;
 
-			void open_new_incoming_socks_connection();
+			//void open_new_incoming_socks_connection();
 
-			void setup_listener(listen_socket_t* s, ns3::InetSocketAddress ep, int& retries
+			void setup_listener(listen_socket_t* s, ns3::Ipv4EndPoint ep, int& retries
 				, bool v6_only, int flags, error_code& ec);
-
-			// the proxy used for bittorrent
-			proxy_settings m_proxy;
 
 			// set to true when the session object
 			// is being destructed and the thread
@@ -642,7 +633,7 @@ namespace libtorrent
 			// NAT or not.
 			bool m_incoming_connection;
 			
-			void on_disk_queue();
+			//void on_disk_queue();
 			void on_tick(error_code const& e);
 
 			void auto_manage_torrents(std::vector<torrent*>& list
@@ -671,7 +662,7 @@ namespace libtorrent
 			int m_next_port;
 
 			void on_receive_udp(error_code const& e
-				, udp::endpoint const& ep, char const* buf, int len);
+				, ns3::Ipv4EndPoint const& ep, char const* buf, int len);
 
 			void on_receive_udp_hostname(error_code const& e
 				, char const* hostname, char const* buf, int len);
@@ -691,8 +682,8 @@ namespace libtorrent
 			// this is deducted from the connect speed
 			int m_boost_connections;
 
-			boost::intrusive_ptr<natpmp> m_natpmp;
-			boost::intrusive_ptr<upnp> m_upnp;
+			//boost::intrusive_ptr<natpmp> m_natpmp;
+			//boost::intrusive_ptr<upnp> m_upnp;
 
 			// mask is a bitmask of which protocols to remap on:
 			// 1: NAT-PMP
@@ -715,6 +706,8 @@ namespace libtorrent
 			// get to download again after the disk has been
 			// blocked
 			connection_map::iterator m_next_disk_peer;
+
+            ns3::Ptr<ns3::Node> m_node;
 #ifdef TORRENT_DEBUG
 			void check_invariant() const;
 #endif
@@ -874,7 +867,7 @@ namespace libtorrent
 				// reported this address
 				bloom_filter<16> voters;
 				// this is the actual external address
-				address addr;
+				ns3::Address addr;
 				// a bitmask of sources the reporters have come from
 				boost::uint16_t sources;
 				// the total number of votes for this IP
@@ -886,7 +879,7 @@ namespace libtorrent
 			// IP only gets to add a new item once.
 			bloom_filter<32> m_external_address_voters;
 			std::vector<external_ip_t> m_external_addresses;
-			address m_external_address;
+			ns3::Address m_external_address;
 
 			// total redundant and failed bytes
 			size_type m_total_failed_bytes;
@@ -903,79 +896,6 @@ namespace libtorrent
 			pthread_t m_network_thread;
 #endif
 		};
-		
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-		struct tracker_logger : request_callback
-		{
-			tracker_logger(session_impl& ses): m_ses(ses) {}
-			void tracker_warning(tracker_request const& req
-				, std::string const& str)
-			{
-				debug_log("*** tracker warning: %s", str.c_str());
-			}
-
-			void tracker_response(tracker_request const&
-				, libtorrent::address const& tracker_ip
-				, std::list<address> const& ip_list
-				, std::vector<peer_entry>& peers
-				, int interval
-				, int min_interval
-				, int complete
-				, int incomplete
-				, address const& external_ip
-				, std::string const& tracker_id)
-			{
-				std::string s;
-				s = "TRACKER RESPONSE:\n";
-				char tmp[200];
-				snprintf(tmp, 200, "interval: %d\nmin_interval: %d\npeers:\n", interval, min_interval);
-				s += tmp;
-				for (std::vector<peer_entry>::const_iterator i = peers.begin();
-					i != peers.end(); ++i)
-				{
-					char pid[41];
-					to_hex((const char*)&i->pid[0], 20, pid);
-					if (i->pid.is_all_zeros()) pid[0] = 0;
-
-					snprintf(tmp, 200, " %-16s %-5d %s\n", i->ip.c_str(), i->port, pid);
-					s += tmp;
-				}
-				snprintf(tmp, 200, "external ip: %s\n", print_address(external_ip).c_str());
-				s += tmp;
-				debug_log("%s", s.c_str());
-			}
-
-			void tracker_request_timed_out(
-				tracker_request const&)
-			{
-				debug_log("*** tracker timed out");
-			}
-
-			void tracker_request_error(tracker_request const& r
-				, int response_code, error_code const& ec, const std::string& str
-				, int retry_interval)
-			{
-				debug_log("*** tracker error: %d: %s %s"
-					, response_code, ec.message().c_str(), str.c_str());
-			}
-			
-			void debug_log(const char* fmt, ...) const
-			{
-				if (!m_ses.m_logger) return;
-
-				va_list v;	
-				va_start(v, fmt);
-	
-				char usr[1024];
-				vsnprintf(usr, sizeof(usr), fmt, v);
-				va_end(v);
-				char buf[1280];
-				snprintf(buf, sizeof(buf), "%s: %s\n", time_now_string(), usr);
-				(*m_ses.m_logger) << buf;
-			}
-			session_impl& m_ses;
-		};
-#endif
 
 	}
 }

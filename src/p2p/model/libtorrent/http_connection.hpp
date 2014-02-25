@@ -44,15 +44,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <list>
 #include <string>
 
-#include "libtorrent/socket.hpp"
-#include "libtorrent/error_code.hpp"
-#include "libtorrent/http_parser.hpp"
-#include "libtorrent/deadline_timer.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/socket_type.hpp"
-#include "libtorrent/session_settings.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/error_code.hpp"
+#include "ns3/libtorrent/http_parser.hpp"
+#include "ns3/libtorrent/deadline_timer.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/socket_type.hpp"
+#include "ns3/libtorrent/session_settings.hpp"
 
-#include "libtorrent/i2p_stream.hpp"
+#include "ns3/libtorrent/i2p_stream.hpp"
 
 #ifdef TORRENT_USE_OPENSSL
 #include <boost/asio/ssl/context.hpp>

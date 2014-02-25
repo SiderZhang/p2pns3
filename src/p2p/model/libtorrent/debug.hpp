@@ -36,7 +36,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #if defined TORRENT_ASIO_DEBUGGING
 
 #include "libtorrent/assert.hpp"
-#include "libtorrent/thread.hpp"
 
 #include <map>
 
@@ -110,7 +109,6 @@ namespace libtorrent
 #include <cstring>
 #include "libtorrent/config.hpp"
 #include "libtorrent/file.hpp"
-#include "libtorrent/thread.hpp"
 
 #if TORRENT_USE_IOSTREAM
 #include <string>

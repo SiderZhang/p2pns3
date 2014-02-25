@@ -27,6 +27,10 @@ NS_LOG_COMPONENT_DEFINE ("Ipv4EndPoint");
 
 namespace ns3 {
 
+Ipv4EndPoint::Ipv4EndPoint ()
+{
+  NS_LOG_FUNCTION (this);
+}
 Ipv4EndPoint::Ipv4EndPoint (Ipv4Address address, uint16_t port)
   : m_localAddr (address), 
     m_localPort (port),
@@ -48,7 +52,7 @@ Ipv4EndPoint::~Ipv4EndPoint ()
 }
 
 Ipv4Address 
-Ipv4EndPoint::GetLocalAddress (void)
+Ipv4EndPoint::GetLocalAddress (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_localAddr;
@@ -62,19 +66,19 @@ Ipv4EndPoint::SetLocalAddress (Ipv4Address address)
 }
 
 uint16_t 
-Ipv4EndPoint::GetLocalPort (void)
+Ipv4EndPoint::GetLocalPort (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_localPort;
 }
 Ipv4Address 
-Ipv4EndPoint::GetPeerAddress (void)
+Ipv4EndPoint::GetPeerAddress (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_peerAddr;
 }
 uint16_t 
-Ipv4EndPoint::GetPeerPort (void)
+Ipv4EndPoint::GetPeerPort (void) const
 {
   NS_LOG_FUNCTION (this);
   return m_peerPort;

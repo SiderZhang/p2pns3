@@ -43,9 +43,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/fingerprint.hpp"
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/fingerprint.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 namespace libtorrent
 {

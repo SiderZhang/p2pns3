@@ -1,14 +1,14 @@
 #ifndef PEER_H
 #define PEER_H
 
-#include "ns3/application.h"
 #include "ns3/event-id.h"
 #include "ns3/ptr.h"
+#include "ns3/application.h"
 #include "libtorrent/session.hpp"
 
 namespace ns3
 {
-    class PeerPoint : Application
+    class PeerPoint : public Application
     {
     public:
         static TypeId GetTypeId();
@@ -21,13 +21,13 @@ namespace ns3
     protected:
         virtual void DoDispose (void);
 
-        bool loadTorrent();
+        void loadTorrent(libtorrent::session* sess);
 
     private:
         virtual void StartApplication (void);
         virtual void StopApplication (void);
 
-        libtorrent::session ses;
+        libtorrent::session* ses;
     };
 }
 

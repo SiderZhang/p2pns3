@@ -455,25 +455,23 @@ namespace libtorrent
 
 	int load_file(std::string const& filename, std::vector<char>& v, error_code& ec, int limit)
 	{
-        // TODO: 处理torrent文件的解析
-        return -1;
-//		ec.clear();
-//		file f;
-//		if (!f.open(filename, file::read_only, ec)) return -1;
-//		size_type s = f.get_size(ec);
-//		if (ec) return -1;
-//		if (s > limit)
-//		{
-//			ec = error_code(errors::metadata_too_large, get_libtorrent_category());
-//			return -2;
-//		}
-//		v.resize(s);
-//		if (s == 0) return 0;
-//		file::iovec_t b = {&v[0], size_t(s) };
-//		size_type read = f.readv(0, &b, 1, ec);
-//		if (read != s) return -3;
-//		if (ec) return -3;
-//		return 0;
+		ec.clear();
+		file f;
+		if (!f.open(filename, file::read_only, ec)) return -1;
+		size_type s = f.get_size(ec);
+		if (ec) return -1;
+		if (s > limit)
+		{
+			ec = error_code(errors::metadata_too_large, get_libtorrent_category());
+			return -2;
+		}
+		v.resize(s);
+		if (s == 0) return 0;
+		file::iovec_t b = {&v[0], size_t(s) };
+		size_type read = f.readv(0, &b, 1, ec);
+		if (read != s) return -3;
+		if (ec) return -3;
+		return 0;
 	}
 
 	announce_entry::announce_entry(std::string const& u)

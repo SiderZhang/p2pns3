@@ -37,17 +37,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/function/function1.hpp>
 #include <boost/function/function0.hpp>
 #include <boost/noncopyable.hpp>
-#include "libtorrent/io_service.hpp"
-#include "libtorrent/error_code.hpp"
-#include "libtorrent/ptime.hpp"
-#include "libtorrent/time.hpp"
+#include "ns3/libtorrent/io_service.hpp"
+#include "ns3/libtorrent/error_code.hpp"
+#include "ns3/libtorrent/ptime.hpp"
+#include "ns3/libtorrent/time.hpp"
 
 #ifdef TORRENT_CONNECTION_LOGGING
 #include <fstream>
 #endif
 
 #include "ns3/event-id.h"
-#include "libtorrent/thread.hpp"
 
 namespace libtorrent
 {
@@ -92,9 +91,7 @@ public:
 
 private:
 
-	typedef mutex mutex_t;
-
-	void try_connect(mutex_t::scoped_lock& l);
+	void try_connect(/*mutex_t::scoped_lock& l*/);
 	void on_timeout(error_code const& e);
 	void on_try_connect();
 
@@ -137,8 +134,6 @@ private:
 
 	//deadline_timer m_timer;
     ns3::EventId timerId;
-
-	mutable mutex_t m_mutex;
 
 #ifdef TORRENT_DEBUG
 	bool m_in_timeout_function;

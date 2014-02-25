@@ -193,8 +193,8 @@ public:
    */
   static Ipv4Address GetLoopback (void);
 
-private:
   Address ConvertTo (void) const;
+private:
   static uint8_t GetType (void);
   uint32_t m_address;
 

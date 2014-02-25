@@ -107,6 +107,10 @@ public:
   virtual bool SetAllowBroadcast (bool allowBroadcast);
   virtual bool GetAllowBroadcast () const;
 
+  virtual Ipv4EndPoint* GetIpv4EndPoint (void) const
+  {
+      return NULL;
+  }
 private:
   void ForwardUp (Ptr<NetDevice> device, Ptr<const Packet> packet, 
                   uint16_t protocol, const Address &from, const Address &to,

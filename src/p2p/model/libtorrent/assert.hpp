@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef TORRENT_ASSERT
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 #if (!defined TORRENT_DEBUG && !TORRENT_RELEASE_ASSERTS) \
 	|| TORRENT_NO_ASSERTS

@@ -37,10 +37,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <ctime>
 
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/peer_request.hpp"
-#include "libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/peer_request.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
 
 namespace libtorrent
 {
@@ -194,7 +194,7 @@ namespace libtorrent
 		void add_file(std::wstring const& p, size_type size, int flags = 0
 			, std::time_t mtime = 0, std::string const& s_p = "") TORRENT_DEPRECATED;
 		TORRENT_DEPRECATED_PREFIX
-		void rename_file(int index, std::wstring const& new_filename) TORRENT_DEPRECATED;
+		void rename_file(int index, std::wstring const& new_filename) ;
 		TORRENT_DEPRECATED_PREFIX
 		void set_name(std::wstring const& n) TORRENT_DEPRECATED;
 #endif // TORRENT_NO_DEPRECATE

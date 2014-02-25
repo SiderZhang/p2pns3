@@ -71,6 +71,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/magnet_uri.hpp"
 
 #include "libtorrent/tracker_manager.hpp"
+#include "ns3/log.h"
+
 
 using boost::shared_ptr;
 using boost::weak_ptr;
@@ -80,6 +82,9 @@ using libtorrent::aux::session_impl;
 void start_malloc_debug();
 void stop_malloc_debug();
 #endif
+
+using namespace ns3;
+NS_LOG_COMPONENT_DEFINE ("Session");
 
 namespace libtorrent
 {
@@ -380,10 +385,12 @@ namespace libtorrent
 	// configurations this will give a link error
 	void TORRENT_EXPORT TORRENT_CFG() {}
 
-	void session::init(std::pair<int, int> listen_range, char const* listen_interface
+	void session::init(ns3::Ptr<Node> node, std::pair<int, int> listen_range, char const* listen_interface
 		, fingerprint const& id, int flags, boost::uint32_t alert_mask TORRENT_LOGPATH_ARG)
 	{
-		m_impl.reset(new session_impl(listen_range, id, listen_interface, alert_mask TORRENT_LOGPATH));
+        NS_LOG_FUNCTION(this);
+        ns3::Callback<void> initCallback = MakeCallback(&session::initCallback, this);
+		m_impl.reset(new session_impl(initCallback, node, listen_range, id, listen_interface, alert_mask TORRENT_LOGPATH));
 
 #ifdef TORRENT_MEMDEBUG
 		start_malloc_debug();
@@ -479,6 +486,7 @@ namespace libtorrent
 //#ifndef BOOST_NO_EXCEPTIONS
 	torrent_handle session::add_torrent(add_torrent_params const& params)
 	{
+        NS_LOG_FUNCTION(this);
 		error_code ec;
         torrent_handle r = m_impl->add_torrent(params, boost::ref(ec));
 		//TORRENT_SYNC_CALL_RET2(torrent_handle, add_torrent, params, boost::ref(ec));

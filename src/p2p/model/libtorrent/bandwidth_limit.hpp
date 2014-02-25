@@ -36,7 +36,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/integer_traits.hpp>
 #include <boost/cstdint.hpp>
 
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/assert.hpp"
 
 namespace libtorrent {
 

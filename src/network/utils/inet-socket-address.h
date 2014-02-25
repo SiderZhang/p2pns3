@@ -40,6 +40,7 @@ namespace ns3 {
 class InetSocketAddress
 {
 public:
+  InetSocketAddress ();
   /**
    * \param ipv4 the ipv4 address
    * \param port the port number

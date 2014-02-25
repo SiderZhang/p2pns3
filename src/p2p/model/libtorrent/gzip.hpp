@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_GZIP_HPP_INCLUDED
 #define TORRENT_GZIP_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 #include <string>
 #include <vector>
 

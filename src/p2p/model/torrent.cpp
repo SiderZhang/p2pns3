@@ -75,6 +75,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/random.hpp"
 #include "libtorrent/string_util.hpp" // for allocate_string_copy
 #include "libtorrent/escape_string.hpp"
+#include "libtorrent/broadcast_socket.hpp"
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 #include "libtorrent/struct_debug.hpp"
@@ -408,6 +409,7 @@ namespace libtorrent
         , m_download_rate(peer_connection::download_channel)
         , m_upload_rate(peer_connection::upload_channel)
 	{
+        NS_LOG_FUNCTION(this);
 		// if there is resume data already, we don't need to trigger the initial save
 		// resume data
 		if (p.resume_data && (p.flags & add_torrent_params::flag_override_resume_data) == 0)
@@ -557,6 +559,7 @@ namespace libtorrent
 
 	void torrent::start()
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		debug_log("starting torrent");
@@ -589,7 +592,10 @@ namespace libtorrent
 			// we need to download the .torrent file from m_url
 			start_download_url();
 		}
-		else*/ if (m_torrent_file->is_valid())
+		else*/ 
+        // 张惊:如果torrent文件正常的话，进行初始化
+        // 否则采用别的方式（例如从URL下载，从磁力连接找等等）
+        if (m_torrent_file->is_valid())
 		{
 			init();
 		}
@@ -871,6 +877,7 @@ namespace libtorrent
 	// shared_from_this()
 	void torrent::init()
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		TORRENT_ASSERT(m_torrent_file->is_valid());
 		TORRENT_ASSERT(m_torrent_file->num_files() > 0);
@@ -893,12 +900,14 @@ namespace libtorrent
 		if (m_torrent_file->num_pieces() > piece_picker::max_pieces)
 		{
 			set_error(errors::too_many_pieces_in_torrent, "");
+        NS_LOG_INFO("too many pieces in torrent");
 			return;
 		}
 
 		if (m_torrent_file->num_pieces() == 0)
 		{
 			set_error(errors::torrent_invalid_length, "");
+        NS_LOG_INFO("invalid length");
 			return;
 		}
 
@@ -1108,6 +1117,7 @@ namespace libtorrent
 	void torrent::announce_with_tracker(tracker_request::event_t e
 		, ns3::Address const& bind_interface)
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		INVARIANT_CHECK;
 
@@ -1231,12 +1241,11 @@ namespace libtorrent
 				else if (!ae.complete_sent && is_seed()) req.event = tracker_request::completed;
 			}
 
-            // TODO: 禁用IP识别
-			//if (!is_any(bind_interface)) req.bind_ip = bind_interface;
-			//else 
+			if (!is_any(bind_interface)) req.bind_ip = bind_interface;
+			else 
                 req.bind_ip = m_ses.m_listen_interface.GetPeerAddress().ConvertTo();
 
-            // TODO: 禁用boost::asio
+            // TODO: 将ASIO的连接tracker代码改为udp的
             /*
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 			debug_log("==> TRACKER REQUEST \"%s\" event: %s abort: %d"
@@ -1253,11 +1262,12 @@ namespace libtorrent
 					, tracker_login(), tl);
 			}
 			else
-#endif
+#endif*/
 			{
-				m_ses.m_tracker_manager.queue_request(m_ses.m_io_service, m_ses.m_half_open, req
+                // TODO: 传递tracker的IP地址
+				m_ses.m_tracker_manager.queue_request(req
 					, tracker_login() , shared_from_this());
-			}*/
+			}
 
 			ae.updating = true;
 			ae.next_announce = now + seconds(20);
@@ -2329,11 +2339,11 @@ namespace libtorrent
 		return avail_vec[random() % avail_vec.size()];
 	}
 
-	/*std::string torrent::tracker_login() const
+	std::string torrent::tracker_login() const
 	{
 		if (m_username.empty() && m_password.empty()) return "";
 		return m_username + ":" + m_password;
-	}*/
+	}
 
     // TODO: 禁用磁盘读写
 	/*boost::uint32_t torrent::tracker_key() const
@@ -4916,6 +4926,7 @@ namespace libtorrent
 
 	void torrent::start_announcing()
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 //		if (is_paused())
 //		{
@@ -4984,6 +4995,7 @@ namespace libtorrent
 
 	void torrent::second_tick(stat& accumulator, int tick_interval_ms)
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		INVARIANT_CHECK;
 

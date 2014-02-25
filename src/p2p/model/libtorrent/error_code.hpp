@@ -34,7 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TORRENT_ERROR_CODE_HPP_INCLUDED
 
 #include <boost/version.hpp>
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 #if defined TORRENT_WINDOWS || defined TORRENT_CYGWIN
 // asio assumes that the windows error codes are defined already
@@ -47,7 +47,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/system/error_code.hpp>
 #endif
 
-#include "libtorrent/string_util.hpp" // for allocate_string_copy
+#include "ns3/libtorrent/string_util.hpp" // for allocate_string_copy
 #include <stdlib.h> // free
 
 #ifndef BOOST_SYSTEM_NOEXCEPT

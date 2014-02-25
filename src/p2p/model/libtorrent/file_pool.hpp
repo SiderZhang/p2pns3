@@ -44,10 +44,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include <map>
-#include "libtorrent/file.hpp"
-#include "libtorrent/ptime.hpp"
-#include "libtorrent/thread.hpp"
-#include "libtorrent/file_storage.hpp"
+#include "ns3/libtorrent/ptime.hpp"
+#include "ns3/libtorrent/file_storage.hpp"
 
 namespace libtorrent
 {
@@ -74,7 +72,7 @@ namespace libtorrent
 		struct lru_file_entry
 		{
 			lru_file_entry(): key(0), last_use(time_now()), mode(0) {}
-			mutable boost::intrusive_ptr<file> file_ptr;
+//			mutable boost::intrusive_ptr<file> file_ptr;
 			void* key;
 			ptime last_use;
 			int mode;
@@ -85,11 +83,9 @@ namespace libtorrent
 		typedef std::map<std::pair<void*, int>, lru_file_entry> file_set;
 		
 		file_set m_files;
-		mutex m_mutex;
 
 #if TORRENT_CLOSE_MAY_BLOCK
 		void closer_thread_fun();
-		mutex m_closer_mutex;
 		std::vector<boost::intrusive_ptr<file> > m_queued_for_close;
 		bool m_stop_thread;
 

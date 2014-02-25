@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_CHAINED_BUFFER_HPP_INCLUDED
 #define TORRENT_CHAINED_BUFFER_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 #include <boost/function/function1.hpp>
 #include <boost/version.hpp>

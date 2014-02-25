@@ -33,9 +33,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_RSS_HPP_INCLUDED
 #define TORRENT_RSS_HPP_INCLUDED
 
-#include "libtorrent/torrent_handle.hpp"
-#include "libtorrent/add_torrent_params.hpp"
-#include "libtorrent/size_type.hpp"
+#include "ns3/libtorrent/torrent_handle.hpp"
+#include "ns3/libtorrent/add_torrent_params.hpp"
+#include "ns3/libtorrent/size_type.hpp"
 
 #include <boost/enable_shared_from_this.hpp>
 #include <string>

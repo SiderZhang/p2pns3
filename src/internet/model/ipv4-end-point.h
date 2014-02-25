@@ -46,14 +46,15 @@ class Packet;
 
 class Ipv4EndPoint {
 public:
+  Ipv4EndPoint ();
   Ipv4EndPoint (Ipv4Address address, uint16_t port);
   ~Ipv4EndPoint ();
 
-  Ipv4Address GetLocalAddress (void);
+  Ipv4Address GetLocalAddress (void) const;
   void SetLocalAddress (Ipv4Address address);
-  uint16_t GetLocalPort (void);
-  Ipv4Address GetPeerAddress (void);
-  uint16_t GetPeerPort (void);
+  uint16_t GetLocalPort (void) const;
+  Ipv4Address GetPeerAddress (void) const;
+  uint16_t GetPeerPort (void) const;
 
   void SetPeer (Ipv4Address address, uint16_t port);
 
@@ -75,6 +76,7 @@ public:
                     uint8_t icmpType, uint8_t icmpCode,
                     uint32_t icmpInfo);
 
+  friend bool operator == (Ipv4EndPoint const &a, Ipv4EndPoint const &b);
 private:
   void DoForwardUp (Ptr<Packet> p, const Ipv4Header& header, uint16_t sport,
                     Ptr<Ipv4Interface> incomingInterface);
@@ -91,6 +93,22 @@ private:
   Callback<void> m_destroyCallback;
 };
 
+inline bool operator == (Ipv4EndPoint const &a, Ipv4EndPoint const &b)
+{
+    if (a.GetPeerPort() != b.GetPeerPort())
+        return false;
+
+    if (a.GetPeerAddress() != b.GetPeerAddress())
+        return false;
+
+    if (a.GetLocalPort() != b.GetLocalPort())
+        return false;
+
+    if (a.GetLocalAddress() != b.GetLocalAddress())
+        return false;
+
+    return true;
+}
 } // namespace ns3
 
 

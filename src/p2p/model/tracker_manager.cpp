@@ -33,6 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/pch.hpp"
 #include "libtorrent/tracker_manager.hpp"
 #include "ns3/ipv4-end-point.h"
+#include "ns3/udp_tracker_connection.hpp"
 
 #include <vector>
 #include <cctype>
@@ -236,9 +237,9 @@ namespace libtorrent
 		}
 		else*/ if (protocol == "udp")
 		{
-//			con = new udp_tracker_connection(
-//				/*ios, cc,*/ *this, req , c/*, m_ses
-//				, m_proxy*/);
+			con = new udp_tracker_connection(
+				/*ios, cc,*/ *this, req , c/*, m_ses
+				, m_proxy*/);
 		}
 		else
 		{

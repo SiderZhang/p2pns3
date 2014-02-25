@@ -35,7 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 
-#include "libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
 
 namespace libtorrent
 {

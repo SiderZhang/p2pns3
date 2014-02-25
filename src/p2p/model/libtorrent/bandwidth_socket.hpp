@@ -34,7 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_BANDWIDTH_SOCKET_HPP_INCLUDED
 #define TORRENT_BANDWIDTH_SOCKET_HPP_INCLUDED
 
-#include "libtorrent/intrusive_ptr_base.hpp"
+#include "ns3/libtorrent/intrusive_ptr_base.hpp"
 
 namespace libtorrent
 {

@@ -58,11 +58,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/ptime.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/thread.hpp"
-#include "libtorrent/io_service_fwd.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/io_service_fwd.hpp"
+#include "ns3/libtorrent/ptime.hpp"
 
 #ifndef TORRENT_MAX_ALERT_TYPES
 #define TORRENT_MAX_ALERT_TYPES 15
@@ -126,7 +125,7 @@ namespace libtorrent {
 		virtual std::auto_ptr<alert> clone() const = 0;
 
 	private:
-		ptime m_timestamp;
+        ns3::Time m_timestamp;
 	};
 
 	class TORRENT_EXTRA_EXPORT alert_manager
@@ -145,7 +144,6 @@ namespace libtorrent {
 		template <class T>
 		bool should_post() const
 		{
-			mutex::scoped_lock lock(m_mutex);
 			if (m_alerts.size() >= m_queue_size_limit) return false;
 			return (m_alert_mask & T::static_category) != 0;
 		}
@@ -154,7 +152,6 @@ namespace libtorrent {
 
 		void set_alert_mask(boost::uint32_t m)
 		{
-			mutex::scoped_lock lock(m_mutex);
 			m_alert_mask = m;
 		}
 
@@ -173,7 +170,6 @@ namespace libtorrent {
 		void post_impl(std::auto_ptr<alert>& alert_);
 
 		std::deque<alert*> m_alerts;
-		mutable mutex m_mutex;
 //		event m_condition;
 		boost::uint32_t m_alert_mask;
 		size_t m_queue_size_limit;

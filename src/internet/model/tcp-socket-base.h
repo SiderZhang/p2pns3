@@ -99,6 +99,11 @@ public:
   virtual int GetSockName (Address &address) const; // Return local addr:port in address
   virtual void BindToNetDevice (Ptr<NetDevice> netdevice); // NetDevice with my m_endPoint
 
+  virtual Ipv4EndPoint* GetIpv4EndPoint (void) const
+  {
+      return m_endPoint;
+  }
+
 protected:
   // Implementing ns3::TcpSocket -- Attribute get/set
   virtual void     SetSndBufSize (uint32_t size);

@@ -45,11 +45,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/lazy_entry.hpp"
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/tracker_manager.hpp"
-#include "libtorrent/i2p_stream.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/lazy_entry.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/tracker_manager.hpp"
+#include "ns3/libtorrent/i2p_stream.hpp"
 
 namespace libtorrent
 {

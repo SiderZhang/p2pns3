@@ -64,11 +64,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <stdexcept>
 
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/error_code.hpp"
-#include "libtorrent/max.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/error_code.hpp"
+#include "ns3/libtorrent/max.hpp"
 
 #if TORRENT_USE_IOSTREAM
 #include <iosfwd>

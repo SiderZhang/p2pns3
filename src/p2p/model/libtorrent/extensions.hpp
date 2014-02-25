@@ -60,7 +60,7 @@ namespace libtorrent
 	class peer_connection;
 	class entry;
 	struct lazy_entry;
-	struct disk_buffer_holder;
+	//struct disk_buffer_holder;
 	struct bitfield;
 	class alert;
 	struct torrent_plugin;
@@ -202,8 +202,8 @@ namespace libtorrent
 		virtual bool on_request(peer_request const& req)
 		{ return false; }
 
-		virtual bool on_piece(peer_request const& piece, disk_buffer_holder& data)
-		{ return false; }
+//		virtual bool on_piece(peer_request const& piece, disk_buffer_holder& data)
+//		{ return false; }
 
 		virtual bool on_cancel(peer_request const& req)
 		{ return false; }

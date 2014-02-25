@@ -33,26 +33,27 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_BROADCAST_SOCKET_HPP_INCLUDED
 #define TORRENT_BROADCAST_SOCKET_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/io_service_fwd.hpp"
-#include "libtorrent/socket.hpp"
-#include "libtorrent/address.hpp"
-#include "libtorrent/error_code.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/io_service_fwd.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/error_code.hpp"
 #include <boost/shared_ptr.hpp>
 #include <boost/function/function3.hpp>
 #include <list>
 
 #include "ns3/inet-socket-address.h"
+#include "ns3/address.h"
+#include "ns3/ipv4-end-point.h"
 
 namespace libtorrent
 {
 
-	TORRENT_EXPORT bool is_local(ns3::Ipv4Address const& a);
-	TORRENT_EXPORT bool is_loopback(ns3::Ipv4Address const& addr);
-	TORRENT_EXPORT bool is_multicast(ns3::Ipv4Address const& addr);
-	TORRENT_EXPORT bool is_any(ns3::Ipv4Address const& addr);
-	TORRENT_EXPORT bool is_teredo(ns3::Ipv4Address const& addr);
-	TORRENT_EXTRA_EXPORT int cidr_distance(address const& a1, address const& a2);
+	TORRENT_EXPORT bool is_local(ns3::Address const& a);
+	TORRENT_EXPORT bool is_loopback(ns3::Address const& addr);
+	TORRENT_EXPORT bool is_multicast(ns3::Address const& addr);
+	TORRENT_EXPORT bool is_any(ns3::Address const& addr);
+	TORRENT_EXPORT bool is_teredo(ns3::Address const& addr);
+	TORRENT_EXTRA_EXPORT int cidr_distance(ns3::Address const& a1, ns3::Address const& a2);
 
 	// determines if the operating system supports IPv6
 	TORRENT_EXPORT bool supports_ipv6();
@@ -60,15 +61,15 @@ namespace libtorrent
 	TORRENT_EXTRA_EXPORT int common_bits(unsigned char const* b1
 		, unsigned char const* b2, int n);
 
-	TORRENT_EXPORT address guess_local_address(io_service&);
+	TORRENT_EXPORT ns3::Address guess_local_address(io_service&);
 
-	typedef boost::function<void(udp::endpoint const& from
+	typedef boost::function<void(ns3::Ipv4EndPoint const& from
 		, char* buffer, int size)> receive_handler_t;
 
 	class TORRENT_EXTRA_EXPORT broadcast_socket
 	{
 	public:
-		broadcast_socket(udp::endpoint const& multicast_endpoint
+		broadcast_socket(ns3::Ipv4EndPoint const& multicast_endpoint
 			, receive_handler_t const& handler);
 		~broadcast_socket() { close(); }
 
@@ -111,9 +112,9 @@ namespace libtorrent
 	
 		void on_receive(socket_entry* s, error_code const& ec
 			, std::size_t bytes_transferred);
-		void open_unicast_socket(io_service& ios, address const& addr
+		void open_unicast_socket(io_service& ios, ns3::Address const& addr
 			, ns3::Ipv4Address const& mask);
-		void open_multicast_socket(io_service& ios, address const& addr
+		void open_multicast_socket(io_service& ios, ns3::Address const& addr
 			, bool loopback, error_code& ec);
 
 		// if we're aborting, destruct the handler and return true
@@ -128,7 +129,7 @@ namespace libtorrent
 		// send messages to the multicast group
 		// and receive unicast responses
 		std::list<socket_entry> m_unicast_sockets;
-		udp::endpoint m_multicast_endpoint;
+		ns3::Ipv4EndPoint m_multicast_endpoint;
 		receive_handler_t m_on_receive;
 
 		// the number of outstanding async operations

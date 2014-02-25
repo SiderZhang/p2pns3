@@ -37,6 +37,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "assert.hpp"
 #include "thread.hpp"
+#include <ssream>
 
 #include <map>
 
@@ -139,10 +140,15 @@ namespace libtorrent
 			log_file.close();
 			open_filename.clear();
 		}
+        logger()
+        {
+            isStdOut = true;
+        }
 
 		logger(std::string const& logpath, std::string const& filename
 			, int instance, bool append)
 		{
+            isStdOut = false;
 			char log_name[512];
 			snprintf(log_name, sizeof(log_name), "libtorrent_logs%d", instance);
 			std::string dir(complete(combine_path(logpath, log_name)));
@@ -176,10 +182,23 @@ namespace libtorrent
 			open(false);
 			log_file << v;
 #endif
+            if (isStdOut)
+            {
+                ss<<v;
+            }
+
 			return *this;
 		}
 
+        void flush()
+        {
+            // TODO:
+            std::string s = s//s.str();
+        }
+
+        std::stringstream ss;
 		std::string m_filename;
+        bool isStdOut;
 	};
 
 }

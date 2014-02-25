@@ -39,7 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_ERROR_LOGGING
-#include "libtorrent/debug.hpp"
+#include "ns3/libtorrent/debug.hpp"
 #endif
 
 #ifdef _MSC_VER
@@ -72,7 +72,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/intrusive_ptr_base.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/chained_buffer.hpp"
-#include "libtorrent/disk_buffer_holder.hpp"
 #include "libtorrent/bitfield.hpp"
 #include "libtorrent/bandwidth_socket.hpp"
 #include "libtorrent/error_code.hpp"
@@ -81,10 +80,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/ptr.h"
 #include "ns3/socket.h"
 #include "ns3/inet-socket-address.h"
+#include "ns3/ipv4-end-point.h"
 
-#ifdef TORRENT_STATS
 #include "libtorrent/aux_/session_impl.hpp"
-#endif
 
 namespace libtorrent
 {
@@ -169,7 +167,7 @@ namespace libtorrent
 			aux::session_impl& ses
 			, boost::weak_ptr<torrent> t
 			, ns3::Ptr<ns3::Socket> s
-            , ns3::InetSocketAddress const& remote
+            , ns3::Ipv4EndPoint const& remote
 			, policy::peer* peerinfo
 			, bool outgoing = true);
 
@@ -178,7 +176,7 @@ namespace libtorrent
 		peer_connection(
 			aux::session_impl& ses
             , ns3::Ptr<ns3::Socket> s
-            , ns3::InetSocketAddress const& remote
+            , ns3::Ipv4EndPoint const& remote
 			, policy::peer* peerinfo);
 
 		// this function is called after it has been constructed and properly
@@ -339,7 +337,7 @@ namespace libtorrent
 		void timeout_requests();
 
         ns3::Ptr<ns3::Socket> get_socket() const { return m_socket; }
-        ns3::InetSocketAddress const& remote() const { return m_remote; }
+        ns3::Ipv4EndPoint const& remote() const { return m_remote; }
 
 		bitfield const& get_bitfield() const;
 		std::vector<int> const& allowed_fast();
@@ -456,7 +454,7 @@ namespace libtorrent
 		void incoming_dont_have(int piece_index);
 		void incoming_bitfield(bitfield const& bits);
 		void incoming_request(peer_request const& r);
-		void incoming_piece(peer_request const& p, disk_buffer_holder& data);
+//		void incoming_piece(peer_request const& p, disk_buffer_holder& data);
 		void incoming_piece(peer_request const& p, char const* data);
 		void incoming_piece_fragment(int bytes);
 		void start_receive_piece(peer_request const& r);
@@ -602,12 +600,15 @@ namespace libtorrent
 
 		// called when the disk write buffer is drained again, and we can
 		// start downloading payload again
-		void on_disk();
+		//void on_disk();
 
 		int num_reading_bytes() const { return m_reading_bytes; }
 
 		enum sync_t { read_async, read_sync };
-		void setup_receive(sync_t sync = read_sync);
+		void setup_receive();
+
+        // 张惊：这个是用来代替setup_receive的函数
+        void setup_packet_receive(ns3::Ptr<ns3::Socket> socket);
 
 	protected:
 
@@ -623,7 +624,7 @@ namespace libtorrent
 		virtual void write_cancel(peer_request const& r) = 0;
 		virtual void write_have(int index) = 0;
 		virtual void write_keepalive() = 0;
-		virtual void write_piece(peer_request const& r, disk_buffer_holder& buffer) = 0;
+		//virtual void write_piece(peer_request const& r, disk_buffer_holder& buffer) = 0;
 		virtual void write_suggest(int piece) = 0;
 		
 		virtual void write_reject_request(peer_request const& r) = 0;
@@ -649,9 +650,9 @@ namespace libtorrent
 				, &m_recv_buffer[0] + rcv_pos);
 		}
 
-		bool allocate_disk_receive_buffer(int disk_buffer_size);
-		char* release_disk_receive_buffer();
-		bool has_disk_receive_buffer() const { return m_disk_recv_buffer; }
+		//bool allocate_disk_receive_buffer(int disk_buffer_size);
+		//char* release_disk_receive_buffer();
+		//bool has_disk_receive_buffer() const { return m_disk_recv_buffer; }
 		void cut_receive_buffer(int size, int packet_size, int offset = 0);
 		void reset_recv_buffer(int packet_size);
 		void set_soft_packet_size(int size) { m_soft_packet_size = size; }
@@ -805,7 +806,7 @@ namespace libtorrent
 		// points to a disk buffer that the data is
 		// read into. This eliminates a memcopy from
 		// the receive buffer into the disk buffer
-		disk_buffer_holder m_disk_recv_buffer;
+		//disk_buffer_holder m_disk_recv_buffer;
 
 		chained_buffer m_send_buffer;
 
@@ -813,7 +814,7 @@ namespace libtorrent
 		// this is the peer we're actually talking to
 		// it may not necessarily be the peer we're
 		// connected to, in case we use a proxy
-		ns3::InetSocketAddress m_remote;
+		ns3::Ipv4EndPoint m_remote;
 		
 		// this is the torrent this connection is
 		// associated with. If the connection is an
@@ -918,7 +919,7 @@ namespace libtorrent
 		// we've received so far
 		int m_recv_pos;
 
-		int m_disk_recv_buffer_size;
+		//int m_disk_recv_buffer_size;
 
 		// the number of bytes we are currently reading
 		// from disk, that will be added to the send

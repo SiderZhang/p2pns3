@@ -55,14 +55,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/buffer.hpp"
-#include "libtorrent/peer_connection.hpp"
-#include "libtorrent/socket.hpp"
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/torrent.hpp"
-#include "libtorrent/peer_request.hpp"
-#include "libtorrent/piece_block_progress.hpp"
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/buffer.hpp"
+#include "ns3/libtorrent/peer_connection.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/torrent.hpp"
+#include "ns3/libtorrent/peer_request.hpp"
+#include "ns3/libtorrent/piece_block_progress.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 namespace libtorrent
 {
@@ -86,7 +86,7 @@ namespace libtorrent
 			aux::session_impl& ses
 			, boost::weak_ptr<torrent> t
             , ns3::Ptr<ns3::Socket> s
-            , ns3::InetSocketAddress const& remote
+            , ns3::Ipv4EndPoint const& remote
 			, policy::peer* peerinfo
 			, bool outgoing = true);
 
@@ -95,7 +95,7 @@ namespace libtorrent
 		bt_peer_connection(
 			aux::session_impl& ses
             , ns3::Ptr<ns3::Socket> s
-            , ns3::InetSocketAddress const& remote
+            , ns3::Ipv4EndPoint const& remote
 			, policy::peer* peerinfo);
 
 		void start();
@@ -198,7 +198,7 @@ namespace libtorrent
 		void write_cancel(peer_request const& r);
 		void write_bitfield();
 		void write_have(int index);
-		void write_piece(peer_request const& r, disk_buffer_holder& buffer);
+		//void write_piece(peer_request const& r, disk_buffer_holder& buffer);
 		void write_handshake();
 		void write_metadata(std::pair<int, int> req);
 		void write_metadata_request(std::pair<int, int> req);

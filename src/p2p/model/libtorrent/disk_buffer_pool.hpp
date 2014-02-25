@@ -35,10 +35,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/utility.hpp>
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/thread.hpp"
-#include "libtorrent/session_settings.hpp"
-#include "libtorrent/allocator.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/session_settings.hpp"
+#include "ns3/libtorrent/allocator.hpp"
 
 #ifdef TORRENT_DISK_STATS
 #include <fstream>
@@ -58,8 +57,6 @@ namespace libtorrent
 #endif
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS || defined TORRENT_DISK_STATS
-		bool is_disk_buffer(char* buffer
-			, mutex::scoped_lock& l) const;
 		bool is_disk_buffer(char* buffer) const;
 #endif
 
@@ -84,7 +81,7 @@ namespace libtorrent
 
 	protected:
 
-		void free_buffer_impl(char* buf, mutex::scoped_lock& l);
+		void free_buffer_impl(char* buf);
 
 		// number of bytes per block. The BitTorrent
 		// protocol defines the block size to 16 KiB.
@@ -96,8 +93,6 @@ namespace libtorrent
 		session_settings m_settings;
 
 	private:
-
-		mutable mutex m_pool_mutex;
 
 #if defined TORRENT_DISK_STATS || defined TORRENT_STATS
 		int m_allocations;

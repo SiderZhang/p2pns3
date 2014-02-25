@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_STORAGE_DEFS_HPP_INCLUDE
 #define TORRENT_STORAGE_DEFS_HPP_INCLUDE
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 #include <boost/function.hpp>
 #include <string>
 

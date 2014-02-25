@@ -1,5 +1,5 @@
 #!/bin/bash
 cd ..
-./waf -j8 2>src/error
+./waf -j16 2>src/error
 cd src
 

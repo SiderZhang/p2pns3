@@ -56,9 +56,9 @@ using namespace std;
 
 namespace libtorrent {
 
-	alert::alert() : m_timestamp(time_now()) {}
+	alert::alert() : m_timestamp(time_now().time) {}
 	alert::~alert() {}
-	ptime alert::timestamp() const { return m_timestamp; }
+	ptime alert::timestamp() const { return ptime(m_timestamp); }
 
 
 	std::string torrent_alert::message() const

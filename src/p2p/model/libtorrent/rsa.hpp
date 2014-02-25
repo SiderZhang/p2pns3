@@ -33,8 +33,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_SIGN_HPP_INCLUDED
 #define TORRENT_SIGN_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/hasher.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/hasher.hpp"
 
 namespace libtorrent
 {

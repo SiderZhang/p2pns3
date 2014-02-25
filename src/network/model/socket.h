@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include "ns3/inet-socket-address.h"
 #include "ns3/inet6-socket-address.h"
+#include "ns3/ipv4-end-point.h"
 
 namespace ns3 {
 
@@ -789,6 +790,8 @@ public:
    * \return Wheter the IPV6_RECVHOPLIMIT is set
    */
   bool IsIpv6RecvHopLimit (void) const;
+
+  virtual Ipv4EndPoint* GetIpv4EndPoint (void) const = 0;
  
 protected:
   void NotifyConnectionSucceeded (void);

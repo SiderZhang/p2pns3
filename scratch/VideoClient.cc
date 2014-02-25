@@ -36,7 +36,6 @@
 #include "ns3/simple-channel.h"
 #include "ns3/test.h"
 #include "ns3/simulator.h"
-#include "ns3/udpTracker.hpp"
 
 #include <fstream>
 #include "ns3/core-module.h"
@@ -49,7 +48,6 @@
 #include "ns3/tcp-server.h"
 #include "ns3/tcp-client.h"
 #include "ns3/udp-client.h"
-#include "ns3/p2ptracker-helper.h"
 #include "ns3/internet-stack-helper.h"
 
 #include "ns3/point-to-point-module.h"
@@ -58,7 +56,6 @@
 #include <stdio.h>
 
 using namespace ns3;
-using namespace UDPT;
 
 NS_LOG_COMPONENT_DEFINE ("TcpClientServerExample");
 
@@ -97,7 +94,7 @@ main (int argc, char *argv[])
   Ipv4InterfaceContainer i = ipv4.Assign (d);
 
   uint16_t port = 4000;
-  UdpTrackerHelper server;
+  UdpServerHelper server;
   ApplicationContainer apps = server.Install (n.Get (1));
   apps.Start (Seconds (1.0));
   apps.Stop (Seconds (10.0));

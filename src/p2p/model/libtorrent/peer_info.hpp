@@ -33,14 +33,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_PEER_INFO_HPP_INCLUDED
 #define TORRENT_PEER_INFO_HPP_INCLUDED
 
-#include "libtorrent/socket.hpp"
-#include "libtorrent/deadline_timer.hpp"
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/bitfield.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/deadline_timer.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/bitfield.hpp"
 
 #include "ns3/inet-socket-address.h"
+#include "ns3/ipv4-end-point.h"
 
 namespace libtorrent
 {
@@ -99,7 +100,7 @@ namespace libtorrent
 		char read_state;
 		char write_state;
 		
-        ns3::InetSocketAddress ip;
+        ns3::Ipv4EndPoint ip;
 		int up_speed;
 		int down_speed;
 		int payload_up_speed;
@@ -231,7 +232,7 @@ namespace libtorrent
 		float progress; // [0, 1]
 		int progress_ppm; // [0, 1000000]
 
-		tcp::endpoint local_endpoint;
+		ns3::Ipv4EndPoint local_endpoint;
 	};
 
 	struct TORRENT_EXPORT peer_list_entry
@@ -241,7 +242,7 @@ namespace libtorrent
 			banned = 1
 		};
 		
-		tcp::endpoint ip;
+		ns3::Ipv4EndPoint ip;
 		int flags;
 		boost::uint8_t failcount;
 		boost::uint8_t source;

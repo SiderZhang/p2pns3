@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_BUILD_CONFIG_HPP_INCLUDED
 #define TORRENT_BUILD_CONFIG_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/stringize.hpp>
 

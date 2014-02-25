@@ -36,8 +36,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/config.hpp"
 #include <vector>
 #include "libtorrent/io_service_fwd.hpp"
-#include "libtorrent/address.hpp"
 #include "libtorrent/error_code.hpp"
+
+#include "ns3/address.h"
 
 namespace libtorrent
 {
@@ -45,17 +46,17 @@ namespace libtorrent
 	// the interface should not have a netmask
 	struct ip_interface
 	{
-		address interface_address;
-		address netmask;
+		ns3::Address interface_address;
+		ns3::Address netmask;
 		char name[64];
 		int mtu;
 	};
 
 	struct ip_route
 	{
-		address destination;
-		address netmask;
-		address gateway;
+		ns3::Address destination;
+		ns3::Address netmask;
+		ns3::Address gateway;
 		char name[64];
 		int mtu;
 	};
@@ -68,14 +69,14 @@ namespace libtorrent
 	TORRENT_EXPORT std::vector<ip_route> enum_routes(io_service& ios, error_code& ec);
 
 	// return (a1 & mask) == (a2 & mask)
-	TORRENT_EXPORT bool match_addr_mask(address const& a1, address const& a2, address const& mask);
+	TORRENT_EXPORT bool match_addr_mask(ns3::Address const& a1, ns3::Address const& a2, ns3::Address const& mask);
 
 	// returns true if the specified address is on the same
 	// local network as us
-	TORRENT_EXPORT bool in_local_network(io_service& ios, address const& addr
+	TORRENT_EXPORT bool in_local_network(io_service& ios, ns3::Address const& addr
 		, error_code& ec);
 	
-	TORRENT_EXPORT address get_default_gateway(io_service& ios
+	TORRENT_EXPORT ns3::Address get_default_gateway(io_service& ios
 		, error_code& ec);
 }
 

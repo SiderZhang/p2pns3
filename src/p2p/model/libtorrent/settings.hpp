@@ -33,8 +33,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef SETTINGS_HPP_INCLUDED
 #define SETTINGS_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/session_settings.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/session_settings.hpp"
 
 namespace libtorrent
 {

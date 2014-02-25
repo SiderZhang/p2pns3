@@ -58,8 +58,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/allocator.hpp"
 #include <string>
 #include <map>
-#include "ns3/peer_id.hpp"
-#include "ns3/tracker_req.hpp"
+#include "libtorrent/peer_id.hpp"
+#include "libtorrent/tracker_manager.hpp"
 #include "udp-p2p-header.h"
 #include "action.h"
 

@@ -321,6 +321,16 @@ public:
     return GetTimeStep ();
   }
 
+  inline void multiply(long long data)
+  {
+      m_data = m_data * data;
+  }
+
+  inline Time divide(long long data) const
+  {
+      int64_t m_datan = m_data / data;
+      return Time(m_datan);
+  }
 
   /**
    * \param resolution the new resolution to use
@@ -517,6 +527,7 @@ operator > (const Time &lhs, const Time &rhs)
 {
   return lhs.m_data > rhs.m_data;
 }
+
 inline Time operator + (const Time &lhs, const Time &rhs)
 {
   return Time (lhs.m_data + rhs.m_data);

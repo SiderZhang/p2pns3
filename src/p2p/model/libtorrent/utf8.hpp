@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_UTF8_HPP_INCLUDED
 #define TORRENT_UTF8_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 // on windows we need these functions for
 // convert_to_native and convert_from_native

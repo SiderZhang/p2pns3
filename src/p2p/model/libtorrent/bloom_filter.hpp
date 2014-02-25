@@ -34,8 +34,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TORRENT_BLOOM_FILTER_HPP_INCLUDED
 
 #include <boost/cstdint.hpp>
-#include "libtorrent/peer_id.hpp" // for sha1_hash
-#include "libtorrent/config.hpp" // for sha1_hash
+#include "ns3/libtorrent/peer_id.hpp" // for sha1_hash
+#include "ns3/libtorrent/config.hpp" // for sha1_hash
 
 #include <math.h> // for log()
 

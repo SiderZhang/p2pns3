@@ -104,6 +104,9 @@ def create_ns3_module(bld, name, dependencies=(), test=False):
     cxxdefines = ["NS3_MODULE_COMPILATION"]
     ccdefines = ["NS3_MODULE_COMPILATION"]
 
+    # TODO: 张惊 这里屏蔽强转带来的警告
+    cxxflags.append("-fno-strict-aliasing")
+
     module.env.append_value('CXXFLAGS', cxxflags)
     module.env.append_value('CCFLAGS', ccflags)
     module.env.append_value('LINKFLAGS', linkflags)
@@ -441,7 +444,10 @@ def apply_ns3header(self):
         src_node = self.path.find_resource(filename)
         if src_node is None:
             raise WafError("source ns3 header file %s not found" % (filename,))
-        dst_node = ns3_dir_node.find_or_declare(src_node.name)
+        index = filename.find("/")
+        filename = filename[index+1:]
+        dst_node = ns3_dir_node.find_or_declare(filename)
+        #dst_node = ns3_dir_node.find_or_declare(src_node.name)
         assert dst_node is not None
         task = self.create_task('ns3header')
         task.mode = getattr(self, 'mode', 'install')
@@ -458,7 +464,7 @@ def apply_ns3header(self):
 class ns3header_task(Task.Task):
     before = 'cxx gen_ns3_module_header'
     color = 'BLUE'
-
+    
     def __str__(self):
         "string to display to the user"
         env = self.env
@@ -613,14 +619,16 @@ def apply_ns3moduleheader(self):
     ns3_dir_node = self.bld.path.find_dir("ns3")
     all_headers_inputs = []
     found_the_module = False
+
     for ns3headers in self.bld.all_task_gen:
         if 'ns3header' in getattr(ns3headers, "features", []):
             if ns3headers.module != self.module:
                 continue
             found_the_module = True
             for source in ns3headers.headers:
-                source = os.path.basename(source)
-                node = ns3_dir_node.find_or_declare(os.path.basename(source))
+                index = source.find('/')
+                source = source[index + 1:]
+                node = ns3_dir_node.find_or_declare(source)
                 if node is None:
                     fatal("missing header file %s" % (source,))
                 all_headers_inputs.append(node)

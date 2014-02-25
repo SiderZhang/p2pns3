@@ -3863,7 +3863,7 @@ namespace libtorrent
 	{
 		return m_ignore_unchoke_slots
 			|| (m_ses.settings().ignore_limits_on_local_network
-			&& on_local_network()
+			//&& on_local_network()
 			&& m_ses.m_local_upload_channel.throttle() == 0);
 	}
 
@@ -5013,6 +5013,7 @@ namespace libtorrent
 
 		shared_ptr<torrent> t = m_torrent.lock();
 		
+        // 张惊：申请带宽
 		if (m_quota[download_channel] == 0
 			&& !m_connecting)
 		{
@@ -5058,6 +5059,7 @@ namespace libtorrent
 		
 		if (!can_read(&m_channel_state[download_channel]))
 		{
+
 #ifdef TORRENT_VERBOSE_LOGGING
 			peer_log("<<< CANNOT READ [ quota: %d ignore: %s "
 				"can-write-to-disk: %s queue-limit: %d disconnecting: %s ]"

@@ -31,7 +31,6 @@
 
 #include <string>
 using namespace std;
-using namespace ns3;
 
 #define UDPT_DYNAMIC			0x01	// Track Any info_hash?
 #define UDPT_ALLOW_REMOTE_IP	0x02	// Allow client's to send other IPs?
@@ -41,7 +40,7 @@ using namespace ns3;
 
 namespace UDPT
 {
-	class UDPTracker : public Application
+	class UDPTracker : public ns3::Application
 	{
 	public:
 		typedef struct udp_error_response
@@ -57,7 +56,7 @@ namespace UDPT
 			START_ESOCKET_FAILED = 1,
 			START_EBIND_FAILED = 2
 		};
-        static TypeId GetTypeId(void);
+        static ns3::TypeId GetTypeId(void);
 
 		/**
 		 * Initializes the UDP Tracker.
@@ -95,7 +94,7 @@ namespace UDPT
         virtual void StopApplication(void);
 
 		//SOCKET sock;
-        Ptr<Socket> m_socket;
+        ns3::Ptr<ns3::Socket> m_socket;
         
         // TODO: 待修正
 //		SOCKADDR_IN localEndpoint;
@@ -112,7 +111,7 @@ namespace UDPT
 
 		Settings *o_settings;
         
-        void HandleRead (Ptr<Socket> socket);
+        void HandleRead (ns3::Ptr<ns3::Socket> socket);
 
         /*
 #ifdef WIN32
@@ -123,16 +122,16 @@ namespace UDPT
 		static void* _maintainance_start (void *arg);
 #endif*/
 
-		static int resolveRequest (UDPTracker *usi, Address *remote, ns3::UdpP2PHeader& header);
+		static int resolveRequest (UDPTracker *usi, ns3::Address *remote, ns3::UdpP2PHeader& header);
 
-		static int handleConnection (UDPTracker *usi, Address *remote, ns3::UdpP2PHeader& header);
-		static int handleAnnounce (UDPTracker *usi, Address *remote, ns3::UdpP2PHeader& header);
-		static int handleScrape (UDPTracker *usi, Address *remote, ns3::UdpP2PHeader& header);
+		static int handleConnection (UDPTracker *usi, ns3::Address *remote, ns3::UdpP2PHeader& header);
+		static int handleAnnounce (UDPTracker *usi, ns3::Address *remote, ns3::UdpP2PHeader& header);
+		static int handleScrape (UDPTracker *usi, ns3::Address *remote, ns3::UdpP2PHeader& header);
 
-		static int sendError (UDPTracker *, Address *remote, uint32_t transId, const string &);
+		static int sendError (UDPTracker *, ns3::Address *remote, uint32_t transId, const string &);
 
     protected:
-        void sendto(ns3::UdpP2PHeader& header, int flags, Address* remote);
+        void sendto(ns3::UdpP2PHeader& header, int flags, ns3::Address* remote);
 	};
 };
 

@@ -48,10 +48,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/time.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/time.hpp"
 
 namespace libtorrent
 {

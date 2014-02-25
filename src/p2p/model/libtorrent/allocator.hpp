@@ -34,7 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TORRENT_ALLOCATOR_HPP_INCLUDED
 
 #include <cstddef>
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 namespace libtorrent
 {

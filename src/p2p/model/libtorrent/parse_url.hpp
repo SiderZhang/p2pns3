@@ -44,8 +44,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include <string>
-#include "libtorrent/config.hpp"
-#include "libtorrent/error_code.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/error_code.hpp"
 
 namespace libtorrent
 {

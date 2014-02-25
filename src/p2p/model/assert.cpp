@@ -39,6 +39,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstring>
 #include <stdlib.h>
+#include "ns3/libtorrent/assert.hpp"
 
 // uClibc++ doesn't have cxxabi.h
 #if defined __GNUC__ && !defined __UCLIBCXX_MAJOR__

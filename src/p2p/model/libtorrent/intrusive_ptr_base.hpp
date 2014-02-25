@@ -36,8 +36,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/detail/atomic_count.hpp>
 #include <boost/checked_delete.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
 
 namespace libtorrent
 {

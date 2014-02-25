@@ -49,14 +49,13 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/piece_picker.hpp"
-#include "libtorrent/torrent_info.hpp"
-#include "libtorrent/ptime.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/storage.hpp"
-#include "libtorrent/address.hpp"
-#include "libtorrent/bitfield.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/piece_picker.hpp"
+#include "ns3/libtorrent/torrent_info.hpp"
+#include "ns3/libtorrent/ptime.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/storage.hpp"
+#include "ns3/libtorrent/bitfield.hpp"
 
 #include "ns3/inet-socket-address.h"
 
@@ -96,10 +95,10 @@ namespace libtorrent
 		uint16_t port;
 	public:
 
-		void set_peer(ns3::InetSocketAddress const& ep)
+		void set_peer(ns3::Ipv4EndPoint const& ep)
 		{
-			addr.v4 = ep.GetIpv4().Get();
-			port = ep.GetPort();
+			addr.v4 = ep.GetPeerAddress().Get();
+			port = ep.GetPeerPort();
 		}
 
 		ns3::InetSocketAddress peer() const

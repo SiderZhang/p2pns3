@@ -48,6 +48,10 @@ public:
   virtual bool SetAllowBroadcast (bool allowBroadcast);
   virtual bool GetAllowBroadcast () const;
 
+  virtual Ipv4EndPoint* GetIpv4EndPoint (void) const
+  {
+      return NULL;
+  }
 private:
   virtual void DoDispose (void);
 

@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_PTIME_HPP_INCLUDED
 #define TORRENT_PTIME_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 #include <string>
 #if defined TORRENT_USE_BOOST_DATE_TIME
 
@@ -41,15 +41,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 
-namespace libtorrent
-{
-	typedef boost::posix_time::ptime ptime;
-	typedef boost::posix_time::time_duration time_duration;
-}
+//namespace libtorrent
+//{
+//	typedef boost::posix_time::ptime ptime;
+//	typedef boost::posix_time::time_duration time_duration;
+//}
 
 #else // TORRENT_USE_BOOST_DATE_TIME
 
 #include <boost/cstdint.hpp>
+#include "ns3/nstime.h"
 
 namespace libtorrent
 {
@@ -57,24 +58,32 @@ namespace libtorrent
 	struct time_duration
 	{
 		time_duration() {}
-		time_duration operator/(int rhs) const { return time_duration(diff / rhs); }
-		explicit time_duration(boost::int64_t d) : diff(d) {}
+		explicit time_duration(ns3::Time d) : diff(d) {}
+		explicit time_duration(boost::int64_t d) : diff(ns3::Time(d)) {}
+		time_duration operator/(int rhs) const { 
+            diff.divide(rhs);
+
+            return time_duration(diff); 
+        }
 		time_duration& operator-=(time_duration const& c) { diff -= c.diff; return *this; }
 		time_duration& operator+=(time_duration const& c) { diff += c.diff; return *this; }
-		time_duration& operator*=(int v) { diff *= v; return *this; }
+		time_duration& operator*=(int v) { diff.multiply(v); return *this; }
 		time_duration operator+(time_duration const& c) { return time_duration(diff + c.diff); }
 		time_duration operator-(time_duration const& c) { return time_duration(diff - c.diff); }
-		boost::int64_t diff;
+	//	boost::int64_t diff;
+        ns3::Time diff;
 	};
 
 	// libtorrent time type
 	struct ptime
 	{
 		ptime() {}
-		explicit ptime(boost::uint64_t t): time(t) {}
+		explicit ptime(ns3::Time t): time(t) {}
+		explicit ptime(boost::uint64_t t): time(ns3::Time(t)) {}
 		ptime& operator+=(time_duration rhs) { time += rhs.diff; return *this; }
 		ptime& operator-=(time_duration rhs) { time -= rhs.diff; return *this; }
-		boost::uint64_t time;
+		//boost::uint64_t time;
+        ns3::Time time;
 	};
 
 	inline bool operator>(ptime lhs, ptime rhs)
@@ -102,9 +111,15 @@ namespace libtorrent
 	inline bool operator>=(time_duration lhs, time_duration rhs)
 	{ return lhs.diff >= rhs.diff; }
 	inline time_duration operator*(time_duration lhs, int rhs)
-	{ return time_duration(boost::int64_t(lhs.diff * rhs)); }
+	{
+        lhs.diff.multiply(rhs);
+        return time_duration(ns3::Time(lhs.diff));
+    }
 	inline time_duration operator*(int lhs, time_duration rhs)
-	{ return time_duration(boost::int64_t(lhs * rhs.diff)); }
+	{
+        rhs.diff.multiply(lhs);
+        return time_duration(ns3::Time(rhs.diff));
+    }
 
 	inline time_duration operator-(ptime lhs, ptime rhs)
 	{ return time_duration(lhs.time - rhs.time); }

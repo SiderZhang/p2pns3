@@ -35,7 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_PE_CRYPTO_HPP_INCLUDED
 #define TORRENT_PE_CRYPTO_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 #ifdef TORRENT_USE_GCRYPT
 #include <gcrypt.h>

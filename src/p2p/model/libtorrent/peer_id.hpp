@@ -38,11 +38,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstring>
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/assert.hpp"
 
 #if TORRENT_USE_IOSTREAM
-#include "libtorrent/escape_string.hpp" // to_hex, from_hex
+#include "ns3/libtorrent/escape_string.hpp" // to_hex, from_hex
 #include <iostream>
 #include <iomanip>
 #endif

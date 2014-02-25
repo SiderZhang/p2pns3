@@ -30,9 +30,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "libtorrent/allocator.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/allocator.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
 
 #if defined TORRENT_BEOS
 #include <kernel/OS.h>

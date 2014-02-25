@@ -35,16 +35,17 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <algorithm>
 #include <deque>
-#include "libtorrent/string_util.hpp" // for allocate_string_copy
+#include "ns3/libtorrent/string_util.hpp" // for allocate_string_copy
 
-#include "libtorrent/peer.hpp"
-#include "libtorrent/piece_picker.hpp"
-#include "libtorrent/socket.hpp"
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/invariant_check.hpp"
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/peer.hpp"
+#include "ns3/libtorrent/piece_picker.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/invariant_check.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 #include "ns3/inet-socket-address.h"
+#include "ns3/ipv4-end-point.h"
 
 namespace libtorrent
 {
@@ -114,7 +115,7 @@ namespace libtorrent
 
 		// this is called once for every peer we get from
 		// the tracker, pex, lsd or dht.
-		policy::peer* add_peer(const ns3::InetSocketAddress& remote, const peer_id& pid
+		policy::peer* add_peer(const ns3::Ipv4EndPoint& remote, const peer_id& pid
 			, int source, char flags);
 
 		// false means duplicate connection
@@ -173,7 +174,7 @@ namespace libtorrent
 			ns3::Ipv4Address address() const;
 			char const* dest() const;
 
-			ns3::InetSocketAddress ip() const { return ns3::InetSocketAddress(address(), port); }
+			ns3::Ipv4EndPoint ip() const { return ns3::Ipv4EndPoint(ns3::Ipv4Address(), port); }
 
 			// this is the accumulated amount of
 			// uploaded and downloaded data to this
@@ -294,7 +295,7 @@ namespace libtorrent
 
 		struct TORRENT_EXTRA_EXPORT ipv4_peer : peer
 		{
-			ipv4_peer(ns3::InetSocketAddress const& ip, bool connectable, int src);
+			ipv4_peer(ns3::Ipv4EndPoint const& ip, bool connectable, int src);
 
 			const ns3::Ipv4Address addr;
 		};
@@ -357,7 +358,7 @@ namespace libtorrent
 	private:
 
 		void update_peer(policy::peer* p, int src, int flags
-		, ns3::InetSocketAddress const& remote, char const* destination);
+		, ns3::Ipv4EndPoint const& remote, char const* destination);
 		bool insert_peer(policy::peer* p, iterator iter, int flags);
 
 		bool compare_peer_erase(policy::peer const& lhs, policy::peer const& rhs) const;
@@ -413,13 +414,17 @@ namespace libtorrent
 	};
 
 	inline policy::ipv4_peer::ipv4_peer(
-		ns3::InetSocketAddress const& ep, bool c, int src
+		ns3::Ipv4EndPoint const& ep, bool c, int src
 	)
-		: peer(ep.GetPort(), c, src)
-		, addr(ep.GetIpv4())
+		: peer(ep.GetPeerPort(), c, src)
+		, addr(ep.GetPeerAddress())
 	{
 	}
 
+	inline ns3::Ipv4Address policy::peer::address() const
+	{
+		return static_cast<policy::ipv4_peer const*>(this)->addr;
+	}
 }
 
 #endif // TORRENT_POLICY_HPP_INCLUDED

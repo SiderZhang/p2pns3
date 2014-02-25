@@ -46,20 +46,24 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/torrent_handle.hpp"
-#include "libtorrent/entry.hpp"
-#include "libtorrent/session_status.hpp"
-#include "libtorrent/version.hpp"
-#include "libtorrent/fingerprint.hpp"
-#include "libtorrent/disk_io_thread.hpp"
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/alert.hpp" // alert::error_notification
-#include "libtorrent/add_torrent_params.hpp"
-#include "libtorrent/rss.hpp"
-#include "libtorrent/build_config.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/torrent_handle.hpp"
+#include "ns3/libtorrent/entry.hpp"
+#include "ns3/libtorrent/session_status.hpp"
+#include "ns3/libtorrent/version.hpp"
+#include "ns3/libtorrent/fingerprint.hpp"
+#include "ns3/libtorrent/disk_io_thread.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/alert.hpp" // alert::error_notification
+#include "ns3/libtorrent/add_torrent_params.hpp"
+#include "ns3/libtorrent/rss.hpp"
+#include "ns3/libtorrent/build_config.hpp"
 
-#include "libtorrent/storage.hpp"
+#include "ns3/libtorrent/storage.hpp"
+#include "ns3/node.h"
+#include "ns3/callback.h"
+
+#include <string>
 
 #ifdef _MSC_VER
 #	include <eh.h>
@@ -93,35 +97,6 @@ namespace libtorrent
 
 	void TORRENT_EXPORT TORRENT_CFG();
 
-	namespace aux
-	{
-		// workaround for microsofts
-		// hardware exceptions that makes
-		// it hard to debug stuff
-#ifdef _MSC_VER
-		struct TORRENT_EXPORT eh_initializer
-		{
-			eh_initializer();
-			static void straight_to_debugger(unsigned int, _EXCEPTION_POINTERS*)
-			{ throw; }
-		};
-#else
-		struct eh_initializer {};
-#endif
-		struct session_impl;
-	}
-
-	class TORRENT_EXPORT session_proxy
-	{
-		friend class session;
-	public:
-		session_proxy() {}
-	private:
-		session_proxy(boost::shared_ptr<aux::session_impl> impl)
-			: m_impl(impl) {}
-		boost::shared_ptr<aux::session_impl> m_impl;
-	};
-
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 #define TORRENT_LOGPATH_ARG_DEFAULT , std::string logpath = "."
 #define TORRENT_LOGPATH_ARG , std::string logpath
@@ -132,22 +107,24 @@ namespace libtorrent
 #define TORRENT_LOGPATH
 #endif
 
-	class TORRENT_EXPORT session: public boost::noncopyable, aux::eh_initializer
+	class TORRENT_EXPORT session: public boost::noncopyable
 	{
 	public:
 
-		session(fingerprint const& print = fingerprint("LT"
+		session(ns3::Callback<void, session*> callback, ns3::Ptr<ns3::Node> node, fingerprint const& print = fingerprint("LT"
 			, LIBTORRENT_VERSION_MAJOR, LIBTORRENT_VERSION_MINOR, 0, 0)
 			, int flags = start_default_features | add_default_plugins
 			, boost::uint32_t alert_mask = alert::error_notification
 			TORRENT_LOGPATH_ARG_DEFAULT)
 		{
 			TORRENT_CFG();
-			init(std::make_pair(0, 0), "0.0.0.0", print, flags, alert_mask TORRENT_LOGPATH);
+            onInit = callback;
+			init(node, std::make_pair(0, 0), "0.0.0.0", print, flags, alert_mask TORRENT_LOGPATH);
 		}
 
 		session(
-			fingerprint const& print
+            ns3::Callback<void, session*> callback
+			,ns3::Ptr<ns3::Node> node, fingerprint const& print
 			, std::pair<int, int> listen_port_range
 			, char const* listen_interface = "0.0.0.0"
 			, int flags = start_default_features | add_default_plugins
@@ -157,10 +134,16 @@ namespace libtorrent
 			TORRENT_CFG();
 			TORRENT_ASSERT(listen_port_range.first > 0);
 			TORRENT_ASSERT(listen_port_range.first < listen_port_range.second);
-			init(listen_port_range, listen_interface, print, flags, alert_mask TORRENT_LOGPATH);
+            onInit = callback;
+			init(node, listen_port_range, listen_interface, print, flags, alert_mask TORRENT_LOGPATH);
 		}
 			
 		~session();
+
+        void initCallback()
+        {
+            this->onInit(this);
+        }
 
 		enum save_state_flags_t
 		{
@@ -193,13 +176,11 @@ namespace libtorrent
 
 		// all torrent_handles must be destructed before the session is destructed!
 //#ifndef BOOST_NO_EXCEPTIONS
-//		torrent_handle add_torrent(add_torrent_params const& params);
+		torrent_handle add_torrent(add_torrent_params const& params);
 //#endif
 //		torrent_handle add_torrent(add_torrent_params const& params, error_code& ec);
 //		void async_add_torrent(add_torrent_params const& params);
 		
-		session_proxy abort() { return session_proxy(m_impl); }
-
 		//void pause();
 		//void resume();
 		//bool is_paused() const;
@@ -262,9 +243,6 @@ namespace libtorrent
 
 		session_settings settings() const;
 
-		void set_proxy(proxy_settings const& s);
-		proxy_settings proxy() const;
-
 #ifdef TORRENT_STATS
 		void enable_stats_logging(bool s);
 #endif
@@ -292,16 +270,18 @@ namespace libtorrent
 
 		// starts/stops UPnP, NATPMP or LSD port mappers
 		// they are stopped by default
-		natpmp* start_natpmp();
-		upnp* start_upnp();
+		//natpmp* start_natpmp();
+		//upnp* start_upnp();
 
-		void stop_natpmp();
-		void stop_upnp();
+		//void stop_natpmp();
+		//void stop_upnp();
 		
 	private:
 
-		void init(std::pair<int, int> listen_range, char const* listen_interface
+		void init(ns3::Ptr<ns3::Node> node, std::pair<int, int> listen_range, char const* listen_interface
 			, fingerprint const& id, int flags, boost::uint32_t alert_mask TORRENT_LOGPATH_ARG);
+
+        ns3::Callback<void, session*> onInit;
 
 		// data shared between the main thread
 		// and the working thread

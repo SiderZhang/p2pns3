@@ -36,9 +36,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/assert.hpp"
 
 namespace libtorrent
 {

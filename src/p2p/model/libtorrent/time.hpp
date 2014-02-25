@@ -34,10 +34,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #define TORRENT_TIME_HPP_INCLUDED
 
 #include <boost/version.hpp>
-#include "libtorrent/config.hpp"
-#include "libtorrent/ptime.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/ptime.hpp"
 #include <boost/cstdint.hpp>
 #include <string>
+
+#include "ns3/nstime.h"
 
 namespace libtorrent
 {
@@ -111,11 +113,15 @@ namespace libtorrent
 #elif TORRENT_USE_CLOCK_GETTIME || TORRENT_USE_SYSTEM_TIME || TORRENT_USE_ABSOLUTE_TIME
 
 	inline int total_seconds(time_duration td)
-	{ return td.diff / 1000000; }
+	{
+        return td.diff.GetSeconds();    
+    }
 	inline int total_milliseconds(time_duration td)
-	{ return td.diff / 1000; }
-	inline boost::int64_t total_microseconds(time_duration td)
-	{ return td.diff; }
+	{ 
+        return td.diff.GetMicroSeconds();
+    }
+	inline int64_t total_microseconds(time_duration td)
+	{ return td.diff.GetMicroSeconds(); }
 
 	inline time_duration microsec(boost::int64_t s)
 	{ return time_duration(s); }

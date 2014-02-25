@@ -46,10 +46,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/error_code.hpp"
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/intrusive_ptr_base.hpp"
+#include "ns3/libtorrent/error_code.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/intrusive_ptr_base.hpp"
 
 #ifdef TORRENT_WINDOWS
 // windows part

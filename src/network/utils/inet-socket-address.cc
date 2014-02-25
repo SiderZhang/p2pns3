@@ -26,6 +26,11 @@ NS_LOG_COMPONENT_DEFINE ("InetSocketAddress");
 
 namespace ns3 {
 
+InetSocketAddress::InetSocketAddress ()
+{
+  NS_LOG_FUNCTION (this);
+}
+
 InetSocketAddress::InetSocketAddress (Ipv4Address ipv4, uint16_t port)
   : m_ipv4 (ipv4),
     m_port (port)

@@ -33,8 +33,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_BITFIELD_HPP_INCLUDED
 #define TORRENT_BITFIELD_HPP_INCLUDED
 
-#include "libtorrent/assert.hpp"
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/config.hpp"
 #include <cstring> // for memset and memcpy
 #include <cstdlib> // for malloc, free and realloc
 #include <boost/cstdint.hpp> // uint32_t

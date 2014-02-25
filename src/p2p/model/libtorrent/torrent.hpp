@@ -54,31 +54,31 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/torrent_handle.hpp"
-#include "libtorrent/socket.hpp"
-#include "libtorrent/address.hpp"
-#include "libtorrent/policy.hpp"
-#include "libtorrent/tracker_manager.hpp"
-#include "libtorrent/stat.hpp"
-#include "libtorrent/alert.hpp"
-#include "libtorrent/piece_picker.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/escape_string.hpp"
-#include "libtorrent/bandwidth_limit.hpp"
-#include "libtorrent/bandwidth_manager.hpp"
-#include "libtorrent/bandwidth_queue_entry.hpp"
-//#include "libtorrent/storage_defs.hpp"
-#include "libtorrent/hasher.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/bitfield.hpp"
-#include "libtorrent/aux_/session_impl.hpp"
+#include "ns3/libtorrent/torrent_handle.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/policy.hpp"
+#include "ns3/libtorrent/tracker_manager.hpp"
+#include "ns3/libtorrent/stat.hpp"
+#include "ns3/libtorrent/alert.hpp"
+#include "ns3/libtorrent/piece_picker.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/escape_string.hpp"
+#include "ns3/libtorrent/bandwidth_limit.hpp"
+#include "ns3/libtorrent/bandwidth_manager.hpp"
+#include "ns3/libtorrent/bandwidth_queue_entry.hpp"
+#include "ns3/libtorrent/hasher.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/bitfield.hpp"
+#include "ns3/libtorrent/aux_/session_impl.hpp"
 
 #include "ns3/ptr.h"
 #include "ns3/node.h"
 
 #if TORRENT_COMPLETE_TYPES_REQUIRED
-#include "libtorrent/peer_connection.hpp"
+#include "ns3/libtorrent/peer_connection.hpp"
 #endif
+
+#include "ns3/ipv4-end-point.h"
 
 namespace libtorrent
 {
@@ -112,7 +112,7 @@ namespace libtorrent
 	{
 	public:
 
-		torrent(aux::session_impl& ses, ns3::InetSocketAddress const& net_interface
+		torrent(aux::session_impl& ses, ns3::Ipv4EndPoint const& net_interface
 			, int block_size, int seq, add_torrent_params const& p
 			, sha1_hash const& info_hash);
 		~torrent();
@@ -153,7 +153,7 @@ namespace libtorrent
 		void stop_announcing();
 
 		void send_share_mode();
-		void send_upload_only();
+		//void send_upload_only();
 
 		void set_share_mode(bool s);
 		bool share_mode() const { return m_share_mode; }
@@ -353,7 +353,7 @@ namespace libtorrent
 
 		bool want_more_peers() const;
 		bool try_connect_peer();
-		void add_peer(ns3::InetSocketAddress const& adr, int source);
+		void add_peer(ns3::Ipv4EndPoint const& adr, int source);
 
 		// the number of peers that belong to this torrent
 		int num_peers() const { return (int)m_connections.size(); }
@@ -383,13 +383,13 @@ namespace libtorrent
 		// or when a failure occured
 		virtual void tracker_response(
 			tracker_request const& r
-			, address const& tracker_ip
-			, std::list<address> const& ip_list
+			, ns3::Address const& tracker_ip
+			, std::list<ns3::Address> const& ip_list
 			, std::vector<peer_entry>& e, int interval, int min_interval
-			, int complete, int incomplete, address const& external_ip
+			, int complete, int incomplete, ns3::Address const& external_ip
 			, std::string const& trackerid);
 		virtual void tracker_request_error(tracker_request const& r
-			, int response_code, error_code const& ec, const std::string& msg
+			, int response_code, const std::string& msg
 			, int retry_interval);
 		virtual void tracker_warning(tracker_request const& req
 			, std::string const& msg);
@@ -417,7 +417,7 @@ namespace libtorrent
 		void scrape_tracker();
 		void announce_with_tracker(tracker_request::event_t e
 			= tracker_request::none
-			, address const& bind_interface = address_v4::any());
+			, ns3::Address const& bind_interface = ns3::Ipv4Address::GetAny());
 		int seconds_since_last_scrape() const { return m_last_scrape; }
 
 		// sets the username and password that will be sent to
@@ -426,7 +426,7 @@ namespace libtorrent
 
 		// the ns3::InetSocketAddress of the tracker that we managed to
 		// announce ourself at the last time we tried to announce
-		ns3::InetSocketAddress current_tracker() const;
+		ns3::Ipv4EndPoint current_tracker() const;
 
 		announce_entry* find_tracker(tracker_request const& r);
 
@@ -661,10 +661,10 @@ namespace libtorrent
 				m_available_free_upload = UINT_MAX;
 		}
 
-		int get_peer_upload_limit(ns3::InetSocketAddress ip) const;
-		int get_peer_download_limit(ns3::InetSocketAddress ip) const;
-		void set_peer_upload_limit(ns3::InetSocketAddress ip, int limit);
-		void set_peer_download_limit(ns3::InetSocketAddress ip, int limit);
+		int get_peer_upload_limit(ns3::Ipv4EndPoint ip) const;
+		int get_peer_download_limit(ns3::Ipv4EndPoint ip) const;
+		void set_peer_upload_limit(ns3::Ipv4EndPoint ip, int limit);
+		void set_peer_download_limit(ns3::Ipv4EndPoint ip, int limit);
 
 		void set_upload_limit(int limit);
 		int upload_limit() const;

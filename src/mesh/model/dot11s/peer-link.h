@@ -27,9 +27,9 @@
 #include "ns3/callback.h"
 #include "ns3/mac48-address.h"
 #include "ns3/event-id.h"
-#include "ns3/ie-dot11s-beacon-timing.h"
-#include "ns3/ie-dot11s-peer-management.h"
-#include "ns3/ie-dot11s-configuration.h"
+#include "ns3/dot11s/ie-dot11s-beacon-timing.h"
+#include "ns3/dot11s/ie-dot11s-peer-management.h"
+#include "ns3/dot11s/ie-dot11s-configuration.h"
 
 namespace ns3 {
 namespace dot11s {

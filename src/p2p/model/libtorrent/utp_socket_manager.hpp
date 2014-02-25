@@ -35,9 +35,11 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <map>
 
-#include "libtorrent/socket_type.hpp"
-#include "libtorrent/session_status.hpp"
-#include "libtorrent/enum_net.hpp"
+#include "ns3/libtorrent/session_status.hpp"
+#include "ns3/libtorrent/enum_net.hpp"
+
+#include "ns3/socket.h"
+#include "ns3/ipv4-end-point.h"
 
 namespace libtorrent
 {
@@ -45,7 +47,7 @@ namespace libtorrent
 	class utp_stream;
 	struct utp_socket_impl;
 
-	typedef boost::function<void(boost::shared_ptr<socket_type> const&)> incoming_utp_callback_t;
+	typedef boost::function<void(boost::shared_ptr<ns3::Socket> const&)> incoming_utp_callback_t;
 
 	struct utp_socket_manager
 	{
@@ -55,16 +57,16 @@ namespace libtorrent
 		void get_status(utp_status& s) const;
 
 		// return false if this is not a uTP packet
-		bool incoming_packet(char const* p, int size, udp::endpoint const& ep);
+		bool incoming_packet(char const* p, int size, ns3::Ipv4EndPoint const& ep);
 
 		void tick(ptime now);
 
-		tcp::endpoint local_endpoint(address const& remote, error_code& ec) const;
+		ns3::Ipv4EndPoint local_endpoint(ns3::Address const& remote, error_code& ec) const;
 		int local_port(error_code& ec) const;
 
 		// flags for send_packet
 		enum { dont_fragment = 1 };
-		void send_packet(udp::endpoint const& ep, char const* p, int len
+		void send_packet(ns3::Ipv4EndPoint const& ep, char const* p, int len
 			, error_code& ec, int flags = 0);
 
 		// internal, used by utp_stream
@@ -82,7 +84,7 @@ namespace libtorrent
 		int loss_multiplier() const { return m_sett.utp_loss_multiplier; }
 		bool allow_dynamic_sock_buf() const { return m_sett.utp_dynamic_sock_buf; }
 
-		void mtu_for_dest(address const& addr, int& link_mtu, int& utp_mtu);
+		void mtu_for_dest(ns3::Address const& addr, int& link_mtu, int& utp_mtu);
 		void set_sock_buf(int size);
 		int num_sockets() const { return m_utp_sockets.size(); }
 

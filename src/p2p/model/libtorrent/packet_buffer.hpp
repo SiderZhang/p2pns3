@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_PACKET_BUFFER_HPP_INCLUDED
 #define TORRENT_PACKET_BUFFER_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 #include "boost/cstdint.hpp"
 #include <cstddef>
 

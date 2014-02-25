@@ -37,7 +37,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/cstdint.hpp>
 
 // TODO:
-#include "peer_id.hpp"
+#include "libtorrent/peer_id.hpp"
 /*#include "libtorrent/config.hpp"
 #include "libtorrent/assert.hpp"*/
 

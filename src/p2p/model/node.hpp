@@ -37,8 +37,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <set>
 
-#include "config.hpp"
-
 //TODO
 //#include "routing_table.hpp"
 //#include "rpc_manager.hpp"
@@ -55,7 +53,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/cstdint.hpp>
 #include <boost/ref.hpp>
 
-#include "socket.hpp"
+#include "libtorrent/socket.hpp"
 #include "ns3/ipv4-end-point.h"
 
 namespace libtorrent {
@@ -103,19 +101,19 @@ struct key_desc_t
 // this is the entry for every peer
 // the timestamp is there to make it possible
 // to remove stale peers
-struct peer_entry
-{
-	ns3::Ipv4EndPoint addr;
-	ptime added;
-	bool seed;
-};
+//struct peer_entry
+//{
+//	ns3::Ipv4EndPoint addr;
+//	ptime added;
+//	bool seed;
+//};
 
 // this is a group. It contains a set of group members
-struct torrent_entry
-{
-	std::string name;
-	std::set<peer_entry> peers;
-};
+//struct torrent_entry
+//{
+//	std::string name;
+//	std::set<peer_entry> peers;
+//};
 
 /*
 struct dht_immutable_item

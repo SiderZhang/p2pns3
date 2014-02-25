@@ -33,8 +33,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #define LIBTORRENT_BUFFER_HPP
 
 #include <cstring>
-#include "libtorrent/invariant_check.hpp"
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/invariant_check.hpp"
+#include "ns3/libtorrent/assert.hpp"
 #include <cstdlib> // malloc/free/realloc
 
 namespace libtorrent {
@@ -60,7 +60,7 @@ public:
 			return begin[index];
 		}
 		  
-		int left() const { TORRENT_ASSERT(end >= begin); return end - begin; }
+		uint left() const { TORRENT_ASSERT(end >= begin); return end - begin; }
 
 		char* begin;
 		char* end;

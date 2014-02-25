@@ -49,9 +49,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/buffer.hpp"
-#include "libtorrent/size_type.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/buffer.hpp"
+#include "ns3/libtorrent/size_type.hpp"
 
 namespace libtorrent
 {

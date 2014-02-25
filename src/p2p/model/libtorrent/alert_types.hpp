@@ -33,23 +33,26 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_ALERT_TYPES_HPP_INCLUDED
 #define TORRENT_ALERT_TYPES_HPP_INCLUDED
 
-#include "libtorrent/alert.hpp"
-#include "libtorrent/torrent_handle.hpp"
-#include "libtorrent/socket.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/identify_client.hpp"
-#include "libtorrent/address.hpp"
-#include "libtorrent/stat.hpp"
-#include "libtorrent/rss.hpp" // for feed_handle
+#include "ns3/libtorrent/alert.hpp"
+#include "ns3/libtorrent/torrent_handle.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/identify_client.hpp"
+#include "ns3/libtorrent/stat.hpp"
+#include "ns3/libtorrent/rss.hpp" // for feed_hanns3/dle
+
+#include <sstream>
+
+#include "ns3/ipv4-end-point.h"
+#include "ns3/address.h"
 
 // lines reserved for future includes
 // the type-ids of the alert types
 // are derived from the line on which
 // they are declared
 
-
-
+#include <sstream>
 
 namespace libtorrent
 {
@@ -71,7 +74,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT peer_alert: torrent_alert
 	{
-		peer_alert(torrent_handle const& h, tcp::endpoint const& ip_
+		peer_alert(torrent_handle const& h, ns3::Ipv4EndPoint const& ip_
 			, peer_id const& pid_)
 			: torrent_alert(h)
 			, ip(ip_)
@@ -83,7 +86,7 @@ namespace libtorrent
 		virtual int category() const { return static_category; }
 		virtual std::string message() const;
 
-		tcp::endpoint ip;
+		ns3::Ipv4EndPoint ip;
 		peer_id pid;
 	};
 
@@ -425,7 +428,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT peer_ban_alert: peer_alert
 	{
-		peer_ban_alert(torrent_handle h, tcp::endpoint const& ep
+		peer_ban_alert(torrent_handle h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id)
 			: peer_alert(h, ep, peer_id)
 		{}
@@ -437,7 +440,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT peer_unsnubbed_alert: peer_alert
 	{
-		peer_unsnubbed_alert(torrent_handle h, tcp::endpoint const& ep
+		peer_unsnubbed_alert(torrent_handle h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id)
 			: peer_alert(h, ep, peer_id)
 		{}
@@ -449,7 +452,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT peer_snubbed_alert: peer_alert
 	{
-		peer_snubbed_alert(torrent_handle h, tcp::endpoint const& ep
+		peer_snubbed_alert(torrent_handle h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id)
 			: peer_alert(h, ep, peer_id)
 		{}
@@ -461,7 +464,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT peer_error_alert: peer_alert
 	{
-		peer_error_alert(torrent_handle const& h, tcp::endpoint const& ep
+		peer_error_alert(torrent_handle const& h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id, error_code const& e)
 			: peer_alert(h, ep, peer_id)
 			, error(e)
@@ -488,7 +491,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT peer_connect_alert: peer_alert
 	{
-		peer_connect_alert(torrent_handle h, tcp::endpoint const& ep
+		peer_connect_alert(torrent_handle h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id)
 			: peer_alert(h, ep, peer_id)
 		{}
@@ -502,7 +505,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT peer_disconnected_alert: peer_alert
 	{
-		peer_disconnected_alert(torrent_handle const& h, tcp::endpoint const& ep
+		peer_disconnected_alert(torrent_handle const& h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id, error_code const& e)
 			: peer_alert(h, ep, peer_id)
 			, error(e)
@@ -526,7 +529,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT invalid_request_alert: peer_alert
 	{
-		invalid_request_alert(torrent_handle const& h, tcp::endpoint const& ep
+		invalid_request_alert(torrent_handle const& h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id, peer_request const& r)
 			: peer_alert(h, ep, peer_id)
 			, request(r)
@@ -572,7 +575,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT request_dropped_alert: peer_alert
 	{
-		request_dropped_alert(const torrent_handle& h, tcp::endpoint const& ep
+		request_dropped_alert(const torrent_handle& h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id, int block_num, int piece_num)
 			: peer_alert(h, ep, peer_id)
 			, block_index(block_num)
@@ -591,7 +594,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT block_timeout_alert: peer_alert
 	{
-		block_timeout_alert(const torrent_handle& h, tcp::endpoint const& ep
+		block_timeout_alert(const torrent_handle& h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id, int block_num, int piece_num)
 			: peer_alert(h, ep, peer_id)
 			, block_index(block_num)
@@ -610,7 +613,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT block_finished_alert: peer_alert
 	{
-		block_finished_alert(const torrent_handle& h, tcp::endpoint const& ep
+		block_finished_alert(const torrent_handle& h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id, int block_num, int piece_num)
 			: peer_alert(h, ep, peer_id)
 			, block_index(block_num)
@@ -628,7 +631,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT block_downloading_alert: peer_alert
 	{
-		block_downloading_alert(const torrent_handle& h, tcp::endpoint const& ep
+		block_downloading_alert(const torrent_handle& h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id, char const* speedmsg, int block_num, int piece_num)
 			: peer_alert(h, ep, peer_id)
 			, peer_speedmsg(speedmsg)
@@ -648,7 +651,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT unwanted_block_alert: peer_alert
 	{
-		unwanted_block_alert(const torrent_handle& h, tcp::endpoint const& ep
+		unwanted_block_alert(const torrent_handle& h, ns3::Ipv4EndPoint const& ep
 			, peer_id const& peer_id, int block_num, int piece_num)
 			: peer_alert(h, ep, peer_id)
 			, block_index(block_num)
@@ -927,7 +930,7 @@ namespace libtorrent
 	struct TORRENT_EXPORT udp_error_alert: alert
 	{
 		udp_error_alert(
-			udp::endpoint const& ep
+			ns3::Ipv4EndPoint const& ep
 			, error_code const& ec)
 			: endpoint(ep)
 			, error(ec)
@@ -939,16 +942,18 @@ namespace libtorrent
 		virtual std::string message() const
 		{
 			error_code ec;
-			return "UDP error: " + convert_from_native(error.message()) + " from: " + endpoint.address().to_string(ec);
+            std::stringstream ss;
+            ss << "UDP error: " << convert_from_native(error.message()) << " from: " << endpoint.GetPeerAddress().Get();
+            return ss.str();
 		}
 
-		udp::endpoint endpoint;
+		ns3::Ipv4EndPoint endpoint;
 		error_code error;
 	};
 
 	struct TORRENT_EXPORT external_ip_alert: alert
 	{
-		external_ip_alert(address const& ip)
+		external_ip_alert(ns3::Address const& ip)
 			: external_address(ip)
 		{}
 
@@ -958,16 +963,18 @@ namespace libtorrent
 		virtual std::string message() const
 		{
 			error_code ec;
-			return "external IP received: " + external_address.to_string(ec);
+            std::stringstream ss;
+            ss << "external IP received: " << external_address;
+			return ss.str();
 		}
 
-		address external_address;
+        ns3::Address external_address;
 	};
 
 	struct TORRENT_EXPORT listen_failed_alert: alert
 	{
 		listen_failed_alert(
-			tcp::endpoint const& ep
+			ns3::Ipv4EndPoint const& ep
 			, error_code const& ec)
 			: endpoint(ep)
 			, error(ec)
@@ -979,13 +986,13 @@ namespace libtorrent
 		virtual std::string message() const;
 		virtual bool discardable() const { return false; }
 
-		tcp::endpoint endpoint;
+		ns3::Ipv4EndPoint endpoint;
 		error_code error;
 	};
 
 	struct TORRENT_EXPORT listen_succeeded_alert: alert
 	{
-		listen_succeeded_alert(tcp::endpoint const& ep)
+		listen_succeeded_alert(ns3::Ipv4EndPoint const& ep)
 			: endpoint(ep)
 		{}
 
@@ -995,7 +1002,7 @@ namespace libtorrent
 		virtual std::string message() const;
 		virtual bool discardable() const { return false; }
 
-		tcp::endpoint endpoint;
+		ns3::Ipv4EndPoint endpoint;
 	};
 
 	struct TORRENT_EXPORT portmap_error_alert: alert
@@ -1081,7 +1088,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT peer_blocked_alert: torrent_alert
 	{
-		peer_blocked_alert(torrent_handle const& h, address const& ip_)
+		peer_blocked_alert(torrent_handle const& h, ns3::Address const& ip_)
 			: torrent_alert(h)
 			, ip(ip_)
 		{}
@@ -1092,15 +1099,17 @@ namespace libtorrent
 		virtual std::string message() const
 		{
 			error_code ec;
-			return torrent_alert::message() + ": blocked peer: " + ip.to_string(ec);
+            std::stringstream ss;
+            ss << torrent_alert::message() << ": blocked peer: " << ip;
+            return ss.str();
 		}
 
-		address ip;
+        ns3::Address ip;
 	};
 
 	struct TORRENT_EXPORT dht_announce_alert: alert
 	{
-		dht_announce_alert(address const& ip_, int port_
+		dht_announce_alert(ns3::Address const& ip_, int port_
 			, sha1_hash const& info_hash_)
 			: ip(ip_)
 			, port(port_)
@@ -1112,7 +1121,7 @@ namespace libtorrent
 		const static int static_category = alert::dht_notification;
 		virtual std::string message() const;
 
-		address ip;
+		ns3::Address ip;
 		int port;
 		sha1_hash info_hash;
 	};
@@ -1197,7 +1206,7 @@ namespace libtorrent
 	struct TORRENT_EXPORT lsd_peer_alert: peer_alert
 	{
 		lsd_peer_alert(torrent_handle const& h
-			, tcp::endpoint const& ip_)
+			, ns3::Ipv4EndPoint const& ip_)
 			: peer_alert(h, ip_, peer_id(0))
 		{}
 
@@ -1289,7 +1298,7 @@ namespace libtorrent
 
 	struct TORRENT_EXPORT incoming_connection_alert: alert
 	{
-		incoming_connection_alert(int type_, tcp::endpoint const& ip_)
+		incoming_connection_alert(int type_, ns3::Ipv4EndPoint const& ip_)
 			: socket_type(type_)
 			, ip(ip_)
 		{}
@@ -1300,7 +1309,7 @@ namespace libtorrent
 		virtual std::string message() const;
 
 		int socket_type;
-		tcp::endpoint ip;
+		ns3::Ipv4EndPoint ip;
 	};
 
 	struct TORRENT_EXPORT add_torrent_alert : torrent_alert

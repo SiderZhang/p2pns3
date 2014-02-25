@@ -37,10 +37,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <cstring>
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/error_code.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/error_code.hpp"
 
 #if TORRENT_USE_IOSTREAM
 #include <iosfwd>

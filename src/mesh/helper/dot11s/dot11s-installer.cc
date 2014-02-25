@@ -17,9 +17,9 @@
  *
  * Authors: Kirill Andreev <andreev@iitp.ru>
  */
-#include "ns3/dot11s-installer.h"
-#include "ns3/peer-management-protocol.h"
-#include "ns3/hwmp-protocol.h"
+#include "ns3/dot11s/dot11s-installer.h"
+#include "ns3/dot11s/peer-management-protocol.h"
+#include "ns3/dot11s/hwmp-protocol.h"
 #include "ns3/wifi-net-device.h"
 #include "ns3/mesh-wifi-interface-mac.h"
 

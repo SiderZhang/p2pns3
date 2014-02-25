@@ -1331,7 +1331,7 @@ namespace aux {
 		add_outstanding_async("session_impl::on_tick");
 #endif
 		error_code ec;
-		m_io_service.post(boost::bind(&session_impl::on_tick, this, ec));
+		//m_io_service.post(boost::bind(&session_impl::on_tick, this, ec));
 
 #if defined TORRENT_ASIO_DEBUGGING
 		add_outstanding_async("session_impl::on_lsd_announce");
@@ -4918,6 +4918,7 @@ retry:
 	torrent_handle session_impl::add_torrent(add_torrent_params const& p
 		, error_code& ec)
 	{
+        NS_LOG_INFO(this);
 		TORRENT_ASSERT(!p.save_path.empty());
 
 #ifndef TORRENT_NO_DEPRECATE

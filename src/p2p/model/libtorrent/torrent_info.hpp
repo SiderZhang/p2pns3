@@ -47,18 +47,20 @@ POSSIBILITY OF SUCH DAMAGE.
 #pragma warning(pop)
 #endif
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/entry.hpp"
-#include "libtorrent/lazy_entry.hpp"
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/ptime.hpp"
-#include "libtorrent/intrusive_ptr_base.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/file_storage.hpp"
-#include "libtorrent/copy_ptr.hpp"
-#include "libtorrent/socket.hpp"
-#include "libtorrent/policy.hpp" // for policy::peer
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/entry.hpp"
+#include "ns3/libtorrent/lazy_entry.hpp"
+#include "ns3/libtorrent/peer_id.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/ptime.hpp"
+#include "ns3/libtorrent/intrusive_ptr_base.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/file_storage.hpp"
+#include "ns3/libtorrent/copy_ptr.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/policy.hpp" // for policy::peer
+
+#include "ns3/ipv4-end-point.h"
 
 namespace libtorrent
 {
@@ -209,7 +211,7 @@ namespace libtorrent
 		// callback remove it
 		bool removed;
 
-		tcp::endpoint endpoint;
+		ns3::Ipv4EndPoint endpoint;
 
 		// this is the peer_info field used for the
 		// connection, just to count hash failures

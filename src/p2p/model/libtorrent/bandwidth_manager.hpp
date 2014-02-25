@@ -39,15 +39,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #endif
 
-#include "libtorrent/socket.hpp"
-#include "libtorrent/error_code.hpp"
-#include "libtorrent/invariant_check.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/bandwidth_limit.hpp"
-#include "libtorrent/bandwidth_queue_entry.hpp"
-#include "libtorrent/thread.hpp"
-#include "libtorrent/bandwidth_socket.hpp"
-#include "libtorrent/ptime.hpp"
+#include "ns3/libtorrent/socket.hpp"
+#include "ns3/libtorrent/error_code.hpp"
+#include "ns3/libtorrent/invariant_check.hpp"
+#include "ns3/libtorrent/assert.hpp"
+#include "ns3/libtorrent/bandwidth_limit.hpp"
+#include "ns3/libtorrent/bandwidth_queue_entry.hpp"
+#include "ns3/libtorrent/bandwidth_socket.hpp"
+#include "ns3/libtorrent/ptime.hpp"
 
 using boost::intrusive_ptr;
 

@@ -24,7 +24,7 @@
 #include <map>
 #include "ns3/nstime.h"
 #include "ns3/mac48-address.h"
-#include "ns3/hwmp-protocol.h"
+#include "ns3/dot11s/hwmp-protocol.h"
 namespace ns3 {
 namespace dot11s {
 /**

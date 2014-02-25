@@ -33,8 +33,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_DISK_BUFFER_HOLDER_HPP_INCLUDED
 #define TORRENT_DISK_BUFFER_HOLDER_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/assert.hpp"
 #include <algorithm>
 
 namespace libtorrent

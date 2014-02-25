@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_PIECE_BLOCK_PROGRESS_HPP_INCLUDED
 #define TORRENT_PIECE_BLOCK_PROGRESS_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 namespace libtorrent
 {

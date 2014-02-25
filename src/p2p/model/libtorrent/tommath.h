@@ -21,7 +21,7 @@
 #include <ctype.h>
 #include <limits.h>
 
-#include "libtorrent/tommath_class.h"
+#include "ns3/libtorrent/tommath_class.h"
 
 #ifndef MIN
    #define MIN(x,y) ((x)<(y)?(x):(y))

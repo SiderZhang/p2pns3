@@ -36,9 +36,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <boost/limits.hpp>
 #include <boost/array.hpp>
-#include "libtorrent/config.hpp"
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/error_code.hpp"
+#include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/size_type.hpp"
+#include "ns3/libtorrent/error_code.hpp"
 
 namespace libtorrent
 {

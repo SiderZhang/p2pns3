@@ -57,7 +57,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #undef Protocol
 #endif
 
-#include "libtorrent/time.hpp"
+#include "ns3/libtorrent/time.hpp"
 
 // asio time_traits
 #if !TORRENT_USE_BOOST_DATE_TIME

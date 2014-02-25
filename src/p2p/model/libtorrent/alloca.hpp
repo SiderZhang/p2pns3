@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef TORRENT_ALLOCA
 
-#include "libtorrent/config.hpp"
+#include "ns3/libtorrent/config.hpp"
 
 #if defined TORRENT_WINDOWS || defined TORRENT_MINGW
 

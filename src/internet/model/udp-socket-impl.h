@@ -85,6 +85,11 @@ public:
   virtual bool SetAllowBroadcast (bool allowBroadcast);
   virtual bool GetAllowBroadcast () const;
 
+  virtual Ipv4EndPoint* GetIpv4EndPoint (void) const
+  {
+      return m_endPoint;
+  }
+
 private:
   // Attributes set through UdpSocket base class 
   virtual void SetRcvBufSize (uint32_t size);
