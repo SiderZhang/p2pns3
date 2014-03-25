@@ -37,6 +37,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <utility>
 #include <ctime>
+#include <list>
 
 #ifdef _MSC_VER
 #pragma warning(push, 1)
@@ -53,6 +54,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/event-id.h"
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
+#include "ns3/inet-socket-address.h"
 #include "ns3/traced-callback.h"
 #include "ns3/attribute.h"
 #include "ns3/allocator.hpp"
@@ -62,6 +64,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/tracker_manager.hpp"
 #include "udp-p2p-header.h"
 #include "action.h"
+#include "ns3/ipv4-end-point.h"
+#include "ns3/ptr.h"
+#include "ns3/node.h"
 
 // TODO
 //#include "udp_socket.hpp"
@@ -95,29 +100,45 @@ namespace libtorrent
 
 		udp_tracker_connection(tracker_manager& man
                 , tracker_request const& req
-                , boost::weak_ptr<request_callback> c);
+                , boost::shared_ptr<request_callback> c
+                , ns3::Ptr<ns3::Node> node
+                , ns3::Ipv4Address addr);
 
         // 这个函数开启与一个远程trakcer的连接
 		void start();
         // 这个函数关闭与一个远程tracker的连接
 		void close();
 
-        void SetRemote(ns3::Ipv4Address ip, uint16_t port);
+        //void SetRemote(ns3::Ipv4Address ip, uint16_t port);
+	    void start_announce();
+    protected:
+        ns3::Ipv4Address GetAddress()
+        {
+//            ns3::Ptr<ns3::NetDevice> netdev = m_node->GetDevice(0);
+//            return ns3::Ipv4InterfaceAddress::ConvertFrom(netdev->GetAddress());
+            return ns3::Ipv4Address();        
+        }
 	private:
 
 		boost::intrusive_ptr<udp_tracker_connection> self()
 		{ return boost::intrusive_ptr<udp_tracker_connection>(this); }
 
 		void on_receive(ns3::Ptr<ns3::Packet> p);
-		void on_connect_response(ns3::UdpP2PHeader &header);
-		void on_announce_response(ns3::UdpP2PHeader &header);
-		void on_scrape_response(ns3::UdpP2PHeader &header);
+		void on_connect_response(uint8_t* buf, uint32_t size);
+		void on_announce_response(uint8_t* buf, uint32_t size);
+		void on_scrape_response(uint8_t* buf, uint32_t size);
 
+        void handleRecv(ns3::Ptr<ns3::Socket> sock);
 		void send_udp_connect();
 		void send_udp_announce();
 		void send_udp_scrape();
 
 		//virtual void on_timeout();
+		
+        bool m_abort;
+		std::string m_hostname;
+		ns3::Ipv4EndPoint m_target;
+		std::list<ns3::Ipv4EndPoint> m_endpoints;
 
         ns3::Ptr<ns3::Socket> m_socket;
 
@@ -133,7 +154,8 @@ namespace libtorrent
 
         ns3::action_t m_state;
 
-        ns3::Ipv4Address remoteAddress;
+        ns3::Ptr<ns3::Node> m_node;
+        ns3::Ipv4Address ip;
 	};
 
 }

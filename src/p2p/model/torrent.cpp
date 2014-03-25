@@ -76,6 +76,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/string_util.hpp" // for allocate_string_copy
 #include "libtorrent/escape_string.hpp"
 #include "libtorrent/broadcast_socket.hpp"
+#include "libtorrent/peer_info.hpp"
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 #include "libtorrent/struct_debug.hpp"
@@ -83,6 +84,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include "ns3/log.h"
+#include "ns3/packet.h"
+#include "ns3/simulator.h"
 
 using namespace libtorrent;
 using namespace ns3;
@@ -174,7 +177,7 @@ namespace
 		{
             ns3::Ipv4EndPoint const& sender = c->remote();
 			if (sender.GetPeerAddress() != ip.GetIpv4()) return false;
-			if (tor != c->associated_torrent().lock().get()) return false;
+			if (tor != c->associated_torrent().get()) return false;
 			return true;
 		}
 
@@ -323,11 +326,14 @@ namespace libtorrent
 
 	torrent::torrent(
 		session_impl& ses
+        , ns3::Ipv4Address addr
 		, ns3::Ipv4EndPoint const& net_interface
 		, int block_size
 		, int seq
 		, add_torrent_params const& p
-		, sha1_hash const& info_hash)
+		, sha1_hash const& info_hash
+        , ns3::Ptr<ns3::Node> myNode
+        , bool i_seed)
 		: m_policy(this)
 		, m_total_uploaded(0)
 		, m_total_downloaded(0)
@@ -354,7 +360,7 @@ namespace libtorrent
 		, m_total_redundant_bytes(0)
 		, m_sequence_number(seq)
 		, m_upload_mode_time(0)
-		, m_state(torrent_status::checking_resume_data)
+		, m_state(torrent_status::downloading)
 		//, m_storage_mode(p.storage_mode)
 		, m_announcing(false)
 		, m_waiting_tracker(false)
@@ -409,9 +415,13 @@ namespace libtorrent
         , m_download_rate(peer_connection::download_channel)
         , m_upload_rate(peer_connection::upload_channel)
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(addr, this);
+
+        initSeed = i_seed;
+        ip = addr;
 		// if there is resume data already, we don't need to trigger the initial save
 		// resume data
+        m_node = myNode;
 		if (p.resume_data && (p.flags & add_torrent_params::flag_override_resume_data) == 0)
 			m_need_save_resume_data = false;
 
@@ -500,6 +510,7 @@ namespace libtorrent
 			m_torrent_file = (p.ti ? p.ti : new torrent_info(info_hash));
 
 		m_trackers = m_torrent_file->trackers();
+        NS_LOG_INFO("tracker count " << m_trackers.size());
 		if (m_torrent_file->is_valid())
 		{
 			m_seed_mode = p.flags & add_torrent_params::flag_seed_mode;
@@ -543,7 +554,6 @@ namespace libtorrent
 			m_torrent_file->add_tracker(p.tracker_url);
 		}
 #endif
-
 		for (std::vector<std::string>::const_iterator i = p.trackers.begin()
 			, end(p.trackers.end()); i != end; ++i)
 		{
@@ -559,7 +569,7 @@ namespace libtorrent
 
 	void torrent::start()
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		debug_log("starting torrent");
@@ -587,6 +597,19 @@ namespace libtorrent
 			}
 		}
 
+        if (initSeed)
+        {
+            for (int i = 0;i < m_picker->num_pieces();++i)
+            {
+                m_picker->we_have(i);
+            }
+            completed();
+            if (!is_seed())
+            {
+                NS_LOG_ERROR("failed to build initial seed");
+            }
+        }
+
 	/*	if (!m_torrent_file->is_valid() && !m_url.empty())
 		{
 			// we need to download the .torrent file from m_url
@@ -598,6 +621,8 @@ namespace libtorrent
         if (m_torrent_file->is_valid())
 		{
 			init();
+            // 我们直接开始announce并连接tracker
+			start_announcing();
 		}
 		else
 		{
@@ -877,7 +902,7 @@ namespace libtorrent
 	// shared_from_this()
 	void torrent::init()
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		TORRENT_ASSERT(m_torrent_file->is_valid());
 		TORRENT_ASSERT(m_torrent_file->num_files() > 0);
@@ -939,7 +964,7 @@ namespace libtorrent
 			return;
 		}
 
-		set_state(torrent_status::checking_resume_data);
+		set_state(torrent_status::downloading);
 
 		if (m_resume_entry.type() == lazy_entry::dict_t)
 		{
@@ -1117,12 +1142,13 @@ namespace libtorrent
 	void torrent::announce_with_tracker(tracker_request::event_t e
 		, ns3::Address const& bind_interface)
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		INVARIANT_CHECK;
 
 		if (m_trackers.empty())
 		{
+            NS_LOG_ERROR("tracker is empty");
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 			debug_log("*** announce_with_tracker: no trackers");
 #endif
@@ -1133,13 +1159,13 @@ namespace libtorrent
 
 		// if we're not announcing to trackers, only allow
 		// stopping
-		if (e != tracker_request::stopped && !m_announce_to_trackers)
-		{
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
-			debug_log("*** announce_with_tracker: event != stopped && !m_announce_to_trackers");
-#endif
-			return;
-		}
+//		if (e != tracker_request::stopped && !m_announce_to_trackers)
+//		{
+//#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
+//			debug_log("*** announce_with_tracker: event != stopped && !m_announce_to_trackers");
+//#endif
+//			return;
+//		}
 
 		TORRENT_ASSERT(m_allow_peers || e == tracker_request::stopped);
 
@@ -1198,6 +1224,8 @@ namespace libtorrent
 
 		// have we sent an announce in this tier yet?
 		bool sent_announce = false;
+
+        NS_LOG_INFO("trackers count "<< m_trackers.size());
 
 		for (int i = 0; i < int(m_trackers.size()); ++i)
 		{
@@ -1265,7 +1293,7 @@ namespace libtorrent
 #endif*/
 			{
                 // TODO: 传递tracker的IP地址
-				m_ses.m_tracker_manager.queue_request(req
+				m_ses.m_tracker_manager.queue_request(m_ses.GetNode(), req
 					, tracker_login() , shared_from_this());
 			}
 
@@ -1342,11 +1370,13 @@ namespace libtorrent
 		, ns3::Address const& external_ip
 		, const std::string& trackerid)
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 
 		INVARIANT_CHECK;
 		TORRENT_ASSERT(r.kind == tracker_request::announce_request);
 
+        // 张惊：参数检查
 		if (external_ip != ns3::Address() && !tracker_ips.empty())
 			m_ses.set_external_address(external_ip, aux::session_impl::source_tracker
 				, *tracker_ips.begin());
@@ -1356,6 +1386,7 @@ namespace libtorrent
 		if (interval < settings().min_announce_interval)
 			interval = settings().min_announce_interval;
 
+        // 张惊：查找tracker
 		announce_entry* ae = find_tracker(r);
 		if (ae)
 		{
@@ -1404,6 +1435,7 @@ namespace libtorrent
 		debug_log("%s", s.str().c_str());
 #endif
 		// for each of the peers we got from the tracker
+        // 张惊：向policy添加要链接的peer
 		for (std::vector<peer_entry>::iterator i = peer_list.begin();
 			i != peer_list.end(); ++i)
 		{
@@ -1411,9 +1443,8 @@ namespace libtorrent
 			if (i->pid == m_ses.get_peer_id())
 				continue;
 
-            // TODO: 临时禁用boost::asio
-			/*error_code ec;
-			ns3::InetSocketAddress a(address::from_string(i->ip, ec), i->port);
+			error_code ec;
+			ns3::InetSocketAddress a(i->ip.c_str(), i->port);
 
 			if (ec)
 			{
@@ -1436,9 +1467,14 @@ namespace libtorrent
 				// 2. it might make sense to have a tracker extension in the future where
 				//    trackers records a peer's internal and external IP, and match up
 				//    peers on the same local network
-//				if (is_local(a.address()) && !is_local(tracker_ip)) continue;
-				m_policy.add_peer(a, i->pid, peer_info::tracker, 0);
-			}*/
+				if (is_local(a.GetIpv4().ConvertTo()) && !is_local(tracker_ip)) 
+                {
+                    continue;
+                }
+
+                ns3::Ipv4EndPoint enp(a.GetIpv4(), a.GetPort());
+				m_policy.add_peer(enp, i->pid, peer_info::tracker, 0);
+			}
 		}
 
 		m_got_tracker_response = true;
@@ -1453,33 +1489,35 @@ namespace libtorrent
 		// announce was the second one
 		// don't connect twice just to tell it we're stopping
 
-		if (r.bind_ip != m_ses.m_ipv4_interface.GetPeerAddress()
-			&& r.event != tracker_request::stopped)
-		{
-			//std::list<ns3::Address>::const_iterator i = std::find_if(tracker_ips.begin()
-			//	, trac_ips.end(), boost::bind(&Address::is_v4, _1) != tracker_ip.is_v4());
-            
-            std::list<ns3::Address>::const_iterator i;
-            for (;i != tracker_ips.end();++i)
-            {
-                if ((*i) == tracker_ip )
-                    break;
-            }
+	//	if (r.bind_ip != m_ses.m_ipv4_interface.GetPeerAddress()
+	//		&& r.event != tracker_request::stopped)
+	//	{
 
-			if (i != tracker_ips.end())
-			{
-				// the tracker did resolve to a different type of address, so announce
-				// to that as well
+	//		//std::list<ns3::Address>::const_iterator i = std::find_if(tracker_ips.begin()
+	//		//	, tracker_ips.end(), boost::bind(&address::is_v4, _1) != tracker_ip.is_v4());
+    //        std::list<ns3::Address>::const_iterator i = tracker_ips.begin();
+    //        
+    //        //std::list<ns3::Address>::const_iterator i;
+    //        for (;i != tracker_ips.end();++i)
+    //        {
+    //            if ((*i) == tracker_ip )
+    //                break;
+    //        }
 
-				// tell the tracker to bind to the opposite protocol type
-                ns3::Address bind_interface = m_ses.m_ipv4_interface.GetPeerAddress();
-				announce_with_tracker(r.event, bind_interface);
-                ostringstream ostr;
-                //char* pstr = print_address(bind_interface).c_str();
-                ostr<<"announce again using "<<" as the bind interface";
-                NS_LOG_INFO(ostr.str().c_str());
-			}
-		}
+	//		if (i != tracker_ips.end())
+	//		{
+	//			// the tracker did resolve to a different type of address, so announce
+	//			// to that as well
+
+	//			// tell the tracker to bind to the opposite protocol type
+    //            ns3::Address bind_interface = m_ses.m_ipv4_interface.GetPeerAddress();
+	//			announce_with_tracker(r.event, bind_interface);
+    //            ostringstream ostr;
+    //            //char* pstr = print_address(bind_interface).c_str();
+    //            ostr<<"announce again using "<<" as the bind interface";
+    //            NS_LOG_INFO(" " << ostr.str().c_str());
+	//		}
+	//	}
 
 		if (m_need_connect_boost)
 		{
@@ -1487,10 +1525,13 @@ namespace libtorrent
 			// this is the first tracker response for this torrent
 			// instead of waiting one second for session_impl::on_tick()
 			// to be called, connect to a few peers immediately
-			int conns = (std::min)((std::min)((std::min)(m_ses.m_settings.torrent_connect_boost
+			int conns = (std::min)((std::min)(m_ses.m_settings.torrent_connect_boost
 				, m_ses.m_settings.connections_limit - m_ses.num_connections())
-				, m_ses.m_half_open.free_slots())
-				, m_ses.m_boost_connections - m_ses.m_settings.connection_speed);
+				//, m_ses.m_half_open.free_slots())
+                    // 张惊：这里源代码可能写错了，初始链接的情况下，这个值肯定是负数
+				, m_ses.m_settings.connection_speed -  m_ses.m_boost_connections);
+
+            NS_LOG_DEBUG("peer connect boost number is " << conns);
 
 			while (want_more_peers() && conns > 0)
 			{
@@ -3584,9 +3625,30 @@ namespace libtorrent
 		}
 	
 	}
+
+    void torrent::sendData()
+    {
+        NS_LOG_IP_FUNCTION(ip,this);
+    }
+
+   // void torrent::ConnectionSucceeded(ns3::Ptr<ns3::Socket> socket)
+   // {
+   //     NS_LOG_IP_FUNCTION(ip,this);
+   // }
+
+   // void torrent::ConnectionFailed(ns3::Ptr<ns3::Socket> socket)
+   // {
+   //     NS_LOG_IP_FUNCTION(ip,this);
+   // }
+    void torrent::onSockReceive(ns3::Ptr<ns3::Socket> sock)
+    {
+        NS_LOG_IP_FUNCTION(ip, this);
+        ccmap.find(sock)->second->on_connection_complete(sock);
+    }
 	
 	bool torrent::connect_to_peer(policy::peer* peerinfo, bool ignore_limit)
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
 		INVARIANT_CHECK;
 
 		TORRENT_ASSERT(peerinfo);
@@ -3615,7 +3677,14 @@ namespace libtorrent
 		//	|| (m_ses.m_ip_filter.access(peerinfo->address()) & ip_filter::blocked) == 0);
 
         ns3::TypeId tid = ns3::TypeId::LookupByName ("ns3::TcpSocketFactory");
-        ns3::Ptr<ns3::Socket> s = ns3::Socket::CreateSocket (node, tid);
+        ns3::Ptr<ns3::Socket> socket = ns3::Socket::CreateSocket (m_node, tid);
+        socket->Bind();
+
+      //  ns3::Ptr<ns3::Packet> p = ns3::Create<ns3::Packet> (120);
+      //  int result = s->Send(p);
+      //  NS_LOG_INFO("connect to ip "<< a.GetLocalAddress() << ", port " << a.GetLocalPort() << ", send data count "<< result);
+       // NS_LOG_INFO("connect to ip "<< a.GetLocalAddress() << ", port " << a.GetLocalPort());// << ", send data count "<< result);
+        //ns3::Simulator::Schedule (Seconds (0.0), &torrent::sendData, this);
 
 		// don't make a TCP connection if it's disabled
 		if (!m_ses.m_settings.enable_outgoing_tcp)
@@ -3624,23 +3693,27 @@ namespace libtorrent
 //		m_ses.setup_socket_buffers(*s);
 
 		boost::intrusive_ptr<peer_connection> c(new bt_peer_connection(
-			m_ses, shared_from_this(), s, a, peerinfo));
+			m_ses, shared_from_this(), socket, a, peerinfo));
 
+        socket->SetConnectCallback (
+            MakeCallback (&torrent::onSockReceive, this),
+            MakeNullCallback<void, ns3::Ptr<ns3::Socket> >());
+        ccmap.insert(std::pair<ns3::Ptr<ns3::Socket>, boost::intrusive_ptr<peer_connection> >(socket, c));
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 		c->m_in_constructor = false;
 #endif
 
- 		c->add_stat(size_type(peerinfo->prev_amount_download) << 10
-			, size_type(peerinfo->prev_amount_upload) << 10);
+ 		//c->add_stat(size_type(peerinfo->prev_amount_download) << 10
+		//	, size_type(peerinfo->prev_amount_upload) << 10);
  		peerinfo->prev_amount_download = 0;
  		peerinfo->prev_amount_upload = 0;
 
 		// add the newly connected peer to this torrent's peer list
 		m_connections.insert(boost::get_pointer(c));
 		m_policy.set_connection(peerinfo, c.get());
-		c->start();
 
         c->on_connect(m_ticket_count);
+		c->start();
         m_ticket_count++;
 /*		TORRENT_TRY
 		{
@@ -3954,6 +4027,7 @@ namespace libtorrent
 	// pieces have been downloaded)
 	void torrent::finished()
 	{
+        NS_LOG_IP_FUNCTION(ip, this);
 		INVARIANT_CHECK;
 
 		TORRENT_ASSERT(is_finished());
@@ -4037,6 +4111,7 @@ namespace libtorrent
 	// called when torrent is complete (all pieces downloaded)
 	void torrent::completed()
 	{
+        NS_LOG_IP_FUNCTION(ip, this);
 		m_picker.reset();
 
 		set_state(torrent_status::seeding);
@@ -4926,7 +5001,7 @@ namespace libtorrent
 
 	void torrent::start_announcing()
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 //		if (is_paused())
 //		{
@@ -4938,13 +5013,13 @@ namespace libtorrent
 		// if we don't have metadata, we need to announce
 		// before checking files, to get peers to
 		// request the metadata from
-		if (!m_files_checked && valid_metadata())
-		{
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
-			debug_log("start_announcing(), files not checked (with valid metadata)");
-#endif
-			return;
-		}
+//		if (!m_files_checked && valid_metadata())
+//		{
+//#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
+//			debug_log("start_announcing(), files not checked (with valid metadata)");
+//#endif
+//			return;
+//		}
 		/*if (!m_torrent_file->is_valid() && !m_url.empty())
 		{
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
@@ -4995,7 +5070,7 @@ namespace libtorrent
 
 	void torrent::second_tick(stat& accumulator, int tick_interval_ms)
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		TORRENT_ASSERT(m_ses.is_network_thread());
 		INVARIANT_CHECK;
 
@@ -5887,6 +5962,7 @@ namespace libtorrent
 
 	void torrent::state_updated()
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
 		// if this fails, this function is probably called 
 		// from within the torrent constructor, which it
 		// shouldn't be. Whichever function ends up calling

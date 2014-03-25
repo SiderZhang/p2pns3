@@ -53,6 +53,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/peer_info.hpp"
 #include "libtorrent/random.hpp"
 #include "libtorrent/alloca.hpp"
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE ("BT_PEER_CONNECTION");
 
 using boost::shared_ptr;
 using libtorrent::aux::session_impl;
@@ -85,7 +88,7 @@ namespace libtorrent
 
 	bt_peer_connection::bt_peer_connection(
 		session_impl& ses
-		, boost::weak_ptr<torrent> tor
+		, boost::shared_ptr<torrent> tor
         , ns3::Ptr<ns3::Socket> s
         , ns3::Ipv4EndPoint const& remote
 		, policy::peer* peerinfo
@@ -101,6 +104,7 @@ namespace libtorrent
 		, m_sent_handshake(false)
 #endif
 	{
+        NS_LOG_FUNCTION(this);
 #ifdef TORRENT_VERBOSE_LOGGING
 		peer_log("*** bt_peer_connection");
 #endif
@@ -125,6 +129,7 @@ namespace libtorrent
 		, m_sent_handshake(false)
 #endif
 	{
+        NS_LOG_FUNCTION(this);
 
 		// we are not attached to any torrent yet.
 		// we have to wait for the handshake to see
@@ -145,6 +150,7 @@ namespace libtorrent
 
 	void bt_peer_connection::start()
 	{
+        NS_LOG_FUNCTION(this);
 		peer_connection::start();
 		
 		// start in the state where we are trying to read the
@@ -160,6 +166,7 @@ namespace libtorrent
 
 	void bt_peer_connection::on_connected()
 	{
+        NS_LOG_FUNCTION(this);
 		{
 			write_handshake();
 			
@@ -176,7 +183,7 @@ namespace libtorrent
 		// will send their bitfield when the handshake
 		// is done
 		if (m_state < read_packet_size) return;
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 		TORRENT_ASSERT(t);
 		write_bitfield();
 	}
@@ -221,7 +228,7 @@ namespace libtorrent
 		if (!m_supports_fast) return;
 
 		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
-		TORRENT_ASSERT(associated_torrent().lock()->valid_metadata());
+		TORRENT_ASSERT(associated_torrent()->valid_metadata());
 
 		char msg[] = {0,0,0,13, msg_reject_request,0,0,0,0, 0,0,0,0, 0,0,0,0};
 		char* ptr = msg + 5;
@@ -238,7 +245,7 @@ namespace libtorrent
 		if (!m_supports_fast) return;
 
 		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
-		TORRENT_ASSERT(associated_torrent().lock()->valid_metadata());
+		TORRENT_ASSERT(associated_torrent()->valid_metadata());
 
 		char msg[] = {0,0,0,5, msg_allowed_fast, 0, 0, 0, 0};
 		char* ptr = msg + 5;
@@ -253,9 +260,9 @@ namespace libtorrent
 		if (!m_supports_fast) return;
 
 		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
-		TORRENT_ASSERT(associated_torrent().lock()->valid_metadata());
+		TORRENT_ASSERT(associated_torrent()->valid_metadata());
 
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 		TORRENT_ASSERT(t);
 
 		if (m_sent_suggested_pieces.empty())
@@ -297,6 +304,7 @@ namespace libtorrent
 
 	void bt_peer_connection::write_handshake()
 	{
+        NS_LOG_FUNCTION(this);
 		INVARIANT_CHECK;
 
 		TORRENT_ASSERT(!m_sent_handshake);
@@ -304,7 +312,7 @@ namespace libtorrent
 		m_sent_handshake = true;
 #endif
 
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 		TORRENT_ASSERT(t);
 
 		// add handshake to the send buffer
@@ -369,7 +377,7 @@ namespace libtorrent
 
 	boost::optional<piece_block_progress> bt_peer_connection::downloading_piece_progress() const
 	{
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 		TORRENT_ASSERT(t);
 
 		buffer::const_interval recv_buffer = receive_buffer();
@@ -442,7 +450,7 @@ namespace libtorrent
 			// assume that the choke message implies that all
 			// of our requests are rejected. Go through them and
 			// pretend that we received reject request messages
-			boost::shared_ptr<torrent> t = associated_torrent().lock();
+			boost::shared_ptr<torrent> t = associated_torrent();
 			TORRENT_ASSERT(t);
 			while (!download_queue().empty())
 			{
@@ -561,7 +569,7 @@ namespace libtorrent
 
 		TORRENT_ASSERT(received > 0);
 
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 		TORRENT_ASSERT(t);
 
 		m_statistics.received_bytes(0, received);
@@ -626,7 +634,7 @@ namespace libtorrent
 		buffer::const_interval recv_buffer = receive_buffer();
 		int recv_pos = receive_pos(); // recv_buffer.end - recv_buffer.begin;
 
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 		TORRENT_ASSERT(t);
 		bool merkle = (unsigned char)recv_buffer.begin[0] == 250;
 		if (merkle)
@@ -1036,7 +1044,7 @@ namespace libtorrent
 	{
 		if (!packet_finished()) return;
 
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 		TORRENT_ASSERT(t);
 
 		buffer::const_interval recv_buffer = receive_buffer();
@@ -1115,7 +1123,7 @@ namespace libtorrent
 		TORRENT_ASSERT(received > 0);
 
 		// this means the connection has been closed already
-		if (associated_torrent().expired())
+		if (associated_torrent().use_count() == 0)
 		{
 			m_statistics.received_bytes(0, received);
 			return false;
@@ -1179,7 +1187,7 @@ namespace libtorrent
 		INVARIANT_CHECK;
 
 		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
-		TORRENT_ASSERT(associated_torrent().lock()->valid_metadata());
+		TORRENT_ASSERT(associated_torrent()->valid_metadata());
 
 		char msg[17] = {0,0,0,13, msg_cancel};
 		char* ptr = msg + 5;
@@ -1197,7 +1205,7 @@ namespace libtorrent
 		INVARIANT_CHECK;
 
 		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
-		TORRENT_ASSERT(associated_torrent().lock()->valid_metadata());
+		TORRENT_ASSERT(associated_torrent()->valid_metadata());
 
 		char msg[17] = {0,0,0,13, msg_request};
 		char* ptr = msg + 5;
@@ -1212,7 +1220,7 @@ namespace libtorrent
 	{
 		INVARIANT_CHECK;
 
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 		TORRENT_ASSERT(t);
 		TORRENT_ASSERT(m_sent_handshake && !m_sent_bitfield);
 		TORRENT_ASSERT(t->valid_metadata());
@@ -1380,6 +1388,7 @@ namespace libtorrent
 
 	void bt_peer_connection::write_not_interested()
 	{
+        NS_LOG_FUNCTION(this);
 		INVARIANT_CHECK;
 
 		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
@@ -1391,9 +1400,9 @@ namespace libtorrent
 	void bt_peer_connection::write_have(int index)
 	{
 		INVARIANT_CHECK;
-		TORRENT_ASSERT(associated_torrent().lock()->valid_metadata());
+		TORRENT_ASSERT(associated_torrent()->valid_metadata());
 		TORRENT_ASSERT(index >= 0);
-		TORRENT_ASSERT(index < associated_torrent().lock()->torrent_file().num_pieces());
+		TORRENT_ASSERT(index < associated_torrent()->torrent_file().num_pieces());
 		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
 
 		char msg[] = {0,0,0,5,msg_have,0,0,0,0};
@@ -1408,7 +1417,7 @@ namespace libtorrent
 //
 //		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
 //
-//		boost::shared_ptr<torrent> t = associated_torrent().lock();
+//		boost::shared_ptr<torrent> t = associated_torrent();
 //		TORRENT_ASSERT(t);
 //
 //		bool merkle = t->torrent_file().is_merkle_torrent() && r.start == 0;
@@ -1497,6 +1506,7 @@ namespace libtorrent
 	void bt_peer_connection::on_receive(error_code const& error
 		, std::size_t bytes_transferred)
 	{
+        NS_LOG_FUNCTION(this);
 		INVARIANT_CHECK;
 
 		if (error)
@@ -1505,7 +1515,7 @@ namespace libtorrent
 			return;
 		}
 
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 	
 		buffer::const_interval recv_buffer = receive_buffer();
 
@@ -1604,7 +1614,7 @@ namespace libtorrent
 #endif
 			}
 
-			t = associated_torrent().lock();
+			t = associated_torrent();
 			TORRENT_ASSERT(t);
 			
 			// if this is a local connection, we have already
@@ -1855,7 +1865,7 @@ namespace libtorrent
 		
 		if (amount_payload > 0)
 		{
-			boost::shared_ptr<torrent> t = associated_torrent().lock();
+			boost::shared_ptr<torrent> t = associated_torrent();
 			TORRENT_ASSERT(t);
 			if (t) t->update_last_upload();
 		}
@@ -1864,7 +1874,7 @@ namespace libtorrent
 #ifdef TORRENT_DEBUG
 	void bt_peer_connection::check_invariant() const
 	{
-		boost::shared_ptr<torrent> t = associated_torrent().lock();
+		boost::shared_ptr<torrent> t = associated_torrent();
 
 		if (!in_handshake())
 		{

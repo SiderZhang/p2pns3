@@ -7,21 +7,28 @@ namespace ns3 {
     using namespace UDPT;
 
 /* ... */
-    UdpTrackerHelper::UdpTrackerHelper()
+    UdpTrackerHelper::UdpTrackerHelper(uint16_t port)
     {
         m_factory.SetTypeId(UDPT::UDPTracker::GetTypeId());
+        SetAttribute ("Port", UintegerValue (port));
     }
 
-    ApplicationContainer UdpTrackerHelper::Install(Ptr<Node> node)
+    ApplicationContainer UdpTrackerHelper::Install(Ptr<Node> node, ns3::Ipv4Address ip)
     {
-        return ApplicationContainer(InstallPriv(node));
+        return ApplicationContainer(InstallPriv(node, ip));
     }
 
-    Ptr<Application> UdpTrackerHelper::InstallPriv(Ptr<Node> node) const
+    Ptr<Application> UdpTrackerHelper::InstallPriv(Ptr<Node> node, ns3::Ipv4Address ip) const
     {
         Ptr<UDPTracker> tracker = m_factory.Create<UDPTracker>();
+        tracker->setIp(ip);
         node->AddApplication(tracker);
         return tracker;
+    }
+    
+    void UdpTrackerHelper::SetAttribute(std::string name, const AttributeValue& value)
+    {
+        m_factory.Set (name, value);
     }
 }
 

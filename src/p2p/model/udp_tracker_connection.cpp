@@ -40,6 +40,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/socket.h"
 #include "ns3/packet.h"
 #include "ns3/node.hpp"
+#include "ns3/libtorrent/io.hpp"
+
+#include "ns3/libtorrent/parse_url.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(push, 1)
@@ -54,6 +57,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "udp_tracker_connection.hpp"
 #include "udp-p2p-header.h"
 #include "libtorrent/peer.hpp"
+#include "ns3/ipv4.h"
 
 using boost::bind;
 using namespace std;
@@ -62,39 +66,111 @@ using namespace ns3;
 namespace libtorrent
 {
     using namespace ns3;
-    NS_LOG_COMPONENT_DEFINE ("UdpP2PClient");
+    NS_LOG_COMPONENT_DEFINE ("UdpTrackerConnection");
 
 	std::map<Ipv4Address, udp_tracker_connection::connection_cache_entry>
 		udp_tracker_connection::m_connection_cache;
 
 	udp_tracker_connection::udp_tracker_connection(tracker_manager& man
                 , tracker_request const& req
-                , boost::weak_ptr<request_callback> c)
+                , boost::shared_ptr<request_callback> c, ns3::Ptr<ns3::Node> node
+                , ns3::Ipv4Address addr)
 		: tracker_connection(man, req, c)
         , m_transaction_id(0)
 		, m_attempts(0)
+        , m_node(node)
 	{
+        ip = addr;
+        NS_LOG_IP_FUNCTION(ip,this);
 	}
+
+    
 
 	void udp_tracker_connection::start()
 	{
-		std::string hostname;
+        NS_LOG_IP_FUNCTION(ip,this);
 
         // build the socket from ns3 instead the ones from boost
+        NS_LOG_INFO(m_node->GetObject<Ipv4>()->GetAddress(1,0).GetLocal());
         TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
-        m_socket = ns3::Socket::CreateSocket(GetNode(), tid);
+        m_socket = ns3::Socket::CreateSocket(m_node, tid);
         m_socket->Bind();
         
+        error_code ec;
+        int port;
+        std::string hostname;
+
+		using boost::tuples::ignore;
+		boost::tie(ignore, ignore, hostname, port, ignore)
+			= parse_url_components(tracker_req().url, ec);
+
+        NS_LOG_INFO("connect info ip "<< hostname <<", port"<<port);
+
+		m_target.SetLocalPort(port);
+        m_target.SetLocalAddress(Ipv4Address(hostname.c_str()));
+        m_socket->SetRecvCallback(MakeCallback(&udp_tracker_connection::handleRecv, this));
+        m_socket->Connect(InetSocketAddress (Ipv4Address(hostname.c_str()), port));
+
+        Simulator::Schedule(Time::FromInteger(1, Time::S), &udp_tracker_connection::start_announce, this);
+	//	start_announce();
+
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		boost::shared_ptr<request_callback> cb = requester();
 		if (cb) cb->debug_log(("*** UDP_TRACKER [ initiating name lookup: " + hostname + " ]").c_str());
 #endif
 	}
-
-    void udp_tracker_connection::SetRemote(Ipv4Address ip, uint16_t port)
+//
+//    void udp_tracker_connection::SetRemote(Ipv4Address ip, uint16_t port)
+//    {
+//        m_socket->Connect(InetSocketAddress (ip, port));
+//        remoteAddress = ip;
+//    }
+//
+	void udp_tracker_connection::start_announce()
     {
-        m_socket->Connect(InetSocketAddress (ip, port));
-        remoteAddress = ip;
+        NS_LOG_IP_FUNCTION(ip,this);
+//		std::map<Ipv4Address, connection_cache_entry>::iterator cc
+//			= m_connection_cache.find(m_target.GetLocalAddress());
+//		if (cc != m_connection_cache.end())
+//		{
+//			// we found a cached entry! Now, we can only
+//			// use if if it hasn't expired
+//			if (time_now() < cc->second.expires)
+//			{
+//				if (tracker_req().kind == tracker_request::announce_request)
+//					send_udp_announce();
+//				else if (tracker_req().kind == tracker_request::scrape_request)
+//					send_udp_scrape();
+//				return;
+//			}
+//			// if it expired, remove it from the cache
+//			m_connection_cache.erase(cc);
+//		}
+
+		send_udp_connect();
+	}
+
+    void udp_tracker_connection::handleRecv(Ptr<Socket> sock)
+    {
+        NS_LOG_IP_FUNCTION(ip,this);
+        Ptr<Packet> packet;
+        Address from;
+        // TODO: 与解析代码结合起来！！
+        while ((packet = sock->RecvFrom (from)))
+        {
+            //uint32_t size = packet->GetSize();
+            
+            if (InetSocketAddress::IsMatchingType (from))
+            {
+                NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s peer received " << packet->GetSize () << " bytes from " <<
+                       InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
+                       InetSocketAddress::ConvertFrom (from).GetPort ());
+
+                on_receive(packet);
+            //UdpP2PHeader header;
+            //packet->RemoveHeader (header);
+            }
+        }
     }
 
     // TODO: wait to add callback of this method
@@ -102,6 +178,7 @@ namespace libtorrent
             /*error_code const& e
 		, ns3::Ipv4EndPoint const& ep, char const* buf, int size)*/
     {
+        NS_LOG_IP_FUNCTION(ip,this);
 		// ignore resposes before we've sent any requests
 		if (m_state == action_error)
         {
@@ -132,11 +209,16 @@ namespace libtorrent
         // 重置超时
 	//	restart_read_timeout();
 
-        UdpP2PHeader header;
-        p->PeekHeader(header);
+        //UdpP2PHeader header;
+        //p->PeekHeader(header);
 
-		int action = header.getAction();
-		int transaction = header.getTransactionId();
+
+        uint8_t* buffer = new uint8_t[p->GetSize()];
+        uint8_t* ptr = buffer;
+        p->CopyData(ptr, p->GetSize());
+
+		int action = detail::read_uint32(ptr);
+		int transaction = detail::read_uint32(ptr);
 
 /*#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		if (cb)
@@ -148,16 +230,28 @@ namespace libtorrent
 #endif*/
 
 		// ignore packets with incorrect transaction id
-		if (m_transaction_id != transaction) return;
+		if (m_transaction_id != transaction) 
+        {
+            NS_LOG_ERROR("transaction id error");
+            delete ptr;
+            return;
+        }
 
 		if (action == action_error)
 		{
+            NS_LOG_ERROR("action is error");
 		//	fail(-1, std::string(ptr, size - 8).c_str());
+            delete ptr;
 			return;
 		}
 
 		// ignore packets that's not a response to our message
-		if (action != m_state) return;
+		if (action != m_state)
+        {
+            NS_LOG_ERROR("state error");
+            delete ptr;
+            return;
+        }
 
 /*#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		if (cb)
@@ -173,36 +267,50 @@ namespace libtorrent
 		switch (m_state)
 		{
 			case action_connect:
-				on_connect_response(header);
+            {
+                NS_LOG_INFO(this << " receive connection response");
+				on_connect_response(buffer, p->GetSize());
 				break;
+            }
 			case action_announce:
-				on_announce_response(header);
+                NS_LOG_INFO(this << " receive announce response");
+				on_announce_response(buffer, p->GetSize());
 				break;
 			case action_scrape:
-				on_scrape_response(header);
+                NS_LOG_INFO(this << " receive scrape response");
+				on_scrape_response(buffer, p->GetSize());
 				break;
-			default: break;
+			default: 
+                NS_LOG_ERROR("action state error");
+                break;
 		}
+
+        delete buffer;
 	}
 
 	void udp_tracker_connection::close()
 	{
+        tracker_connection::close();
 		m_socket->Close();
 	}
 
-	void udp_tracker_connection::on_connect_response(UdpP2PHeader &header)
+	void udp_tracker_connection::on_connect_response(uint8_t* buf, uint32_t size)
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
 		// ignore packets smaller than 16 bytes
 		//if (size < 16) return;
 
 		//restart_read_timeout();
 		// reset transaction
+        buf += 8;
 		m_transaction_id = 0;
 		m_attempts = 0;
-		uint64_t connection_id = header.getConnectionID();
+		uint64_t connection_id = detail::read_uint64(buf);
 
-		connection_cache_entry& cce = m_connection_cache[remoteAddress];
+		connection_cache_entry& cce = m_connection_cache[m_target.GetLocalAddress()];
 		cce.connection_id = connection_id;
+
+        NS_LOG_INFO("receive connection id is "<< connection_id);
 
 		if (tracker_req().kind == tracker_request::announce_request)
 			send_udp_announce();
@@ -213,6 +321,7 @@ namespace libtorrent
     // 发送连接请求
 	void udp_tracker_connection::send_udp_connect()
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		boost::shared_ptr<request_callback> cb = requester();
 		if (cb)
@@ -225,15 +334,19 @@ namespace libtorrent
 		}
 #endif
 
+		char buf[16];
+		char* ptr = buf;
+
 		if (m_transaction_id == 0)
 			m_transaction_id = std::rand() ^ (std::rand() << 16);
 
-        UdpP2PHeader header;
-        header.setAction((int32_t)action_connect);
-        header.setTransactionId(m_transaction_id);
+		detail::write_uint32(0x417, ptr);
+		detail::write_uint32(0x27101980, ptr); // connection_id
+		detail::write_uint32(action_connect, ptr); // action (connect)
+		detail::write_uint32(m_transaction_id, ptr); // transaction_id
+		TORRENT_ASSERT(ptr - buf == sizeof(buf));
 
-        Ptr<Packet> p = Create<Packet>(128);
-        p->AddHeader (header);
+        Ptr<Packet> p = Create<Packet>((uint8_t*)&buf, 16);
 
         m_socket->Send(p);
 		m_state = action_connect;
@@ -243,13 +356,15 @@ namespace libtorrent
     // 发送刮请求
 	void udp_tracker_connection::send_udp_scrape()
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
+
 		if (m_transaction_id == 0)
 			m_transaction_id = std::rand() ^ (std::rand() << 16);
 
         UdpP2PHeader header;
         header.setAction((int32_t) action_scrape);
         header.setTransactionId(m_transaction_id);
-        header.setAnnounceIp(this->remoteAddress.Get());
+        header.setAnnounceIp(this->m_target.GetLocalAddress().Get());
         header.setTrackerReq(this->tracker_req());
 
         Ptr<Packet> p = Create<Packet>(128);
@@ -260,15 +375,24 @@ namespace libtorrent
 		++m_attempts;
 	}
 
-	void udp_tracker_connection::on_announce_response(UdpP2PHeader &header)
+	void udp_tracker_connection::on_announce_response(uint8_t* buf, uint32_t size)
 	{
+        NS_LOG_IP_FUNCTION(ip,GetAddress() << this);
 		//restart_read_timeout();
         
+        buf += 8;
         // TODO: 待完成BOOST的更换后，使用这四个变量
-		//int interval = header.getInterval();
-		//int min_interval = 60;
-		//int leechers = header.getLeechersList().size();
-		//int seeders = header.getSeedersList().size();
+		int interval = detail::read_int32(buf);
+		int min_interval = 60;
+		int leechers = detail::read_int32(buf);
+		int seeders = detail::read_int32(buf);
+        int num_peers = (size - 20) / 6;
+
+        if ((size - 20) % 6 != 0)
+        {
+            NS_LOG_ERROR("invalid tracker response length");
+            return;
+        }
 
 		boost::shared_ptr<request_callback> cb = requester();
 //#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
@@ -283,74 +407,48 @@ namespace libtorrent
 
 		if (!cb)
 		{
+            NS_LOG_ERROR("no callback");
 			m_man.remove_request(this);
+            //close();
 			return;
 		}
 
-        // TODO: 待处理
 		std::vector<peer_entry> peer_list;
-        std::list<uint32_t>::iterator iter;
-        std::list<uint16_t>::iterator portIter;
-        portIter = header.getLeecherPortList().begin();
 
-        std::list<uint32_t>& leechersList = header.getLeechersList();
-		for (iter = leechersList.begin();iter != leechersList.end();++iter)
+		for (int i = 0;i < num_peers; ++i)
 		{
 			peer_entry e;
 			char ip_string[100];
 			
-            uint32_t ip = *iter;
-            unsigned int a = ip >> 24 & 0xff; 
-			unsigned int b = ip >> 16 & 0xff;
-			unsigned int c = ip >> 8 & 0xff;
-			unsigned int d = ip >> 0 & 0xff;
+            unsigned int a = detail::read_uint8(buf);//ip >> 24 & 0xff; 
+			unsigned int b = detail::read_uint8(buf);//ip >> 16 & 0xff;
+			unsigned int c = detail::read_uint8(buf);//ip >> 8 & 0xff;
+			unsigned int d = detail::read_uint8(buf);//ip >> 0 & 0xff;
 			snprintf(ip_string, 100, "%u.%u.%u.%u", a, b, c, d);
 			e.ip = ip_string;
-            
-			e.port = *portIter;
+			e.port = detail::read_uint16(buf);
 			e.pid.clear();
+            NS_LOG_INFO("peer list " << i << " is "<< ip_string);
 			peer_list.push_back(e);
-            portIter++;
 		}
 
-        std::list<uint32_t>& seedersList = header.getSeedersList();
-        portIter = header.getSeederPortList().begin();
-        for (iter = seedersList.begin();iter != seedersList.end();++iter)
-        {
-			peer_entry e;
-			char ip_string[100];
-			
-            uint32_t ip = *iter;
-            unsigned int a = ip >> 24 & 0xff; 
-			unsigned int b = ip >> 16 & 0xff;
-			unsigned int c = ip >> 8 & 0xff;
-			unsigned int d = ip >> 0 & 0xff;
-			snprintf(ip_string, 100, "%u.%u.%u.%u", a, b, c, d);
-			e.ip = ip_string;
-            
-			e.port = *portIter;
-			e.pid.clear();
-			peer_list.push_back(e);
-            portIter++;
-        }
+		std::list<Address> ip_list;
+		for (std::list<ns3::Ipv4EndPoint>::const_iterator i = m_endpoints.begin()
+			, end(m_endpoints.end()); i != end; ++i)
+		{
+			ip_list.push_back((Address)i->GetLocalAddress());
+		}
 
-        //TODO: Boost的网络管理待更换
-		//std::list<address> ip_list;
-		//for (std::list<ns3::Ipv4EndPoint>::const_iterator i = m_endpoints.begin()
-		//	, end(m_endpoints.end()); i != end; ++i)
-		//{
-		//	ip_list.push_back(i->address());
-		//}
+		cb->tracker_response(tracker_req(), (Address)m_target.GetLocalAddress(), ip_list
+			, peer_list, interval, min_interval, seeders, leechers, Address(), "");
 
-		//cb->tracker_response(tracker_req(), m_target.address(), ip_list
-		//	, peer_list, interval, min_interval, seeders leechers, address());
-
-		m_man.remove_request(this);
-		close();
+		//m_man.remove_request(this);
+		//close();
 	}
 
-	void udp_tracker_connection::on_scrape_response(UdpP2PHeader &header)
+	void udp_tracker_connection::on_scrape_response(uint8_t* buf, uint32_t size)
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
 		//restart_read_timeout();
         // TODO: 修改解析代码
 		int action = -1;//detail::read_int32(buf);
@@ -374,54 +472,83 @@ namespace libtorrent
 			return;
 		}
 
-        list<uint32_t>& seedersList = header.getSeedersList();
-        list<uint32_t>& completedList = header.getCompletedList();
-        list<uint32_t>& leechersList = header.getLeechersList();
+		int complete = detail::read_int32(buf);
+		int downloaded = detail::read_int32(buf);
+		int incomplete = detail::read_int32(buf);
+		boost::shared_ptr<request_callback> cb = requester();
 
-        int count = seedersList.size();
-        list<uint32_t>::iterator seederIter = seedersList.begin();
-        list<uint32_t>::iterator completedIter = completedList.begin();
-        list<uint32_t>::iterator leechersIter = leechersList.begin();
-        
-        for (int i = 0;i < count;++i)
-        {
-		    int complete = *seederIter;
-    		int downloaded = *completedIter;
-	    	int incomplete = *leechersIter;
+		if (!cb)
+		{
+			close();
+			return;
+		}
 
-		    boost::shared_ptr<request_callback> cb = requester();
-    		if (!cb)
-	    	{
-		    	close();
-			    return;
-    		}
-		
-	    	cb->tracker_scrape_response(tracker_req()
-		    	, complete, incomplete, downloaded);
+		cb->tracker_scrape_response(tracker_req()
+			, complete, incomplete, downloaded);
 
-            seederIter++;
-            completedIter++;
-            leechersIter++;
-        }
-		m_man.remove_request(this);
 		close();
 	}
 
     // 发送声明请求
 	void udp_tracker_connection::send_udp_announce()
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
 		if (m_transaction_id == 0)
 			m_transaction_id = std::rand() ^ (std::rand() << 16);
 
-        UdpP2PHeader header;
-        header.setAction((int32_t) action_announce);
-        header.setTransactionId(m_transaction_id);
-        header.setAnnounceIp(this->remoteAddress.Get());
-        header.setTrackerReq(this->tracker_req());
+        std::map<Ipv4Address, connection_cache_entry>::iterator i = m_connection_cache.find(m_target.GetLocalAddress());
+        if (i == m_connection_cache.end())
+        {
+            NS_LOG_ERROR("failed to find the connection of the target");
+            return;
+        }
 
-        Ptr<Packet> p = Create<Packet>(128);
-        p->AddHeader (header);
+        uint8_t buffer[800];
+        uint8_t* out = buffer;
+		detail::write_int64(i->second.connection_id, out); // connection_id
+		detail::write_int32(action_announce, out); // action (announce)
+		detail::write_int32(m_transaction_id, out); // transaction_id
 
+        tracker_request const& req = tracker_req();
+		std::copy(req.info_hash.begin(), req.info_hash.end(), out); // info_hash
+		out += 20;
+		std::copy(req.pid.begin(), req.pid.end(), out); // peer_id
+		out += 20;
+		const bool stats = req.send_stats;
+		detail::write_int64(stats ? req.downloaded : 0, out); // downloaded
+		detail::write_int64(stats ? req.left : 0, out); // left
+		detail::write_int64(stats ? req.uploaded : 0, out); // uploaded
+		detail::write_int32(req.event, out); // event
+
+        uint32_t ipv432 = this->m_target.GetLocalAddress().Get();
+        detail::write_uint32(ipv432, out);
+		detail::write_int32(req.key, out); // key
+		detail::write_int32(req.num_want, out); // num_want
+		detail::write_uint16(req.listen_port, out); // port
+
+		std::string request_string;
+		error_code ec;
+		using boost::tuples::ignore;
+		boost::tie(ignore, ignore, ignore, ignore, request_string) = parse_url_components(req.url, ec);
+
+		if (ec)
+        {
+            NS_LOG_ERROR("failed to parse url!");
+            request_string.clear();
+        }
+
+		if (!request_string.empty())
+        {
+			int str_len = (std::min)(int(request_string.size()), 255);
+			request_string.resize(str_len);
+
+			detail::write_uint8(2, out);
+			detail::write_uint8(str_len, out);
+			detail::write_string(request_string, out);
+        }
+
+        uint32_t size = out - buffer;
+        Ptr<Packet> p = Create<Packet>(buffer, size);
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 		boost::shared_ptr<request_callback> cb = requester();
@@ -435,7 +562,6 @@ namespace libtorrent
 		}
 #endif
 
-		error_code ec;
         m_socket->Send(p);
 		m_state = action_announce;
 		++m_attempts;

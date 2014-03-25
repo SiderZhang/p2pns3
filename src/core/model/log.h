@@ -324,6 +324,26 @@ void LogComponentDisableAll (enum LogLevel level);
     }                                                           \
   while (false)
 
+/*
+ * 张惊：这个宏是在上边的FUNCTION宏基础上增加显示当前结点IP的功能
+ */
+#define NS_LOG_IP_FUNCTION(ip, parameters)                             \
+  do                                                            \
+    {                                                           \
+      if (g_log.IsEnabled (ns3::LOG_FUNCTION))                  \
+        {                                                       \
+          NS_LOG_APPEND_TIME_PREFIX;                            \
+          NS_LOG_APPEND_NODE_PREFIX;                            \
+          NS_LOG_APPEND_CONTEXT;                                \
+          std::clog <<ip<<"::"                                       \
+                    << g_log.Name () << ":"                     \
+                    << __FUNCTION__ << "(";                     \
+          ns3::ParameterLogger (std::clog) << parameters;      \
+          std::clog << ")" << std::endl;                        \
+        }                                                       \
+    }                                                           \
+  while (false)
+
 
 /**
  * \ingroup logging

@@ -27,6 +27,7 @@
 #include "udptSettings.hpp"
 #include "ns3/application.h"
 #include "ns3/ptr.h"
+#include "ns3/ipv4-address.h"
 #include "udp-p2p-header.h"
 
 #include <string>
@@ -43,6 +44,65 @@ namespace UDPT
 	class UDPTracker : public ns3::Application
 	{
 	public:
+		typedef struct udp_connection_request
+		{
+			uint64_t connection_id;
+			uint32_t action;
+			uint32_t transaction_id;
+		} ConnectionRequest;
+
+		typedef struct udp_connection_response
+		{
+			uint32_t action;
+			uint32_t transaction_id;
+			uint64_t connection_id;
+		} ConnectionResponse;
+
+		typedef struct udp_announce_request
+		{
+			uint64_t connection_id;
+			uint32_t action;
+			uint32_t transaction_id;
+			uint8_t info_hash [20];
+			uint8_t peer_id [20];
+			uint64_t downloaded;
+			uint64_t left;
+			uint64_t uploaded;
+			uint32_t event;
+			uint32_t ip_address;
+			uint32_t key;
+			uint32_t num_want;
+			uint16_t port;
+		} AnnounceRequest;
+
+		typedef struct udp_announce_response
+		{
+			uint32_t action;
+			uint32_t transaction_id;
+			uint32_t interval;
+			uint32_t leechers;
+			uint32_t seeders;
+
+			uint8_t *peer_list_data;
+		} AnnounceResponse;
+
+		typedef struct udp_scrape_request
+		{
+			uint64_t connection_id;
+			uint32_t action;
+			uint32_t transaction_id;
+
+			uint8_t *torrent_list_data;
+		} ScrapeRequest;
+
+		typedef struct udp_scrape_response
+		{
+			uint32_t action;
+			uint32_t transaction_id;
+
+			uint8_t *data;
+		} ScrapeResponse;
+
 		typedef struct udp_error_response
 		{
 			uint32_t action;
@@ -65,6 +125,11 @@ namespace UDPT
 		UDPTracker (Settings *);
 
         UDPTracker ();
+
+        void setIp(ns3::Ipv4Address addr)
+        {
+            ip = addr;
+        }
 
 		/**
 		 * Starts the Initialized instance.
@@ -93,6 +158,7 @@ namespace UDPT
         virtual void StartApplication(void);
         virtual void StopApplication(void);
 
+        ns3::Ipv4Address ip;
 		//SOCKET sock;
         ns3::Ptr<ns3::Socket> m_socket;
         
@@ -112,6 +178,9 @@ namespace UDPT
 		Settings *o_settings;
         
         void HandleRead (ns3::Ptr<ns3::Socket> socket);
+        
+        bool HandleConnectionRequest (ns3::Ptr<ns3::Socket> socket, const ns3::Address& addr);
+        void HandleNewConnection (ns3::Ptr<ns3::Socket> socket, const ns3::Address& addr);
 
         /*
 #ifdef WIN32
@@ -122,16 +191,16 @@ namespace UDPT
 		static void* _maintainance_start (void *arg);
 #endif*/
 
-		static int resolveRequest (UDPTracker *usi, ns3::Address *remote, ns3::UdpP2PHeader& header);
+		static int resolveRequest (UDPTracker *usi, ns3::Address *remote, uint8_t*, int length);
 
-		static int handleConnection (UDPTracker *usi, ns3::Address *remote, ns3::UdpP2PHeader& header);
-		static int handleAnnounce (UDPTracker *usi, ns3::Address *remote, ns3::UdpP2PHeader& header);
-		static int handleScrape (UDPTracker *usi, ns3::Address *remote, ns3::UdpP2PHeader& header);
+		static int handleConnection (UDPTracker *usi, ns3::Address *remote, uint8_t*);
+		static int handleAnnounce (UDPTracker *usi, ns3::Address *remote, uint8_t*);
+		static int handleScrape (UDPTracker *usi, ns3::Address *remote, uint8_t*, int length);
 
 		static int sendError (UDPTracker *, ns3::Address *remote, uint32_t transId, const string &);
 
     protected:
-        void sendto(ns3::UdpP2PHeader& header, int flags, ns3::Address* remote);
+        void sendto(uint8_t*  header, int size , int flags, ns3::Address* remote);
 	};
 };
 

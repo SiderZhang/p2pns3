@@ -159,7 +159,12 @@ public:
   // TODO:等待完成这一部分
   uint32_t getSize()
   {
-      return -1;
+      return m_size;
+  }
+
+  void setSize(uint32_t size)
+  {
+      this->m_size = size;
   }
 
   void setIsResponse(bool isResponse);
@@ -210,6 +215,8 @@ private:
 
   libtorrent::tracker_request req;
   bool isResponse;
+
+  uint32_t m_size;
 };
 
 } // namespace ns3

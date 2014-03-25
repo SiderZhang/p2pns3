@@ -15,6 +15,7 @@
 #include "ns3/udp-echo-helper.h"
 #include "ns3/simple-net-device.h"
 #include "ns3/simple-channel.h"
+#include "ns3/ipv4-address.h"
 
 namespace ns3 {
 
@@ -22,10 +23,12 @@ namespace ns3 {
     class UdpTrackerHelper
     {
         public:
-            UdpTrackerHelper();
-            ApplicationContainer Install(Ptr<Node> node);
+            UdpTrackerHelper(uint16_t port);
+            ApplicationContainer Install(Ptr<Node> node, ns3::Ipv4Address ip);
 
-            Ptr<Application> InstallPriv(Ptr<Node> node) const;
+            Ptr<Application> InstallPriv(Ptr<Node> node, ns3::Ipv4Address ip) const;
+
+            void SetAttribute(std::string name, const AttributeValue& value);
         private:
             ObjectFactory m_factory;
     };

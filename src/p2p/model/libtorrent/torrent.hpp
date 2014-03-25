@@ -38,6 +38,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <list>
 #include <deque>
+#include <map>
 
 #ifdef _MSC_VER
 #pragma warning(push, 1)
@@ -79,6 +80,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "ns3/ipv4-end-point.h"
+#include "ns3/node.h"
 
 namespace libtorrent
 {
@@ -112,9 +114,9 @@ namespace libtorrent
 	{
 	public:
 
-		torrent(aux::session_impl& ses, ns3::Ipv4EndPoint const& net_interface
+		torrent(aux::session_impl& ses, ns3::Ipv4Address addr, ns3::Ipv4EndPoint const& net_interface
 			, int block_size, int seq, add_torrent_params const& p
-			, sha1_hash const& info_hash);
+			, sha1_hash const& info_hash, ns3::Ptr<ns3::Node> myNode, bool initSeed = false);
 		~torrent();
 
 		sha1_hash const& info_hash() const
@@ -301,6 +303,10 @@ namespace libtorrent
 		ns3::InetSocketAddress get_interface() const;
 		
 		bool connect_to_peer(policy::peer* peerinfo, bool ignore_limit = false);
+
+        std::map<ns3::Ptr<ns3::Socket>, boost::intrusive_ptr<peer_connection> > ccmap;
+
+        void onSockReceive(ns3::Ptr<ns3::Socket> sock);
 
 		void set_ratio(float r)
 		{ TORRENT_ASSERT(r >= 0.0f); m_ratio = r; }
@@ -792,6 +798,8 @@ namespace libtorrent
 
 		void on_tracker_announce();
 
+        void sendData();
+
 		void remove_time_critical_piece(int piece, bool finished = false);
 		void remove_time_critical_pieces(std::vector<int> const& priority);
 		void request_time_critical_pieces();
@@ -850,6 +858,8 @@ namespace libtorrent
 		// kick out these connections when we get incoming
 		// connections (if we've reached the connection limit)
 		int m_num_connecting;
+
+        ns3::Ipv4Address ip;
 
 		// used for tracker announces
 		//deadline_timer m_tracker_timer;
@@ -1212,6 +1222,13 @@ namespace libtorrent
         // 这个是代替连接队列的用于计数的功能
         uint32_t m_ticket_count;
 
+        // 这个节点是否是种子节点
+        bool initSeed;
+
+//        ns3::Ptr<ns3::Socket> m_socket;
+
+//        void ConnectionSucceeded(ns3::Ptr<ns3::Socket> socket);
+//        void ConnectionFailed(ns3::Ptr<ns3::Socket> socket);
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 	public:
 		// set to false until we've loaded resume data
@@ -1219,9 +1236,8 @@ namespace libtorrent
 #endif
 
         // 张惊
-        // TODO: 添加归属节点的指针
         // 这个是所属的节点
-        ns3::Ptr<ns3::Node> node;
+        ns3::Ptr<ns3::Node> m_node;
 
         //////////////////  bandwidth_manager //////////////////////////////
         // 从session那边搬来的

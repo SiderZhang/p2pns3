@@ -71,6 +71,12 @@ Ipv4EndPoint::GetLocalPort (void) const
   NS_LOG_FUNCTION (this);
   return m_localPort;
 }
+void 
+Ipv4EndPoint::SetLocalPort (uint16_t port)
+{
+    m_localPort = port;
+}
+
 Ipv4Address 
 Ipv4EndPoint::GetPeerAddress (void) const
 {

@@ -200,6 +200,7 @@ namespace libtorrent
 			session_impl(
                 ns3::Callback<void> callback,
                 ns3::Ptr<ns3::Node> node,
+                ns3::Ipv4Address ip,
 				std::pair<int, int> listen_port_range
 				, fingerprint const& cl_fprint
 				, char const* listen_interface
@@ -230,11 +231,11 @@ namespace libtorrent
 			// machine, otherwise just an empty endpoint
             ns3::Ipv4EndPoint get_ipv4_interface() const;
 
-			void async_accept(ns3::Ptr<ns3::Socket> const& listener);
-			void on_accept_connection(ns3::Ptr<ns3::Socket> listen_socket);
-			void on_socks_accept(ns3::Ptr<ns3::Socket> const& e);
+//			void async_accept(ns3::Ptr<ns3::Socket> const& listener);
+//			void on_accept_connection(ns3::Ptr<ns3::Socket> listen_socket);
+			//void on_socks_accept(ns3::Ptr<ns3::Socket> const& e);
 
-			void incoming_connection(ns3::Ptr<ns3::Socket> const& s);
+			void incoming_connection(ns3::Ptr<ns3::Socket> const s, const ns3::Address& from);
 		
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 			bool is_network_thread() const
@@ -243,8 +244,8 @@ namespace libtorrent
 			}
 #endif
 
-			boost::weak_ptr<torrent> find_torrent(sha1_hash const& info_hash);
-			boost::weak_ptr<torrent> find_torrent(std::string const& uuid);
+			boost::shared_ptr<torrent> find_torrent(sha1_hash const& info_hash);
+			boost::shared_ptr<torrent> find_torrent(std::string const& uuid);
 
 			peer_id const& get_peer_id() const { return m_peer_id; }
 
@@ -262,6 +263,7 @@ namespace libtorrent
 				, error_code const& ec, int nat_transport);
 
 			bool is_aborted() const { return m_abort; }
+            void setAborted(bool isAbort) {m_abort = isAbort;}
 			//bool is_paused() const { return m_paused; }
 
             // 张惊 关闭暂停/恢复功能
@@ -384,6 +386,8 @@ namespace libtorrent
 				TORRENT_ASSERT(m_disk_queues[channel] > 0);
 				--m_disk_queues[channel];
 			}
+            bool doAcceptConnection(ns3::Ptr<ns3::Socket> sock, const ns3::Address& from);
+            void newAcceptConnection(ns3::Ptr<ns3::Socket> sock, const ns3::Address& from);
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 			bool in_state_updates(boost::shared_ptr<torrent> t)
@@ -455,6 +459,8 @@ namespace libtorrent
 			boost::pool<> m_send_buffers;
 #endif
 
+            ns3::Ipv4Address ip;
+
             // 张惊：这个回调函数在完成初始化的时候调用
             ns3::Callback<void> onInitCallback;
 
@@ -483,7 +489,7 @@ namespace libtorrent
 			// (only outgoing connections)
 			// this has to be one of the last
 			// members to be destructed
-			connection_queue m_half_open;
+			//connection_queue m_half_open;
 
 			// the bandwidth manager is responsible for
 			// handing out bandwidth to connections that
@@ -549,6 +555,8 @@ namespace libtorrent
 			// that we should let the os decide which
 			// interface to listen on
 			ns3::Ipv4EndPoint m_listen_interface;
+
+            listen_socket_t* s;
 
 			// if we're listening on an IPv6 interface
 			// this is one of the non local IPv6 interfaces
@@ -634,7 +642,7 @@ namespace libtorrent
 			bool m_incoming_connection;
 			
 			//void on_disk_queue();
-			void on_tick(error_code const& e);
+			void on_tick();
 
 			void auto_manage_torrents(std::vector<torrent*>& list
 				, int& dht_limit, int& tracker_limit

@@ -34,6 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/tracker_manager.hpp"
 #include "ns3/ipv4-end-point.h"
 #include "ns3/udp_tracker_connection.hpp"
+#include "ns3/log.h"
 
 #include <vector>
 #include <cctype>
@@ -44,6 +45,8 @@ using boost::tuples::make_tuple;
 using boost::tuples::tuple;
 using boost::bind;
 using namespace ns3;
+
+NS_LOG_COMPONENT_DEFINE ("TrackerManager");
 
 namespace
 {
@@ -130,16 +133,18 @@ namespace libtorrent
 		tracker_manager& man
 		, tracker_request const& req
 	//	, io_service& ios
-		, boost::weak_ptr<request_callback> r)
+		, boost::shared_ptr<request_callback> r)
 		: //timeout_handler(ios)
 		m_requester(r)
 		, m_man(man)
 		, m_req(req)
-	{}
+	{
+    }
 
 	boost::shared_ptr<request_callback> tracker_connection::requester()
 	{
-		return m_requester.lock();
+        return m_requester;
+		//return m_requester.lock();
 	}
 
 	void tracker_connection::fail(int code, char const* msg, int interval, int min_interval)
@@ -206,10 +211,12 @@ namespace libtorrent
 	void tracker_manager::queue_request(
 		/*io_service& ios
 		, connection_queue& cc
-		,*/ tracker_request req
+		,*/ns3::Ptr<ns3::Node> node
+        , tracker_request req
 		, std::string const& auth
-		, boost::weak_ptr<request_callback> c)
+		, boost::shared_ptr<request_callback> c)
 	{
+        NS_LOG_IP_FUNCTION(ip,this);
 		//mutex_t::scoped_lock l(m_mutex);
 		TORRENT_ASSERT(req.num_want >= 0);
 		TORRENT_ASSERT(!m_abort);
@@ -218,8 +225,8 @@ namespace libtorrent
 			req.num_want = 0;
 
 		TORRENT_ASSERT(!m_abort || req.event == tracker_request::stopped);
-		if (m_abort && req.event != tracker_request::stopped)
-			return;
+		//if (m_abort && req.event != tracker_request::stopped)
+		//	return;
 
 		std::string protocol = req.url.substr(0, req.url.find(':'));
 
@@ -238,7 +245,7 @@ namespace libtorrent
 		else*/ if (protocol == "udp")
 		{
 			con = new udp_tracker_connection(
-				/*ios, cc,*/ *this, req , c/*, m_ses
+				/*ios, cc,*/ *this, req , c, node, ip/*, m_ses
 				, m_proxy*/);
 		}
 		else

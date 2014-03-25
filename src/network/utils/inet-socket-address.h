@@ -106,9 +106,13 @@ public:
    * Address
    */
   static InetSocketAddress ConvertFrom (const Address &address);
-private:
   Address ConvertTo (void) const;
 
+  void setIp(Ipv4Address ip)
+  {
+      m_ipv4 = ip;
+  }
+private:
   static uint8_t GetType (void);
   Ipv4Address m_ipv4;
   uint16_t m_port;

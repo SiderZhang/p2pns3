@@ -265,7 +265,9 @@ namespace UDPT
 
 			// create table.
 			r = sqlite3_exec(this->db, sql.c_str(), NULL, NULL, &err_msg);
-			printf("E:%s\n", err_msg);
+
+            if (err_msg != NULL)
+                printf("E:%s\n", err_msg);
 
 			return (r == SQLITE_OK);
 		}

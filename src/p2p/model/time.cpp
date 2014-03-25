@@ -38,6 +38,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/config.hpp"
 #include "libtorrent/time.hpp"
 
+#include "ns3/simulator.h"
+
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -94,16 +96,16 @@ namespace libtorrent
 namespace libtorrent
 {
 	ptime time_now_hires()
-	{ return boost::date_time::microsec_clock<ptime>::universal_time(); }
+	{ return ns3::Schedule::Now();//boost::date_time::microsec_clock<ptime>::universal_time(); }
 	ptime min_time()
 	{ return boost::posix_time::ptime(boost::posix_time::min_date_time); }
 	ptime max_time()
 	{ return boost::posix_time::ptime(boost::posix_time::max_date_time); }
-	time_duration seconds(int s) { return boost::posix_time::seconds(s); }
-	time_duration milliseconds(int s) { return boost::posix_time::milliseconds(s); }
-	time_duration microsec(int s) { return boost::posix_time::microsec(s); }
-	time_duration minutes(int s) { return boost::posix_time::minutes(s); }
-	time_duration hours(int s) { return boost::posix_time::hours(s); }
+//	time_duration seconds(int s) { return ; }
+//	time_duration milliseconds(int s) { return boost::posix_time::milliseconds(s); }
+//	time_duration microsec(int s) { return boost::posix_time::microsec(s); }
+//	time_duration minutes(int s) { return boost::posix_time::minutes(s); }
+//	time_duration hours(int s) { return boost::posix_time::hours(s); }
 
 	int total_seconds(time_duration td)
 	{ return td.total_seconds(); }
@@ -131,17 +133,18 @@ namespace libtorrent
 
 namespace libtorrent
 {
-	ptime time_now_hires()
-	{
-		static mach_timebase_info_data_t timebase_info = {0,0};
-		if (timebase_info.denom == 0)
-			mach_timebase_info(&timebase_info);
-		boost::uint64_t at = mach_absolute_time();
-		// make sure we don't overflow
-		TORRENT_ASSERT((at >= at / 1000 * timebase_info.numer / timebase_info.denom)
-			|| (at < 0 && at < at / 1000 * timebase_info.numer / timebase_info.denom));
-		return ptime(at / 1000 * timebase_info.numer / timebase_info.denom);
-	}
+//	ptime time_now_hires()
+//	{
+//        return ns3::Schedule::Now();
+//	//	static mach_timebase_info_data_t timebase_info = {0,0};
+//	//	if (timebase_info.denom == 0)
+//	//		mach_timebase_info(&timebase_info);
+//	//	boost::uint64_t at = mach_absolute_time();
+//	//	// make sure we don't overflow
+//	//	TORRENT_ASSERT((at >= at / 1000 * timebase_info.numer / timebase_info.denom)
+//	//		|| (at < 0 && at < at / 1000 * timebase_info.numer / timebase_info.denom));
+//	//	return ptime(at / 1000 * timebase_info.numer / timebase_info.denom);
+//	}
 }
 #elif defined TORRENT_USE_QUERY_PERFORMANCE_TIMER
 
@@ -183,13 +186,13 @@ namespace libtorrent
 			return (ms / 1000) * performace_counter_frequency.QuadPart / 1000;
 		}
 	}
-
-	ptime time_now_hires()
-	{
-		LARGE_INTEGER now;
-		QueryPerformanceCounter(&now);
-		return ptime(now.QuadPart);
-	}
+//
+//	ptime time_now_hires()
+//	{
+//		LARGE_INTEGER now;
+//		QueryPerformanceCounter(&now);
+//		return ptime(now.QuadPart);
+//	}
 }
 
 #elif defined TORRENT_USE_CLOCK_GETTIME
@@ -201,9 +204,7 @@ namespace libtorrent
 {
 	ptime time_now_hires()
 	{
-		timespec ts;
-		clock_gettime(CLOCK_MONOTONIC, &ts);
-		return ptime(boost::uint64_t(ts.tv_sec) * 1000000 + ts.tv_nsec / 1000);
+        return ptime(ns3::Simulator::Now());
 	}
 }
 
@@ -213,8 +214,8 @@ namespace libtorrent
 
 namespace libtorrent
 {
-	ptime time_now_hires()
-	{ return ptime(system_time()); }
+//	ptime time_now_hires()
+//	{ return ptime(system_time()); }
 }
 
 #endif // TORRENT_USE_SYSTEM_TIME

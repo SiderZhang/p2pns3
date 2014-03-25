@@ -84,7 +84,7 @@ namespace libtorrent
 		// other end has the correct id
 		bt_peer_connection(
 			aux::session_impl& ses
-			, boost::weak_ptr<torrent> t
+			, boost::shared_ptr<torrent> t
             , ns3::Ptr<ns3::Socket> s
             , ns3::Ipv4EndPoint const& remote
 			, policy::peer* peerinfo

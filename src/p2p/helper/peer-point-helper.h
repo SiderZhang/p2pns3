@@ -17,8 +17,8 @@
  *
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
-#ifndef UDP_ECHO_HELPER_H
-#define UDP_ECHO_HELPER_H
+#ifndef PEER_POINT_HELPER_H 
+#define PEER_POINT_HELPER_H
 
 #include <stdint.h>
 #include "ns3/application-container.h"
@@ -42,7 +42,7 @@ public:
    *
    * \param port The port the server will wait on for incoming packets
    */
-  PeerPointHelper ();
+  PeerPointHelper (Ipv4Address address, uint16_t port);
 
   /**
    * Create a UdpEchoServerApplication on the specified Node.
@@ -52,7 +52,7 @@ public:
    *
    * \returns An ApplicationContainer holding the Application created,
    */
-  ApplicationContainer Install (Ptr<Node> node) const;
+  ApplicationContainer Install (Ptr<Node> node, Ipv4Address& addr, bool init_seed = false) const;
 
   /**
    * Create a UdpEchoServerApplication on specified node
@@ -63,7 +63,7 @@ public:
    *
    * \returns An ApplicationContainer holding the Application created.
    */
-  ApplicationContainer Install (std::string nodeName) const;
+  ApplicationContainer Install (std::string nodeName, Ipv4Address& address, bool init_seed = false) const;
 
   /**
    * \param c The nodes on which to create the Applications.  The nodes
@@ -75,13 +75,14 @@ public:
    * \returns The applications created, one Application per Node in the 
    *          NodeContainer.
    */
-  ApplicationContainer Install (NodeContainer c) const;
+  ApplicationContainer Install (NodeContainer c, Ipv4Address& adrress, bool init_seed = false) const;
 
+  void SetAttribute (std::string name, const AttributeValue &value);
 private:
   /**
    * \internal
    */
-  Ptr<Application> InstallPriv (Ptr<Node> node) const;
+  Ptr<Application> InstallPriv (Ptr<Node> node, Ipv4Address&, bool init_seed = false) const;
 
   ObjectFactory m_factory;
 };

@@ -41,7 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 //#include "routing_table.hpp"
 //#include "rpc_manager.hpp"
 #include "node_id.hpp"
-#include "ptime.hpp"
+#include "libtorrent/ptime.hpp"
 //#include "msg.hpp"
 //#include "find_data.hpp"
 

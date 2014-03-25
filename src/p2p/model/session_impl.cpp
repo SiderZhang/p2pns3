@@ -483,6 +483,7 @@ namespace aux {
 	session_impl::session_impl(
         ns3::Callback<void> callback,
         ns3::Ptr<ns3::Node> node,
+        ns3::Ipv4Address addr,
 		std::pair<int, int> listen_port_range
 		, fingerprint const& cl_fprint
 		, char const* listen_interface
@@ -507,10 +508,10 @@ namespace aux {
 #else
 		, m_upload_rate(peer_connection::upload_channel)
 #endif
-		, m_tracker_manager(*this)
+		, m_tracker_manager(*this, addr)
 		, m_key(0)
 		, m_listen_port_retries(listen_port_range.second - listen_port_range.first)
-		//, m_abort(false)
+		, m_abort(false)
 		//, m_paused(false)
 		, m_allowed_upload_slots(8)
 		, m_num_unchoked(0)
@@ -550,8 +551,9 @@ namespace aux {
 		, m_network_thread(0)
 #endif
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(addr, this);
 
+        ip = addr;
         m_node = node;
 		memset(m_redundant_bytes, 0, sizeof(m_redundant_bytes));
         // TODO: 注意转换为NS3的版本
@@ -639,32 +641,32 @@ namespace aux {
 
 		// the least significant byte is the major version
 		// and the most significant one is the minor version
-		if (windows_version >= 0x060100)
-		{
-			// windows 7 and up doesn't have a half-open limit
-			m_half_open.limit(0);
-		}
-		else if (windows_version >= 0x060002)
-		{
-			// on vista SP 2 and up, there's no limit
-			m_half_open.limit(0);
-		}
-		else if (windows_version >= 0x060000)
-		{
-			// on vista the limit is 5 (in home edition)
-			m_half_open.limit(4);
-		}
-		else if (windows_version >= 0x050102)
-		{
-			// on XP SP2 the limit is 10	
-			m_half_open.limit(9);
-		}
-		else
-		{
-			// before XP SP2, there was no limit
-			m_half_open.limit(0);
-		}
-		m_settings.half_open_limit = m_half_open.limit();
+//		if (windows_version >= 0x060100)
+//		{
+//			// windows 7 and up doesn't have a half-open limit
+//			m_half_open.limit(0);
+//		}
+//		else if (windows_version >= 0x060002)
+//		{
+//			// on vista SP 2 and up, there's no limit
+//			m_half_open.limit(0);
+//		}
+//		else if (windows_version >= 0x060000)
+//		{
+//			// on vista the limit is 5 (in home edition)
+//			m_half_open.limit(4);
+//		}
+//		else if (windows_version >= 0x050102)
+//		{
+//			// on XP SP2 the limit is 10	
+//			m_half_open.limit(9);
+//		}
+//		else
+//		{
+//			// before XP SP2, there was no limit
+//			m_half_open.limit(0);
+//		}
+//		m_settings.half_open_limit = m_half_open.limit();
 #endif
 
 		m_bandwidth_channel[peer_connection::download_channel] = &m_download_channel;
@@ -1138,11 +1140,12 @@ namespace aux {
 #endif
         this->main_thread();
 		//m_thread.reset(new thread(boost::bind(&session_impl::main_thread, this)));
+        NS_LOG_INFO("start over");
 	}
 
 	void session_impl::init()
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 #if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
 		(*m_logger) << time_now_string() << " *** session thread init\n";
 #endif
@@ -1276,7 +1279,7 @@ namespace aux {
 #if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
 		(*m_logger) << time_now_string() << " aborting all connections (" << m_connections.size() << ")\n";
 #endif
-		m_half_open.close();
+		//m_half_open.close();
 
 #if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
 		(*m_logger) << time_now_string() << " connection queue: " << m_half_open.size() << "\n";
@@ -1499,63 +1502,81 @@ namespace aux {
 		return m_ipv4_interface;
 	}
 
+    bool session_impl::doAcceptConnection(ns3::Ptr<ns3::Socket> sock, const ns3::Address& from)
+    {
+        NS_LOG_IP_FUNCTION(ip, this);
+        return true;
+    }
+
+    void session_impl::newAcceptConnection(ns3::Ptr<ns3::Socket> sock, const ns3::Address& from)
+    {
+        NS_LOG_IP_FUNCTION(ip, this);
+    }
+
 	void session_impl::setup_listener(listen_socket_t* s, ns3::Ipv4EndPoint addr
             , int& retries, bool v6_only, int flags, error_code& ec)
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		// SO_REUSEADDR on windows is a bit special. It actually allows
 		// two active sockets to bind to the same port. That means we
 		// may end up binding to the same socket as some other random
 		// application. Don't do it!
 
-        Address add = addr.GetPeerAddress().ConvertTo();
+        InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), 6538);
+       // Address add = addr.GetPeerAddress().ConvertTo();
         TypeId tid = TypeId::LookupByName ("ns3::TcpSocketFactory");
         s->sock = Socket::CreateSocket (GetNode (), tid);
         if (s->sock == NULL)
-            NS_LOG_ERROR("asd");
-		s->sock->Bind(add);
-		while (ec && retries > 0)
-		{
-			ec.clear();
-			TORRENT_ASSERT_VAL(!ec, ec);
-			--retries;
-			addr.SetPeer(addr.GetPeerAddress() ,addr.GetPeerPort() + 1);
-			s->sock->Bind(addr.GetPeerAddress().ConvertTo());
-		}
-		if (ec)
-		{
-			// not even that worked, give up
-            NS_LOG_ERROR("cannot bind to interface ");
-			return;
-		}
-		s->external_port = addr.GetPeerPort();
-		if (!ec) 
-        {
-            //s->sock->listen(m_settings.listen_queue_size, ec);
-            s->sock->Listen();
-            NS_LOG_INFO("socket start to listen");
-        }
-		if (ec)
-		{
-			NS_LOG_ERROR("cannot listen on interface");
-			return;
-		}
+            NS_LOG_ERROR("failed to create socket");
+		s->sock->Bind(local);
 
-		// if we asked the system to listen on port 0, which
-		// socket did it end up choosing?
-		//if (ep.port() == 0)
-		//	ep.port(s->sock->local_endpoint(ec).port());
-
-        std::ostringstream ostr;
-		ostr << time_now_string() << " listening on: " << addr.GetPeerAddress().Get()
-			<< " external port: " << s->external_port << "\n";
-        const char* msg = ostr.str().c_str();
-        NS_LOG_INFO(msg);
+        s->sock->Listen();
+        s->sock->SetAcceptCallback(MakeCallback(&session_impl::doAcceptConnection, this),
+                MakeCallback(&session_impl::incoming_connection, this));
+        //s->sock->SetRecvCallback(MakeCallback (&session_impl::on_accept_connection, this));
+//		while (ec && retries > 0)
+//		{
+//			ec.clear();
+//			TORRENT_ASSERT_VAL(!ec, ec);
+//			--retries;
+//			addr.SetPeer(addr.GetPeerAddress() ,addr.GetPeerPort() + 1);
+//            NS_LOG_INFO("listen address is " << addr.GetPeerAddress() << ", port is "<< addr.GetPeerPort());
+//			s->sock->Bind(addr.GetPeerAddress().ConvertTo());
+//		}
+//		if (ec)
+//		{
+//			// not even that worked, give up
+//            NS_LOG_ERROR("cannot bind to interface ");
+//			return;
+//		}
+//		s->external_port = addr.GetPeerPort();
+//		if (!ec) 
+//        {
+//            //s->sock->listen(m_settings.listen_queue_size, ec);
+////            s->sock->Listen();
+//            NS_LOG_INFO("socket start to listen");
+//        }
+//		if (ec)
+//		{
+//			NS_LOG_ERROR("cannot listen on interface");
+//			return;
+//		}
+//
+//		// if we asked the system to listen on port 0, which
+//		// socket did it end up choosing?
+//		//if (ep.port() == 0)
+//		//	ep.port(s->sock->local_endpoint(ec).port());
+//
+//        std::ostringstream ostr;
+//		ostr << time_now_string() << " listening on: " << addr.GetPeerAddress().Get()
+//			<< " external port: " << s->external_port << "\n";
+//        const char* msg = ostr.str().c_str();
+//        NS_LOG_INFO(msg);
 	}
 	
 	void session_impl::open_listen_port(int flags, error_code& ec)
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 
 		//TORRENT_ASSERT(!m_abort);
 retry:
@@ -1580,16 +1601,18 @@ retry:
 		// we should only open a single listen socket, that
 		// binds to the given interface
 
-		listen_socket_t s;
-		setup_listener(&s, m_listen_interface, m_listen_port_retries, false, flags, ec);
+		//listen_socket_t* s = new listen_socket_t();
+        s = new listen_socket_t();
+		setup_listener(s, m_listen_interface, m_listen_port_retries, false, flags, ec);
 
-		if (s.sock)
-		{
-			//TORRENT_ASSERT(!m_abort);
-			m_listen_sockets.push_back(s);
+	//	if (s.sock)
+	//	{
+    //        NS_LOG_INFO("add socket into listen list");
+	//		//TORRENT_ASSERT(!m_abort);
+	//		m_listen_sockets.push_back(s);
 
-			m_ipv4_interface = m_listen_interface;
-		}
+	//		m_ipv4_interface = m_listen_interface;
+	//	}
 
         // TODO: 注意转换为NS3的版本
 		//m_udp_socket.bind(udp::endpoint(m_listen_interface.address(), m_listen_interface.GetPeerPort()), ec);
@@ -1626,9 +1649,9 @@ retry:
 		ec.clear();
 
 		// initiate accepting on the listen sockets
-		for (std::list<listen_socket_t>::iterator i = m_listen_sockets.begin()
-			, end(m_listen_sockets.end()); i != end; ++i)
-			async_accept(i->sock);
+	//	for (std::list<listen_socket_t>::iterator i = m_listen_sockets.begin()
+	//		, end(m_listen_sockets.end()); i != end; ++i)
+	//		async_accept(i->sock);
 
 		//open_new_incoming_socks_connection();
 
@@ -1673,7 +1696,7 @@ retry:
 //			, *m_socks_listen_socket);
 //		TORRENT_ASSERT_VAL(ret, ret);
 //
-//        NS_LOG_FUNCTION(this);
+//        NS_LOG_IP_FUNCTION(ip,this);
 //
 //		socks5_stream& s = *m_socks_listen_socket->get<socks5_stream>();
 //		s.set_command(2); // 2 means BIND (as opposed to CONNECT)
@@ -1740,33 +1763,34 @@ retry:
 		}
 	}
 
-    void session_impl::async_accept(ns3::Ptr<ns3::Socket> const& listener)
+//    void session_impl::async_accept(ns3::Ptr<ns3::Socket> const& listener)
+//	{
+//        NS_LOG_IP_FUNCTION(ip,this);
+//        listener->SetRecvCallback(MakeCallback (&session_impl::on_accept_connection, this));
+//		//listener->async_accept(*str
+//		//	, boost::bind(&session_impl::on_accept_connection, this, c
+//		//	, boost::weak_ptr<socket_acceptor>(listener), _1, ssl));
+//	}
+
+//	void session_impl::on_accept_connection(ns3::Ptr<ns3::Socket> listen_socket)
+//	{
+//        NS_LOG_IP_FUNCTION(ip,this);
+//		TORRENT_ASSERT(is_network_thread());
+//
+//		async_accept(listen_socket);
+//
+//		incoming_connection(listen_socket);
+//	}
+
+	void session_impl::incoming_connection(ns3::Ptr<ns3::Socket> const s, const Address& from)
 	{
-        NS_LOG_FUNCTION(this);
-        listener->SetRecvCallback(MakeCallback (&session_impl::on_accept_connection, this));
-		//listener->async_accept(*str
-		//	, boost::bind(&session_impl::on_accept_connection, this, c
-		//	, boost::weak_ptr<socket_acceptor>(listener), _1, ssl));
-	}
-
-	void session_impl::on_accept_connection(ns3::Ptr<ns3::Socket> listen_socket)
-	{
-        NS_LOG_FUNCTION(this);
-		NS_LOG_INFO("session_impl::on_accept_connection");
-		TORRENT_ASSERT(is_network_thread());
-
-		async_accept(listen_socket);
-
-		incoming_connection(listen_socket);
-	}
-
-	void session_impl::incoming_connection(ns3::Ptr<ns3::Socket> const& s)
-	{
+        NS_LOG_IP_FUNCTION(ip,this);
 		TORRENT_ASSERT(is_network_thread());
 
 		error_code ec;
 		// we got a connection request!
-		ns3::Ipv4EndPoint* endp = s->GetIpv4EndPoint();
+        InetSocketAddress addr = InetSocketAddress::ConvertFrom(from);
+		ns3::Ipv4EndPoint endp(addr.GetIpv4(), addr.GetPort());
 
 		// local addresses do not count, since it's likely
 		// coming from our own client through local service discovery
@@ -1820,7 +1844,7 @@ retry:
 		//setup_socket_buffers(*s);
 
 		boost::intrusive_ptr<peer_connection> c(
-			new bt_peer_connection(*this, s, *endp, 0));
+			new bt_peer_connection(*this, s, endp, 0));
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 		c->m_in_constructor = false;
 #endif
@@ -1850,16 +1874,16 @@ retry:
 			s.set_option(option, ec);
 		}
 	}*/
-
-	void session_impl::on_socks_accept(ns3::Ptr<ns3::Socket> const& s)
-	{
-#if defined TORRENT_ASIO_DEBUGGING
-		complete_async("session_impl::on_socks_accept");
-#endif
-		//m_socks_listen_socket.reset();
-		//open_new_incoming_socks_connection();
-		incoming_connection(s);
-	}
+//
+//	void session_impl::on_socks_accept(ns3::Ptr<ns3::Socket> const& s)
+//	{
+//#if defined TORRENT_ASIO_DEBUGGING
+//		complete_async("session_impl::on_socks_accept");
+//#endif
+//		//m_socks_listen_socket.reset();
+//		//open_new_incoming_socks_connection();
+//		incoming_connection(s);
+//	}
 
 	void session_impl::close_connection(peer_connection const* p
 		, error_code const& ec)
@@ -1906,7 +1930,7 @@ retry:
 	void session_impl::unchoke_peer(peer_connection& c)
 	{
 		TORRENT_ASSERT(!c.ignore_unchoke_slots());
-		torrent* t = c.associated_torrent().lock().get();
+		torrent* t = c.associated_torrent().get();
 		TORRENT_ASSERT(t);
 		if (t->unchoke_peer(c))
 			++m_num_unchoked;
@@ -1915,7 +1939,7 @@ retry:
 	void session_impl::choke_peer(peer_connection& c)
 	{
 		TORRENT_ASSERT(!c.ignore_unchoke_slots());
-		torrent* t = c.associated_torrent().lock().get();
+		torrent* t = c.associated_torrent().get();
 		TORRENT_ASSERT(t);
 		if (t->choke_peer(c))
 			--m_num_unchoked;
@@ -1983,7 +2007,7 @@ retry:
 		g_current_time = time_now_hires();//ns3::Schedule::Now();
 	}
 
-	void session_impl::on_tick(error_code const& e)
+	void session_impl::on_tick()
 	{
 #ifdef TORRENT_STATS
 		++m_num_messages[on_tick_counter];
@@ -2007,17 +2031,17 @@ retry:
 #endif
 			return;
 		}*/
-
-		if (e == asio::error::operation_aborted) return;
-
-		if (e)
-		{
-#if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
-			(*m_logger) << "*** TICK TIMER FAILED " << e.message() << "\n";
-#endif
-			::abort();
-			return;
-		}
+//
+//		if (e == asio::error::operation_aborted) return;
+//
+//		if (e)
+//		{
+//#if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
+//			(*m_logger) << "*** TICK TIMER FAILED " << e.message() << "\n";
+//#endif
+//			::abort();
+//			return;
+//		}
 
 #if defined TORRENT_ASIO_DEBUGGING
 		add_outstanding_async("session_impl::on_tick");
@@ -2025,9 +2049,16 @@ retry:
 		error_code ec;
 		//m_timer.expires_at(now + milliseconds(m_settings.tick_interval), ec);
 		//m_timer.async_wait(bind(&session_impl::on_tick, this, _1));
-        ptime interv = now + milliseconds(m_settings.tick_interval);
-        ns3::Time time = boostTimeConvert(interv);
-        timerId = Simulator::Schedule(time, &session_impl::on_tick, this, ec);
+        
+        //ptime interv = now + milliseconds(m_settings.tick_interval);
+
+        //ns3::Time time = boostTimeConvert(interv);
+        //NS_LOG_INFO("interval is: " << time);
+        //
+        if (!is_aborted())
+        {
+            timerId = Simulator::Schedule(Time::FromInteger(1, Time::S), &session_impl::on_tick, this);
+        }
 
 		m_download_rate.update_quotas(now - m_last_tick);
 		m_upload_rate.update_quotas(now - m_last_tick);
@@ -2042,7 +2073,7 @@ retry:
         {
             return;
         }
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 
 		int tick_interval_ms = total_milliseconds(now - m_last_second_tick);
 		m_last_second_tick = now;
@@ -2130,7 +2161,6 @@ retry:
 				break;
 		}
 
-        NS_LOG_INFO("Sec 2");
 		// --------------------------------------------------------------
 		// auto managed torrent
 		// --------------------------------------------------------------
@@ -2152,7 +2182,7 @@ retry:
 			++i;
 			// ignore connections that already have a torrent, since they
 			// are ticked through the torrents' second_tick
-			if (!p->associated_torrent().expired()) continue;
+			if (p->associated_torrent().use_count() != 0) continue;
 			if (m_last_tick - p->connected_time() > seconds(m_settings.handshake_timeout))
 				p->disconnect(errors::timed_out);
 		}
@@ -2177,8 +2207,6 @@ retry:
 
 		int num_checking = 0;
 		int num_queued = 0;
-        NS_LOG_INFO("size for torrent map");
-        NS_LOG_INFO(m_torrents.size());
 		for (torrent_map::iterator i = m_torrents.begin();
 			i != m_torrents.end();)
 		{
@@ -2268,7 +2296,6 @@ retry:
 			}
 		}
 
-        NS_LOG_INFO("Sec 3");
 		// --------------------------------------------------------------
 		// refresh explicit disk read cache
 		// --------------------------------------------------------------
@@ -2316,7 +2343,7 @@ retry:
 		// round robin fashion, so that every torrent is
 		// equally likely to connect to a peer
 
-		int free_slots = m_half_open.free_slots();
+		//int free_slots = m_half_open.free_slots();
 		int max_connections = m_settings.connection_speed;
 		// boost connections are connections made by torrent connection
 		// boost, which are done immediately on a tracker response. These
@@ -2338,12 +2365,13 @@ retry:
 		// this logic is here to smooth out the number of new connection
 		// attempts over time, to prevent connecting a large number of
 		// sockets, wait 10 seconds, and then try again
-		int limit = (std::min)(m_settings.connections_limit - num_connections(), free_slots);
+		//int limit = (std::min)(m_settings.connections_limit - num_connections(), free_slots);
+        int limit = m_settings.connections_limit;
 		if (m_settings.smooth_connects && max_connections > (limit+1) / 2)
 			max_connections = (limit+1) / 2;
 
 		if (!m_torrents.empty()
-			&& free_slots > -m_half_open.limit()
+			//&& free_slots > -m_half_open.limit()
 			&& num_connections() < m_settings.connections_limit
 			//&& !m_abort
 			&& m_settings.connection_speed > 0
@@ -2383,7 +2411,7 @@ retry:
 							if (t.try_connect_peer())
 							{
 								--max_connections;
-								--free_slots;
+								//--free_slots;
 								steps_since_last_connect = 0;
 #ifdef TORRENT_STATS
 								++m_connection_attempts;
@@ -2399,7 +2427,7 @@ retry:
 							if (m_settings.connections_limit < 2) m_settings.connections_limit = 2;
 						}
 						if (!t.want_more_peers()) break;
-						if (free_slots <= -m_half_open.limit()) break;
+						//if (free_slots <= -m_half_open.limit()) break;
 						if (max_connections == 0) break;
 						if (num_connections() >= m_settings.connections_limit) break;
 					}
@@ -2414,7 +2442,7 @@ retry:
 				// handing out a single connection, break
 				if (steps_since_last_connect > num_torrents + 1) break;
 				// if there are no more free connection slots, abort
-				if (free_slots <= -m_half_open.limit()) break;
+				//if (free_slots <= -m_half_open.limit()) break;
 				// if we should not make any more connections
 				// attempts this tick, abort
 				if (max_connections == 0) break;
@@ -2423,7 +2451,6 @@ retry:
 			}
 		}
 
-        NS_LOG_INFO("Sec 4");
 		// --------------------------------------------------------------
 		// unchoke set calculations
 		// --------------------------------------------------------------
@@ -3132,7 +3159,7 @@ retry:
 			policy::peer* pi = p->peer_info_struct();
 			if (!pi) continue;
 			if (pi->web_seed) continue;
-			torrent* t = p->associated_torrent().lock().get();
+			torrent* t = p->associated_torrent().get();
 			if (!t) continue;
 
 			if (pi->optimistically_unchoked)
@@ -3179,7 +3206,7 @@ retry:
 				--num_opt_unchoke;
 				if (!pi->optimistically_unchoked)
 				{
-					torrent* t = pi->connection->associated_torrent().lock().get();
+					torrent* t = pi->connection->associated_torrent().get();
 					bool ret = t->unchoke_peer(*pi->connection, true);
 					if (ret)
 					{
@@ -3198,7 +3225,7 @@ retry:
 			{
 				if (pi->optimistically_unchoked)
 				{
-					torrent* t = pi->connection->associated_torrent().lock().get();
+					torrent* t = pi->connection->associated_torrent().get();
 					pi->optimistically_unchoked = false;
 					t->choke_peer(*pi->connection);
 					--m_num_unchoked;
@@ -3226,7 +3253,7 @@ retry:
 			boost::intrusive_ptr<peer_connection> p = *i;
 			TORRENT_ASSERT(p);
 			++i;
-			torrent* t = p->associated_torrent().lock().get();
+			torrent* t = p->associated_torrent().get();
 			policy::peer* pi = p->peer_info_struct();
 
 			if (p->ignore_unchoke_slots() || t == 0 || pi == 0 || pi->web_seed)
@@ -3285,9 +3312,9 @@ retry:
 //			{
 //				if (prev != end)
 //				{
-//					boost::shared_ptr<torrent> t1 = (*prev)->associated_torrent().lock();
+//					boost::shared_ptr<torrent> t1 = (*prev)->associated_torrent();
 //					TORRENT_ASSERT(t1);
-//					boost::shared_ptr<torrent> t2 = (*i)->associated_torrent().lock();
+//					boost::shared_ptr<torrent> t2 = (*i)->associated_torrent();
 //					TORRENT_ASSERT(t2);
 //					TORRENT_ASSERT((*prev)->uploaded_in_last_round() * 1000
 //						* (1 + t1->priority()) / total_milliseconds(unchoke_interval)
@@ -3396,7 +3423,7 @@ retry:
 			// #error this should be called for all peers!
 			p->reset_choke_counters();
 
-			torrent* t = p->associated_torrent().lock().get();
+			torrent* t = p->associated_torrent().get();
 			TORRENT_ASSERT(t);
 
 			// if this peer should be unchoked depends on different things
@@ -3450,7 +3477,7 @@ retry:
 
 	void session_impl::main_thread()
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 #if (defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS) && defined BOOST_HAS_PTHREADS
 		m_network_thread = pthread_self();
 #endif
@@ -3458,27 +3485,28 @@ retry:
 
 		// initialize async operations
 		init();
+		m_torrents.clear();
         onInitCallback();
 
-		bool stop_loop = false;
-		while (!stop_loop)
-		{
-			error_code ec;
-            on_tick(ec);
-			//m_io_service.run(ec);
-			if (ec)
-			{
-#ifdef TORRENT_DEBUG
-				fprintf(stderr, "%s\n", ec.message().c_str());
-				std::string err = ec.message();
-#endif
-				TORRENT_ASSERT(false);
-			}
-			//m_io_service.reset();
-
-			//stop_loop = m_abort;
-		}
-        std::cout<<"asd"<<std::endl;
+        on_tick();
+//		bool stop_loop = false;
+//		while (!stop_loop)
+//		{
+//			error_code ec;
+//			//m_io_service.run(ec);
+//			if (ec)
+//			{
+//#ifdef TORRENT_DEBUG
+//				fprintf(stderr, "%s\n", ec.message().c_str());
+//				std::string err = ec.message();
+//#endif
+//				TORRENT_ASSERT(false);
+//			}
+//			//m_io_service.reset();
+//
+//			//stop_loop = m_abort;
+//		}
+//        std::cout<<"asd"<<std::endl;
 
 #if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
 		(*m_logger) << time_now_string() << " locking mutex\n";
@@ -3487,7 +3515,6 @@ retry:
 #if defined(TORRENT_VERBOSE_LOGGING) || defined(TORRENT_LOGGING)
 		(*m_logger) << time_now_string() << " cleaning up torrents\n";
 #endif
-		m_torrents.clear();
 
 		TORRENT_ASSERT(m_torrents.empty());
 		TORRENT_ASSERT(m_connections.empty());
@@ -3500,7 +3527,7 @@ retry:
 
 	// the return value from this function is valid only as long as the
 	// session is locked!
-	boost::weak_ptr<torrent> session_impl::find_torrent(sha1_hash const& info_hash)
+	boost::shared_ptr<torrent> session_impl::find_torrent(sha1_hash const& info_hash)
 	{
 		TORRENT_ASSERT(is_network_thread());
 
@@ -3514,17 +3541,17 @@ retry:
 		}
 #endif
 		if (i != m_torrents.end()) return i->second;
-		return boost::weak_ptr<torrent>();
+		return boost::shared_ptr<torrent>();
 	}
 
-	boost::weak_ptr<torrent> session_impl::find_torrent(std::string const& uuid)
+	boost::shared_ptr<torrent> session_impl::find_torrent(std::string const& uuid)
 	{
 		TORRENT_ASSERT(is_network_thread());
 
 		std::map<std::string, boost::shared_ptr<torrent> >::iterator i
 			= m_uuids.find(uuid);
 		if (i != m_uuids.end()) return i->second;
-		return boost::weak_ptr<torrent>();
+		return boost::shared_ptr<torrent>();
 	}
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
@@ -3622,7 +3649,7 @@ retry:
 	torrent_handle session_impl::add_torrent(add_torrent_params const& p
 		, error_code& ec)
 	{
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		TORRENT_ASSERT(!p.save_path.empty());
 
 		add_torrent_params params = p;
@@ -3644,7 +3671,7 @@ retry:
 
 		if (is_aborted())
 		{
-            NS_LOG_INFO("session is abort");
+            NS_LOG_ERROR("session is abort");
 			ec = errors::session_is_closing;
 			return torrent_handle();
 		}
@@ -3666,8 +3693,8 @@ retry:
 		else ih = &params.info_hash;
 
 		// is the torrent already active?
-		boost::shared_ptr<torrent> torrent_ptr = find_torrent(*ih).lock();
-		if (!torrent_ptr && !params.uuid.empty()) torrent_ptr = find_torrent(params.uuid).lock();
+		boost::shared_ptr<torrent> torrent_ptr = find_torrent(*ih);
+		if (!torrent_ptr && !params.uuid.empty()) torrent_ptr = find_torrent(params.uuid);
 		// TODO: find by url?
 
 		if (torrent_ptr)
@@ -3695,8 +3722,8 @@ retry:
 			if (pos >= queue_pos) queue_pos = pos + 1;
 		}
 
-		torrent_ptr.reset(new torrent(*this, m_listen_interface
-			, 16 * 1024, queue_pos, params, *ih));
+		torrent_ptr.reset(new torrent(*this, ip, m_listen_interface
+			, 16 * 1024, queue_pos, params, *ih, GetNode(), p.init_Seed));
 		torrent_ptr->start();
 
 		m_torrents.insert(std::make_pair(*ih, torrent_ptr));
@@ -4148,7 +4175,7 @@ retry:
 	{
 		if (m_settings.half_open_limit <= 0) m_settings.half_open_limit
 			= (std::numeric_limits<int>::max)();
-		m_half_open.limit(m_settings.half_open_limit);
+		//m_half_open.limit(m_settings.half_open_limit);
 
 		if (m_settings.local_download_rate_limit < 0)
 			m_settings.local_download_rate_limit = 0;
@@ -4563,7 +4590,7 @@ retry:
 			i != m_connections.end(); ++i)
 		{
 			TORRENT_ASSERT(*i);
-			boost::shared_ptr<torrent> t = (*i)->associated_torrent().lock();
+			boost::shared_ptr<torrent> t = (*i)->associated_torrent();
 			TORRENT_ASSERT(unique_peers.find(i->get()) == unique_peers.end());
 			unique_peers.insert(i->get());
 

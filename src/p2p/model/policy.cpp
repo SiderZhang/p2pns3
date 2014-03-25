@@ -62,6 +62,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/address.h"
 #include "ns3/log.h"
 
+NS_LOG_COMPONENT_DEFINE ("Policy");
+
 using namespace ns3;
 
 namespace
@@ -77,7 +79,7 @@ namespace
 		bool operator()(policy::peer const* p) const
 		{
 			TORRENT_ASSERT(p->in_use);
-			return p->address() == m_ep.GetPeerAddress() && p->port == m_ep.GetPeerPort();
+			return p->address() == m_ep.GetLocalAddress() && p->port == m_ep.GetPeerPort();
 		}
 
 		ns3::Ipv4EndPoint const& m_ep;
@@ -427,6 +429,7 @@ namespace libtorrent
 	// as well, such as in the piece picker.
 	void policy::erase_peer(iterator i)
 	{
+        NS_LOG_FUNCTION(this);
 		INVARIANT_CHECK;
 		TORRENT_ASSERT(i != m_peers.end());
 		TORRENT_ASSERT(m_locked_peer != *i);
@@ -602,6 +605,7 @@ namespace libtorrent
 
 	bool policy::is_connect_candidate(peer const& p, bool finished) const
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(p.in_use);
 		if (p.connection
 			|| p.banned
@@ -629,6 +633,7 @@ namespace libtorrent
 
 	policy::iterator policy::find_connect_candidate(int session_time)
 	{
+        NS_LOG_FUNCTION(this);
 		INVARIANT_CHECK;
 
 		int candidate = -1;
@@ -637,19 +642,17 @@ namespace libtorrent
 		TORRENT_ASSERT(m_finished == m_torrent->is_finished());
 
 		int min_reconnect_time = m_torrent->settings().min_reconnect_time;
-		Address external_ip = m_torrent->session().external_address();
+//		Address external_ip = m_torrent->session().external_address();
 
 		// don't bias any particular peers when seeding
-		if (m_finished || external_ip == Address())
+/*		if (m_finished || external_ip == Address())
 		{
-            NS_ASSERT(false);
             // set external_ip to a random value, to
 			// radomize which peers we prefer
-            // TODO: 待测试
-			/*address_v4::bytes_type bytes;
+			address_v4::bytes_type bytes;
 			std::generate(bytes.begin(), bytes.end(), &random);
-			external_ip = address_v4(bytes);*/
-		}
+			external_ip = address_v4(bytes);
+		}*/
 
 		if (m_round_robin >= int(m_peers.size())) m_round_robin = 0;
 
@@ -669,6 +672,7 @@ namespace libtorrent
 			int current = m_round_robin;
 
 			// we need to start weeding.
+            // 张惊：去掉不要的候选peer
 
 			if (int(m_peers.size()) >= max_peerlist_size * 0.95
 				&& max_peerlist_size > 0)
@@ -718,7 +722,7 @@ namespace libtorrent
 		}
 
 #if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING
-		if (candidate != -1)
+		/*if (candidate != -1)
 		{
 			(*m_torrent->session().m_logger) << time_now_string()
 				<< " *** FOUND CONNECTION CANDIDATE ["
@@ -727,7 +731,7 @@ namespace libtorrent
 				" external: " << external_ip <<
 				" t: " << (session_time - m_peers[candidate]->last_connected) <<
 				" ]\n";
-		}
+		}*/
 #endif
 
 		if (candidate == -1) return m_peers.end();
@@ -736,6 +740,7 @@ namespace libtorrent
 
 	bool policy::new_connection(peer_connection& c, int session_time)
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(!c.is_outgoing());
 
 		INVARIANT_CHECK;
@@ -764,7 +769,7 @@ namespace libtorrent
 		if (m_torrent->settings().allow_multiple_connections_per_ip)
 		{
             ns3::Ipv4EndPoint remote = c.remote();
-			std::pair<iterator, iterator> range = find_peers(remote.GetPeerAddress());
+			std::pair<iterator, iterator> range = find_peers(remote.GetLocalAddress());
 			iter = std::find_if(range.first, range.second, match_peer_endpoint(remote));
 	
 			if (iter != range.second)
@@ -966,11 +971,14 @@ namespace libtorrent
 
 			peer* p =
 				(peer*)m_torrent->session().m_ipv4_peer_pool.malloc();
-			if (p == 0) return false;
+			if (p == 0)
+            {
+                return false;
+            }
 
-				m_torrent->session().m_ipv4_peer_pool.set_next_size(500);
+			m_torrent->session().m_ipv4_peer_pool.set_next_size(500);
 
-				new (p) ipv4_peer(c.remote(), false, 0);
+			new (p) ipv4_peer(c.remote(), false, 0);
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 			p->in_use = true;
@@ -1023,7 +1031,7 @@ namespace libtorrent
 		if (m_torrent->settings().allow_multiple_connections_per_ip)
 		{
 			ns3::Ipv4EndPoint remote(p->address(), port);
-			std::pair<iterator, iterator> range = find_peers(remote.GetPeerAddress());
+			std::pair<iterator, iterator> range = find_peers(remote.GetLocalAddress());
 			iterator i = std::find_if(range.first, range.second
 				, match_peer_endpoint(remote));
 			if (i != range.second)
@@ -1096,6 +1104,7 @@ namespace libtorrent
 
 	void policy::set_seed(policy::peer* p, bool s)
 	{
+        NS_LOG_FUNCTION(this);
 		if (p == 0) return;
 		TORRENT_ASSERT(p->in_use);
 		if (p->seed == s) return;
@@ -1151,8 +1160,6 @@ namespace libtorrent
 		}
 		if (flags & 0x04)
 			p->supports_utp = true;
-		if (flags & 0x08)
-			p->supports_holepunch = true;
 
 		if (is_connect_candidate(*p, m_finished))
 			++m_num_connect_candidates;
@@ -1170,7 +1177,7 @@ namespace libtorrent
 		TORRENT_ASSERT(p->in_use);
 		p->connectable = true;
 
-		TORRENT_ASSERT(p->address() == remote.GetPeerAddress());
+		TORRENT_ASSERT(p->address() == remote.GetLocalAddress());
 		p->port = remote.GetPeerPort();
 		p->source |= src;
 			
@@ -1191,8 +1198,6 @@ namespace libtorrent
 		}
 		if (flags & 0x04)
 			p->supports_utp = true;
-		if (flags & 0x08)
-			p->supports_holepunch = true;
 
 #if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
 //		if (p->connection)
@@ -1223,12 +1228,13 @@ namespace libtorrent
 	policy::peer* policy::add_peer(ns3::Ipv4EndPoint const& remote, peer_id const& pid
 		, int src, char flags)
 	{
+        NS_LOG_FUNCTION(this);
 		INVARIANT_CHECK;
 
 		// just ignore the obviously invalid entries
         // TODO: 找出address函数的定义，并修正
-	//	if (remote.GetPeerAddress() == address() || remote.GetPort() == 0)
-	//		return 0;
+		if (remote.GetLocalAddress() == Ipv4Address() || remote.GetLocalPort() == 0)
+			return 0;
 
 		//aux::session_impl& ses = m_torrent->session();
 
@@ -1238,23 +1244,23 @@ namespace libtorrent
 		/*if (pf.access(remote.GetPort()) & port_filter::blocked)
 		{
 			if (ses.m_alerts.should_post<peer_blocked_alert>())
-				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetPeerAddress()));
+				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetLocalAddress()));
 			return 0;
 		}
 
 		if (ses.m_settings.no_connect_privileged_ports && remote.port() < 1024)
 		{
 			if (ses.m_alerts.should_post<peer_blocked_alert>())
-				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetPeerAddress()));
+				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetLocalAddress()));
 			return 0;
 		}
 
 		// if the IP is blocked, don't add it
 		if (m_torrent->apply_ip_filter()
-			&& (ses.m_ip_filter.access(remote.GetPeerAddress()) & ip_filter::blocked))
+			&& (ses.m_ip_filter.access(remote.GetLocalAddress()) & ip_filter::blocked))
 		{
 			if (ses.m_alerts.should_post<peer_blocked_alert>())
-				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetPeerAddress()));
+				ses.m_alerts.post_alert(peer_blocked_alert(m_torrent->get_handle(), remote.GetLocalAddress()));
 			return 0;
 		}*/
 
@@ -1264,7 +1270,7 @@ namespace libtorrent
 		bool found = false;
 		if (m_torrent->settings().allow_multiple_connections_per_ip)
 		{
-			std::pair<iterator, iterator> range = find_peers(remote.GetPeerAddress());
+			std::pair<iterator, iterator> range = find_peers(remote.GetLocalAddress());
 			iter = std::find_if(range.first, range.second, match_peer_endpoint(remote));
 			if (iter != range.second) found = true;
 		}
@@ -1272,10 +1278,10 @@ namespace libtorrent
 		{
 			iter = std::lower_bound(
 				m_peers.begin(), m_peers.end()
-				, remote.GetPeerAddress(), peer_address_compare()
+				, remote.GetLocalAddress(), peer_address_compare()
 			);
 
-			if (iter != m_peers.end() && (*iter)->address() == remote.GetPeerAddress()) found = true;
+			if (iter != m_peers.end() && (*iter)->address() == remote.GetLocalAddress()) found = true;
 		}
 
 		if (!found)
@@ -1285,10 +1291,14 @@ namespace libtorrent
 
 			p =
 				(peer*)m_torrent->session().m_ipv4_peer_pool.malloc();
-			if (p == 0) return 0;
-				m_torrent->session().m_ipv4_peer_pool.set_next_size(500);
+			if (p == 0)
+            {
+                NS_LOG_ERROR("Failed to build new peer");
+                return 0;
+            }
+			m_torrent->session().m_ipv4_peer_pool.set_next_size(500);
 
-				new (p) ipv4_peer(remote, true, src);
+			new (p) ipv4_peer(remote, true, src);
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 			p->in_use = true;
@@ -1315,6 +1325,7 @@ namespace libtorrent
 
 	bool policy::connect_one_peer(int session_time)
 	{
+        NS_LOG_FUNCTION(this);
 		INVARIANT_CHECK;
 
 		TORRENT_ASSERT(m_torrent->want_more_peers());
@@ -1418,6 +1429,7 @@ namespace libtorrent
 
 	void policy::peer_is_interesting(peer_connection& c)
 	{
+        NS_LOG_FUNCTION(this);
 		INVARIANT_CHECK;
 
 		// no peer should be interesting if we're finished
@@ -1612,7 +1624,6 @@ namespace libtorrent
 		, banned(false)
 		, supports_utp(true) // assume peers support utp
 		, confirmed_supports_utp(false)
-		, supports_holepunch(false)
 		, web_seed(false)
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 		, in_use(false)
@@ -1650,6 +1661,7 @@ namespace libtorrent
 	// this returns true if lhs is a better erase candidate than rhs
 	bool policy::compare_peer_erase(policy::peer const& lhs, policy::peer const& rhs) const
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(lhs.connection == 0);
 		TORRENT_ASSERT(rhs.connection == 0);
 

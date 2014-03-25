@@ -68,6 +68,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/libtorrent/intrusive_ptr_base.hpp"
 #include "ns3/ipv4-end-point.h"
 #include "ns3/address.h"
+#include "ns3/node.h"
 
 namespace libtorrent
 {
@@ -202,14 +203,13 @@ namespace libtorrent
 	};*/
 
 	class tracker_connection
-		: public ns3::Application 
-        , public intrusive_ptr_base<tracker_connection>//timeout_handler
+		: public intrusive_ptr_base<tracker_connection>//timeout_handler
 	{
     public:
 		tracker_connection(tracker_manager& man
 			, tracker_request const& req
 			//, io_service& ios
-			, boost::weak_ptr<request_callback> r);
+			, boost::shared_ptr<request_callback> r);
 
 		boost::shared_ptr<request_callback> requester();
 		virtual ~tracker_connection() {}
@@ -230,7 +230,7 @@ namespace libtorrent
 			, char const* buf, int size) { return false; }
 
 	protected:
-		boost::weak_ptr<request_callback> m_requester;
+		boost::shared_ptr<request_callback> m_requester;
 		tracker_manager& m_man;
 	private:
 		const tracker_request m_req;
@@ -240,19 +240,23 @@ namespace libtorrent
 	{
 	public:
 
-		tracker_manager(aux::session_impl& ses)//*, proxy_settings const& ps*/)
+		tracker_manager(aux::session_impl& ses, ns3::Ipv4Address addr)//*, proxy_settings const& ps*/)
 			: /*m_ses(ses)
 			, m_proxy(ps)
-			,*/ m_abort(false) {}
+			,*/ m_abort(false) 
+        {
+            ip = addr;
+        }
 		~tracker_manager();
 
 		void queue_request(
 			/*io_service& ios
 			, connection_queue& cc
-			,*/ tracker_request r
+			,*/ ns3::Ptr<ns3::Node> node
+            , tracker_request r
 			, std::string const& auth
-			, boost::weak_ptr<request_callback> c
-				= boost::weak_ptr<request_callback>());
+			, boost::shared_ptr<request_callback> c
+				= boost::shared_ptr<request_callback>());
 		void abort_all_requests(bool all = false);
 
 		void remove_request(tracker_connection const*);
@@ -269,6 +273,7 @@ namespace libtorrent
 		void received_bytes(int bytes);
 		
 	private:
+        ns3::Ipv4Address ip;
 
 		//typedef boost::recursive_mutex mutex_t;
 		//mutable mutex_t m_mutex;

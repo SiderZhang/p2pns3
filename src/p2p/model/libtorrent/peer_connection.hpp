@@ -165,7 +165,7 @@ namespace libtorrent
 		// other end has the correct id
 		peer_connection(
 			aux::session_impl& ses
-			, boost::weak_ptr<torrent> t
+			, boost::shared_ptr<torrent> t
 			, ns3::Ptr<ns3::Socket> s
             , ns3::Ipv4EndPoint const& remote
 			, policy::peer* peerinfo
@@ -284,14 +284,6 @@ namespace libtorrent
 		void set_upload_only(bool u);
 		bool upload_only() const { return m_upload_only; }
 
-		void set_holepunch_mode()
-		{
-			m_holepunch_mode = true;
-#ifdef TORRENT_VERBOSE_LOGGING
-			peer_log("*** HOLEPUNCH MODE ***");
-#endif
-		}
-
 		// will send a keep-alive message to the peer
 		void keep_alive();
 
@@ -325,7 +317,7 @@ namespace libtorrent
 		// may be zero if the connection is an incoming connection
 		// and it hasn't received enough information to determine
 		// which torrent it should be associated with
-		boost::weak_ptr<torrent> associated_torrent() const
+		boost::shared_ptr<torrent> associated_torrent() const
 		{ return m_torrent; }
 
 		const stat& statistics() const { return m_statistics; }
@@ -357,7 +349,7 @@ namespace libtorrent
 		// this is called when the connection attempt has succeeded
 		// and the peer_connection is supposed to set m_connecting
 		// to false, and stop monitor writability
-		void on_connection_complete(error_code const& e);
+		void on_connection_complete(ns3::Ptr<ns3::Socket> sock);
 
 		// returns true if this connection is still waiting to
 		// finish the connection attempt
@@ -478,6 +470,8 @@ namespace libtorrent
 		void send_interested();
 		void send_not_interested();
 		void send_suggest(int piece);
+
+        void onConnectFailed(ns3::Ptr<ns3::Socket> sock);
 
 		void snub_peer();
 
@@ -821,7 +815,7 @@ namespace libtorrent
 		// incoming connection, this is set to zero
 		// until the info_hash is received. Then it's
 		// set to the torrent it belongs to.
-		boost::weak_ptr<torrent> m_torrent;
+		boost::shared_ptr<torrent> m_torrent;
 
 		// remote peer's id
 		peer_id m_peer_id;
@@ -1112,9 +1106,6 @@ namespace libtorrent
 
 		// set to true when we've sent the first round of suggests
 		bool m_sent_suggests:1;
-
-		// set to true while we're trying to holepunch
-		bool m_holepunch_mode:1;
 
 		// when this is set, the transfer stats for this connection
 		// is not included in the torrent or session stats

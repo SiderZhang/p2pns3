@@ -58,6 +58,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/libtorrent/add_torrent_params.hpp"
 #include "ns3/libtorrent/rss.hpp"
 #include "ns3/libtorrent/build_config.hpp"
+#include "ns3/ipv4-address.h"
 
 #include "ns3/libtorrent/storage.hpp"
 #include "ns3/node.h"
@@ -111,7 +112,8 @@ namespace libtorrent
 	{
 	public:
 
-		session(ns3::Callback<void, session*> callback, ns3::Ptr<ns3::Node> node, fingerprint const& print = fingerprint("LT"
+		session(ns3::Callback<void, session*> callback, ns3::Ptr<ns3::Node> node, ns3::Ipv4Address ip
+            , fingerprint const& print = fingerprint("LT"
 			, LIBTORRENT_VERSION_MAJOR, LIBTORRENT_VERSION_MINOR, 0, 0)
 			, int flags = start_default_features | add_default_plugins
 			, boost::uint32_t alert_mask = alert::error_notification
@@ -119,12 +121,12 @@ namespace libtorrent
 		{
 			TORRENT_CFG();
             onInit = callback;
-			init(node, std::make_pair(0, 0), "0.0.0.0", print, flags, alert_mask TORRENT_LOGPATH);
+			init(node, ip, std::make_pair(0, 0), "0.0.0.0", print, flags, alert_mask TORRENT_LOGPATH);
 		}
 
 		session(
             ns3::Callback<void, session*> callback
-			,ns3::Ptr<ns3::Node> node, fingerprint const& print
+			,ns3::Ptr<ns3::Node> node, ns3::Ipv4Address ip, fingerprint const& print
 			, std::pair<int, int> listen_port_range
 			, char const* listen_interface = "0.0.0.0"
 			, int flags = start_default_features | add_default_plugins
@@ -135,7 +137,7 @@ namespace libtorrent
 			TORRENT_ASSERT(listen_port_range.first > 0);
 			TORRENT_ASSERT(listen_port_range.first < listen_port_range.second);
             onInit = callback;
-			init(node, listen_port_range, listen_interface, print, flags, alert_mask TORRENT_LOGPATH);
+			init(node, ip, listen_port_range, listen_interface, print, flags, alert_mask TORRENT_LOGPATH);
 		}
 			
 		~session();
@@ -184,6 +186,8 @@ namespace libtorrent
 		//void pause();
 		//void resume();
 		//bool is_paused() const;
+        //
+        void setAborted(bool abort);
 
 		session_status status() const;
 		cache_status get_cache_status() const;
@@ -278,7 +282,7 @@ namespace libtorrent
 		
 	private:
 
-		void init(ns3::Ptr<ns3::Node> node, std::pair<int, int> listen_range, char const* listen_interface
+		void init(ns3::Ptr<ns3::Node> node, ns3::Ipv4Address addr, std::pair<int, int> listen_range, char const* listen_interface
 			, fingerprint const& id, int flags, boost::uint32_t alert_mask TORRENT_LOGPATH_ARG);
 
         ns3::Callback<void, session*> onInit;

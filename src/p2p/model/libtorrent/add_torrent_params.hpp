@@ -133,6 +133,9 @@ namespace libtorrent
 		std::string uuid;
 		std::string source_feed_url;
 		boost::uint64_t flags;
+
+        // 这个节点一开始就是种子节点
+        bool init_Seed;
 #ifndef TORRENT_NO_DEPRECATE
 		bool seed_mode;
 		bool override_resume_data;

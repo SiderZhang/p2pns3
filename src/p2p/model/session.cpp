@@ -385,12 +385,18 @@ namespace libtorrent
 	// configurations this will give a link error
 	void TORRENT_EXPORT TORRENT_CFG() {}
 
-	void session::init(ns3::Ptr<Node> node, std::pair<int, int> listen_range, char const* listen_interface
+    void session::setAborted(bool abort)
+    {
+        NS_LOG_FUNCTION(this);
+        m_impl->setAborted(abort);
+    }
+
+	void session::init(ns3::Ptr<Node> node, ns3::Ipv4Address ip, std::pair<int, int> listen_range, char const* listen_interface
 		, fingerprint const& id, int flags, boost::uint32_t alert_mask TORRENT_LOGPATH_ARG)
 	{
         NS_LOG_FUNCTION(this);
         ns3::Callback<void> initCallback = MakeCallback(&session::initCallback, this);
-		m_impl.reset(new session_impl(initCallback, node, listen_range, id, listen_interface, alert_mask TORRENT_LOGPATH));
+		m_impl.reset(new session_impl(initCallback, node, ip, listen_range, id, listen_interface, alert_mask TORRENT_LOGPATH));
 
 #ifdef TORRENT_MEMDEBUG
 		start_malloc_debug();
@@ -646,10 +652,10 @@ namespace libtorrent
 //		//TORRENT_ASYNC_CALL(stop_upnp);
 //	}
 	
-	connection_queue& session::get_connection_queue()
-	{
-		return m_impl->m_half_open;
-	}
+//	connection_queue& session::get_connection_queue()
+//	{
+//		return m_impl->m_half_open;
+//	}
 
 	session_settings::session_settings(std::string const& user_agent_)
 		: version(LIBTORRENT_VERSION_NUM)

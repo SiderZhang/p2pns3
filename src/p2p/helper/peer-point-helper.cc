@@ -30,49 +30,64 @@ using namespace std;
 namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("PeerPointHelper");
 
-PeerPointHelper::PeerPointHelper ()
+PeerPointHelper::PeerPointHelper (Ipv4Address address, uint16_t port)
 {
     NS_LOG_FUNCTION (this);
   m_factory.SetTypeId (PeerPoint::GetTypeId ());
+  SetAttribute ("RemoteAddress", AddressValue (address));
+  SetAttribute ("RemotePort", UintegerValue (port));
 }
 
 ApplicationContainer
-PeerPointHelper::Install (Ptr<Node> node) const
+PeerPointHelper::Install (Ptr<Node> node, Ipv4Address& address, bool init_seed) const
 {
     NS_LOG_FUNCTION (this);
-  return ApplicationContainer (InstallPriv (node));
+  return ApplicationContainer (InstallPriv (node, address, init_seed));
 }
 
 ApplicationContainer
-PeerPointHelper::Install (std::string nodeName) const
+PeerPointHelper::Install (std::string nodeName, Ipv4Address& address, bool init_seed) const
 {
     NS_LOG_FUNCTION (this);
   Ptr<Node> node = Names::Find<Node> (nodeName);
-  return ApplicationContainer (InstallPriv (node));
+  return ApplicationContainer (InstallPriv (node, address, init_seed));
 }
 
 ApplicationContainer
-PeerPointHelper::Install (NodeContainer c) const
+PeerPointHelper::Install (NodeContainer c, Ipv4Address& address, bool init_seed) const
 {
     NS_LOG_FUNCTION (this);
 
   ApplicationContainer apps;
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
     {
-      apps.Add (InstallPriv (*i));
+      apps.Add (InstallPriv (*i, address, init_seed));
     }
 
   return apps;
 }
 
 Ptr<Application>
-PeerPointHelper::InstallPriv (Ptr<Node> node) const
+PeerPointHelper::InstallPriv (Ptr<Node> node, Ipv4Address& address, bool init_seed ) const
 {
     NS_LOG_FUNCTION (this);
-  Ptr<Application> app = m_factory.Create<PeerPoint> ();
-    NS_LOG_INFO("wewe");
+  Ptr<PeerPoint> app = m_factory.Create<PeerPoint> ();
+  app->setAddress(address);
+  if (init_seed)
+  {
+      app->setInitSeed();
+  }
   node->AddApplication (app);
 
   return app;
 }
+
+void 
+PeerPointHelper::SetAttribute (
+  std::string name, 
+  const AttributeValue &value)
+{
+  m_factory.Set (name, value);
+}
+
 } // namespace ns3

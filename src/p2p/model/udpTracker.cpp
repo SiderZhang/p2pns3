@@ -33,6 +33,9 @@
 #include "multiplatform.h"
 #include "logging.h"
 
+#include "ns3/uinteger.h"
+#include "ns3/ipv4.h"
+
 UDPT::Logger *logger;
 
 using namespace std;
@@ -49,14 +52,19 @@ using namespace ns3;
 
     TypeId UDPTracker::GetTypeId(void)
     {
-        static TypeId tid = TypeId("UDPT::UDPTracker").SetParent<Application>()
-            .AddConstructor<UDPTracker>();
+        static TypeId tid = TypeId("UDPT::UDPTracker")
+            .SetParent<Application>()
+            .AddConstructor<UDPTracker>()
+            .AddAttribute("Port", "Port on which we listen for incoming packets",
+                    UintegerValue(8000),
+                    MakeUintegerAccessor(&UDPTracker::port),
+                    MakeUintegerChecker<uint16_t>());
         return tid;
     }
 
     UDPTracker::UDPTracker()
     {
-        NS_LOG_FUNCTION (this);
+        NS_LOG_IP_FUNCTION(ip,this);
         Settings* settings = new Settings("");
 		const char strDATABASE[] = "database";
 		const char strTRACKER[] = "tracker";
@@ -67,7 +75,7 @@ using namespace ns3;
 		settings->set (strDATABASE, "file", "tracker.db");
 
 		settings->set (strTRACKER, "is_dynamic", "0");
-		settings->set (strTRACKER, "port", "6969");		// UDP PORT
+		settings->set (strTRACKER, "port", "8000");		// UDP PORT
 
         // TODO: 线程的处理
 		//settings->set (strTRACKER, "threads", "5");
@@ -78,7 +86,7 @@ using namespace ns3;
 
 		settings->set (strAPISRV, "enable", "1");
 		//settings->set (strAPISRV, "threads", "1");
-		settings->set (strAPISRV, "port", "6969");	// TCP PORT
+		settings->set (strAPISRV, "port", "8000");	// TCP PORT
 
         init(settings);
     }
@@ -90,7 +98,7 @@ using namespace ns3;
 
     void UDPTracker::init(Settings* settings)
     {
-        NS_LOG_FUNCTION (this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		Settings::SettingClass *sc_tracker;
 
 		sc_tracker = settings->getClass("tracker");
@@ -101,7 +109,7 @@ using namespace ns3;
 
 		this->announce_interval = sc_tracker->getInt("announce_interval", 1800);
 		this->cleanup_interval = sc_tracker->getInt("cleanup_interval", 120);
-		this->port = sc_tracker->getInt("port", 6969);
+		this->port = sc_tracker->getInt("port", 8000);
 
         // TODO: 线程
 		//this->thread_count = abs (sc_tracker->getInt("threads", 5)) + 1;
@@ -134,7 +142,7 @@ using namespace ns3;
 
 	UDPTracker::~UDPTracker ()
 	{
-        NS_LOG_FUNCTION (this);
+        NS_LOG_IP_FUNCTION(ip,this);
 		int i; // loop index
 
 		this->isRunning = false;
@@ -177,10 +185,9 @@ using namespace ns3;
         // TODO: 线程
 		// delete[] this->threads;
 	}
-
-	void UDPTracker::wait()
+void UDPTracker::wait()
 	{
-        NS_LOG_FUNCTION (this);
+        NS_LOG_IP_FUNCTION(ip,this);
 /*#ifdef WIN32
 		WaitForMultipleObjects(this->thread_count, this->threads, TRUE, INFINITE);
 #else
@@ -194,21 +201,23 @@ using namespace ns3;
 
     enum UDPTracker::StartStatus UDPTracker::buildSocket()
     {
-        NS_LOG_FUNCTION (this);
+        NS_LOG_IP_FUNCTION(ip,this);
         TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
         // TODO: 等待添加端口号
-        uint16_t m_port = 6969;
+        NS_LOG_INFO(GetNode()->GetObject<Ipv4>()->GetAddress(1,0).GetLocal());
         m_socket = Socket::CreateSocket(GetNode(), tid);
-        ns3::InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), m_port);
-        m_socket->SetRecvCallback(MakeCallback (&UDPTracker::HandleRead, this));
+        ns3::InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), port);
         m_socket->Bind(local);
+        m_socket->SetAcceptCallback(MakeCallback (&UDPTracker::HandleConnectionRequest, this),
+                MakeCallback (&UDPTracker::HandleNewConnection, this));
+        m_socket->SetRecvCallback(MakeCallback (&UDPTracker::HandleRead, this));
 
 		return START_OK;
     }
 
 	enum UDPTracker::StartStatus UDPTracker::start ()
 	{
-        NS_LOG_FUNCTION (this);
+        NS_LOG_IP_FUNCTION(ip,this);
         StartStatus result = buildSocket();
         if (result != START_OK)
             return result;
@@ -266,74 +275,98 @@ using namespace ns3;
 		return 0;
 	}
 
-	int UDPTracker::handleConnection (UDPTracker *usi, Address *remote, UdpP2PHeader& reqHeader)
+	int UDPTracker::handleConnection (UDPTracker *usi, Address *remote, uint8_t* data)
 	{
-        //NS_LOG_FUNCTION (this);
+        NS_LOG_INFO("tracker handle connection");
+
+		ConnectionRequest *req;
+        ConnectionResponse resp;
+
+        req = (ConnectionRequest*) data;
+
+        resp.action = m_hton32(0);
+        //NS_LOG_INFO("connection id " << req->connection_id);
+        resp.transaction_id =req->transaction_id; 
+
         InetSocketAddress transport = InetSocketAddress::ConvertFrom (*remote);
         Ipv4Address addressv4 = transport.GetIpv4();
         uint16_t port = transport.GetPort();
 
-        UdpP2PHeader respHeader;
-		respHeader.setAction(m_hton32(0));
-		respHeader.setTransactionId(reqHeader.getTransactionId());
-
-        uint64_t connectionID = respHeader.getConnectionID();
-		if (!usi->conn->genConnectionId(&connectionID,
+		if (!usi->conn->genConnectionId(&resp.connection_id,
 				addressv4.Get(),
 				port))
 		{
 			return 1;
 		}
-
-		usi->sendto(respHeader, 0, remote);
+        //resp.connection_id = m_hton32(0x27101980);
+        NS_LOG_INFO("send connection id is "<< resp.connection_id);
+                
+		usi->sendto((uint8_t*)&resp, sizeof(resp), 0, remote);
 
 		return 0;
 	}
 
-	int UDPTracker::handleAnnounce (UDPTracker *usi, Address *remote, UdpP2PHeader& reqHeader)
+	int UDPTracker::handleAnnounce (UDPTracker *usi, Address *remote, uint8_t* data)
 	{
-        //NS_LOG_FUNCTION (this);
+        NS_LOG_INFO("tracker handle announce");
 		uint32_t q;		// peer counts
 		int bSize;	// message size
 		uint32_t i;		// loop index
 		DatabaseDriver::PeerEntry *peers;
 		DatabaseDriver::TorrentEntry tE;
 
-		//uint8_t buff [1028];	// Reasonable buffer size. (header+168 peers)
+		AnnounceRequest *req;
+		AnnounceResponse *resp;
+		uint8_t buff [1028];	// Reasonable buffer size. (header+168 peers)
+
+		req = (AnnounceRequest*)data;
 
         InetSocketAddress transport = InetSocketAddress::ConvertFrom (*remote);
         Ipv4Address addressv4 = transport.GetIpv4();
         uint16_t port = transport.GetPort();
 
-		if (!usi->conn->verifyConnectionId(reqHeader.getConnectionID(),
+		if (!usi->conn->verifyConnectionId(req->connection_id,
 				addressv4.Get(),
 				port))
 		{
+            NS_LOG_ERROR("invalid connection id" << req->connection_id<<", address "<< addressv4 << ", "<< port);
 			return 1;
 		}
 
         
-		if (!usi->allowRemotes && reqHeader.getIpAddress() != 0)
+		if (!usi->allowRemotes && req->ip_address!= 0)
 		{
-			UDPTracker::sendError (usi, remote, reqHeader.getTransactionId(), "Tracker doesn't allow remote IP's; Request ignored.");
+            NS_LOG_ERROR("invalid ip address");
+			UDPTracker::sendError (usi, remote, req->transaction_id, "Tracker doesn't allow remote IP's; Request ignored.");
 			return 0;
 		}
 
-		if (!usi->conn->isTorrentAllowed(reqHeader.getInfo_hash()))
+		if (!usi->conn->isTorrentAllowed(req->info_hash))
 		{
-			UDPTracker::sendError(usi, remote, reqHeader.getTransactionId(), "info_hash not registered.");
-			return 0;
+            usi->conn->addTorrent(req->info_hash);
+            NS_LOG_INFO("new torrent");
+//            NS_LOG_ERROR("torrent is not allowed");
+//			UDPTracker::sendError(usi, remote, req->transaction_id, "info_hash not registered.");
+//			return 0;
 		}
+
+		req->port = m_hton16 (req->port);
+		req->ip_address = m_hton32 (req->ip_address);
+		req->downloaded = m_hton64 (req->downloaded);
+		req->event = m_hton32 (req->event);	// doesn't really matter for this tracker
+		req->uploaded = m_hton64 (req->uploaded);
+		req->num_want = m_hton32 (req->num_want);
+		req->left = m_hton64 (req->left);
 
 		// load peers
 		q = 30;
-		if (reqHeader.getNum_want() >= 1)
-			q = min (q, reqHeader.getNum_want());
+		if (req->num_want>= 1)
+			q = min (q, req->num_want);
 
 		peers = new DatabaseDriver::PeerEntry [q];
 
 		DatabaseDriver::TrackerEvents event;
-		switch (reqHeader.getEvent())
+		switch (req->event)
 		{
 		case 1:
 			event = DatabaseDriver::EVENT_COMPLETE;
@@ -352,104 +385,140 @@ using namespace ns3;
 		if (event == DatabaseDriver::EVENT_STOP)
 			q = 0;	// no need for peers when stopping.
 
-        uint8_t* info_hash = reqHeader.getInfo_hash();
 		if (q > 0)
-			usi->conn->getPeers(info_hash, &q, peers);
+			usi->conn->getPeers(req->info_hash, &q, peers);
 
 		bSize = 20; // header is 20 bytes
 		bSize += (6 * q); // + 6 bytes per peer.
 
-		tE.info_hash = info_hash;
+		tE.info_hash = req->info_hash;
 		usi->conn->getTorrentInfo(&tE);
 
-		UdpP2PHeader respHeader;
-		respHeader.setAction (1);
-		respHeader.setInterval ( usi->announce_interval );
-		respHeader.setLeechers (tE.leechers);
-		respHeader.setSeeders (tE.seeders);
-		respHeader.setTransactionId (reqHeader.getTransactionId());
+		resp = (AnnounceResponse*)buff;
+		resp->action = m_hton32(1);
+		resp->interval = m_hton32 ( usi->announce_interval );
+		resp->leechers = m_hton32(tE.leechers);
+		resp->seeders = m_hton32 (tE.seeders);
+		resp->transaction_id = req->transaction_id;
 
-        std::list<uint32_t>& ipList = respHeader.getLeechersList();
-        std::list<uint16_t>& portList = respHeader.getLeecherPortList();
 		for (i = 0;i < q;i++)
 		{
+			int x = i * 6;
+			// network byte order!!!
+
 			// IP
-            ipList.push_back(peers[i].ip);
+			buff[20 + x] = ((peers[i].ip & (0xff << 24)) >> 24);
+			buff[21 + x] = ((peers[i].ip & (0xff << 16)) >> 16);
+			buff[22 + x] = ((peers[i].ip & (0xff << 8)) >> 8);
+			buff[23 + x] = (peers[i].ip & 0xff);
+
+            NS_LOG_INFO("peer ip is "<<(int) buff[20 + x] << ", "<< (int)buff[21 + x] << ", "<< (int)buff[22 + x]<< ", "<< (int)buff[23 + x]);
 
 			// port
-            portList.push_back(peers[i].port);
+			buff[24 + x] = ((peers[i].port & (0xff << 8)) >> 8);
+			buff[25 + x] = (peers[i].port & 0xff);
 		}
 		delete[] peers;
-    	usi->sendto(respHeader, 0, remote);
+    	usi->sendto((uint8_t*)resp, 20 + q * 6 , 0, remote);
 
 		// update DB.
-		uint32_t ip;
-		if (reqHeader.getIpAddress() == 0) // default
-			ip = addressv4.Get();
-		else
-			ip = reqHeader.getIpAddress();
+	//	uint32_t ip;
+	//	if (req->ip_address == 0) // default
+	//		ip = addressv4.Get();
+	//	else
+	//		ip = req->ip_address;//.getIpAddress();
 
-		usi->conn->updatePeer(reqHeader.getPeerId(), reqHeader.getInfo_hash(), ip, reqHeader.getPort(),
-				reqHeader.getDownloaded(), reqHeader.getLeft(), reqHeader.getUploaded(), event);
+        InetSocketAddress addr = InetSocketAddress::ConvertFrom(*remote);
+        uint32_t ip = addr.GetIpv4().Get();
+        int char1 = ip / (256 * 256 *256) ;
+        int char2 = (ip - 256*256*256 * char1) / (256 * 256) ;
+        int char3 = (ip - 256*256*256*char1 - 256*256*char2) / 256;
+        int char4 = ip - 256*256*256*char1 - 256*256*char2 - 256*char3;
+        NS_LOG_INFO("peer ip and port is "<< char1 << ", " << char2 << ", " << char3 << "," << char4 << ", "<< req->port << "weioweuoiwueoiwueoiuweiouwoieuowieuiow");
+		usi->conn->updatePeer(req->peer_id, req->info_hash, ip, req->port,
+				req->downloaded, req->left, req->uploaded, event);
 
 		return 0;
 	}
 
-	int UDPTracker::handleScrape (UDPTracker *usi, Address *remote, UdpP2PHeader& reqHeader)
+	int UDPTracker::handleScrape (UDPTracker *usi, Address *remote, uint8_t* data, int len)
 	{
-        //NS_LOG_FUNCTION (this);
+        NS_LOG_INFO("tracker handle scrape");
+		int v,	// validation helper
+			c,	// torrent counter
+			j;	// loop counter
+		ScrapeRequest *sR;
 		uint8_t hash [20];
-		//uint8_t buffer [1024];	// up to 74 torrents can be scraped at once (17*74+8) < 1024
+		char xHash [50];
+		ScrapeResponse *resp;
+		uint8_t buffer [1024];	// up to 74 torrents can be scraped at once (17*74+8) < 1024
 
+		sR = (ScrapeRequest*)data;
+		v = len - 16;
 		// validate request length:
-		/*if (v < 0 || v % 20 != 0)
+		if (v < 0 || v % 20 != 0)
 		{
-			UDPTracker::sendError (usi, remote, reqHeader.getTransactionId(), "Bad scrape request.");
+			UDPTracker::sendError (usi, remote, sR->transaction_id, "Bad scrape request.");
 			return 0;
-		}*/
+		}
 
         InetSocketAddress transport = InetSocketAddress::ConvertFrom (*remote);
         Ipv4Address addressv4 = transport.GetIpv4();
         uint16_t port = transport.GetPort();
 
-		if (!usi->conn->verifyConnectionId(reqHeader.getConnectionID(),
+		if (!usi->conn->verifyConnectionId(sR->connection_id,
     	        addressv4.Get(), port))
 		{
 			return 1;
 		}
 
+        NS_LOG_INFO("send connection id is "<< sR->connection_id);
 		// get torrent count.
+		c = v / 20;
 
-		UdpP2PHeader respHeader;
-		respHeader.setAction(2);
-		respHeader.setTransactionId (reqHeader.getTransactionId());
+		resp = (ScrapeResponse*)buffer;
+		resp->action = m_hton32 (2);
+		resp->transaction_id = sR->transaction_id;
 
-        std::list<uint8_t*>& hashList = respHeader.getinfo_hashList();
-        std::list<uint8_t*>::iterator hashIter = hashList.begin();
-        int c = hashList.size();
+//        std::list<uint8_t*>& hashList = respHeader.getinfo_hashList();
+//        std::list<uint8_t*>::iterator hashIter = hashList.begin();
+//        int c = hashList.size();
 
-        std::list<uint32_t>& seedersList = respHeader.getSeedersList();
-        std::list<uint32_t>& completedList = respHeader.getCompletedList();
-        std::list<uint32_t>& leechersList = respHeader.getLeechersList();
-
+//        std::list<uint32_t>& seedersList = respHeader.getSeedersList();
+//        std::list<uint32_t>& completedList = respHeader.getCompletedList();
+//        std::list<uint32_t>& leechersList = respHeader.getLeechersList();
+//
 		for (int i = 0;i < c;i++)
 		{
-            memcpy(hash, *hashIter, 20);
-            
+			int32_t *seeders,
+				*completed,
+				*leechers;
+
+			for (j = 0; j < 20;j++)
+				hash[j] = data[j + (i*20)+16];
+
+			to_hex_str (hash, xHash);
+
+			cout << "\t" << xHash << endl;
+
+			seeders = (int32_t*)&buffer[i*12+8];
+			completed = (int32_t*)&buffer[i*12+12];
+			leechers = (int32_t*)&buffer[i*12+16];
+
 			DatabaseDriver::TorrentEntry tE;
 			tE.info_hash = hash;
 			if (!usi->conn->getTorrentInfo(&tE))
 			{
-				sendError(usi, remote, reqHeader.getTransactionId(), "Scrape Failed: couldn't retrieve torrent data");
+				sendError(usi, remote, sR->transaction_id, "Scrape Failed: couldn't retrieve torrent data");
 				return 0;
 			}
 
-            seedersList.push_back(tE.seeders);
-            completedList.push_back(tE.completed);
-            leechersList.push_back(tE.leechers);
+			*seeders = m_hton32 (tE.seeders);
+			*completed = m_hton32 (tE.completed);
+			*leechers = m_hton32 (tE.leechers);
 		}
 
-		usi->sendto (respHeader, 0, remote);
+		usi->sendto ((uint8_t*)&resp, sizeof(ScrapeResponse), 0, remote);
 
 		return 0;
 	}
@@ -462,14 +531,19 @@ static int _isIANA_IP (uint32_t ip)
 	return 0;
 }
 
-	int UDPTracker::resolveRequest (UDPTracker *usi, Address *remote, UdpP2PHeader& header)
+	int UDPTracker::resolveRequest (UDPTracker *usi, Address *remote, uint8_t* data, int length)
 	{
-        //NS_LOG_FUNCTION (this);
+        //NS_LOG_IP_FUNCTION(ip,this);
+
+		ConnectionRequest *cR;
+        cR = (ConnectionRequest*)data;
+
 		uint32_t action;
         InetSocketAddress transport = InetSocketAddress::ConvertFrom (*remote);
         Ipv4Address addressv4 = transport.GetIpv4();
 
-		action = header.getAction();
+        //NS_LOG_INFO("get header "<<header);
+		action = m_hton32(cR->action);
 
 		if (!usi->allowIANA_IPs)
 		{
@@ -482,15 +556,24 @@ static int _isIANA_IP (uint32_t ip)
 		//cout << ":: " << (void*)m_hton32(remote->sin_addr.s_addr) << ": " << m_hton16(remote->sin_port) << " ACTION=" << action << endl;
 
 		if (action == 0)
-			return UDPTracker::handleConnection (usi, remote, header);
+        {
+            NS_LOG_INFO(" action is connection");
+			return UDPTracker::handleConnection (usi, remote, data);
+        }
 		else if (action == 1)
-			return UDPTracker::handleAnnounce (usi, remote, header);
+        {
+            NS_LOG_INFO(" action is announce");
+			return UDPTracker::handleAnnounce (usi, remote, data);
+        }
 		else if (action == 2)
-			return UDPTracker::handleScrape (usi, remote, header);
+        {
+            NS_LOG_INFO(" action is scrape");
+			return UDPTracker::handleScrape (usi, remote, data, length);
+        }
 		else
 		{
 			cout << "E: action=" << action << endl;
-			UDPTracker::sendError (usi, remote, header.getTransactionId(), "Tracker couldn't understand Client's request.");
+			//UDPTracker::sendError (usi, remote, header.getTransactionId(), "Tracker couldn't understand Client's request.");
 			return -1;
 		}
 
@@ -499,36 +582,37 @@ static int _isIANA_IP (uint32_t ip)
 
     void UDPTracker::HandleRead (Ptr<Socket> socket)
     {
-        NS_LOG_FUNCTION (this << socket);
+        NS_LOG_IP_FUNCTION(ip,this << socket);
         Ptr<Packet> packet;
         Address from;
         // TODO: 与解析代码结合起来！！
         while ((packet = socket->RecvFrom (from)))
         {
-            uint32_t size = packet->GetSize();
-            uint8_t* buffer = new uint8_t[size];
-            packet->CopyData(buffer, size);
-            NS_LOG_INFO("Receved Packet" << (char*)buffer);
-
-            UdpP2PHeader header;
-            packet->RemoveHeader (header);
-            
             if (InetSocketAddress::IsMatchingType (from))
             {
-                NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s client received " << packet->GetSize () << " bytes from " <<
+                uint8_t* buf = new uint8_t[packet->GetSize()];
+                NS_LOG_INFO("packet size "<< packet->GetSize());
+                packet->CopyData(buf, packet->GetSize());
+
+                NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s server received " << packet->GetSize () << " bytes from " <<
                        InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port " <<
                        InetSocketAddress::ConvertFrom (from).GetPort ());
 
-                UDPTracker::resolveRequest (this, &from , header);
-            }
-            else if (Inet6SocketAddress::IsMatchingType (from))
-            {
-                NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s client received " << packet->GetSize () << " bytes from " <<
-                       Inet6SocketAddress::ConvertFrom (from).GetIpv6 () << " port " <<
-                       Inet6SocketAddress::ConvertFrom (from).GetPort ());
+                UDPTracker::resolveRequest (this, &from , buf, packet->GetSize());
             }
         }
 
+    }
+
+    bool UDPTracker::HandleConnectionRequest (ns3::Ptr<ns3::Socket> socket, const ns3::Address& addr)
+    {
+        NS_LOG_IP_FUNCTION(ip,this);
+        return false;
+    }
+
+    void UDPTracker::HandleNewConnection (ns3::Ptr<ns3::Socket> socket, const ns3::Address& addr)
+    {
+        NS_LOG_IP_FUNCTION(ip,this);
     }
 
 //	void* UDPTracker::_thread_start (void *arg)
@@ -597,7 +681,7 @@ static int _isIANA_IP (uint32_t ip)
 
     void UDPTracker::StartApplication(void)
     {
-        NS_LOG_FUNCTION (this);
+        NS_LOG_IP_FUNCTION(ip,this);
 
 	    int r = this->start();
 	    if (r != UDPTracker::START_OK)
@@ -615,32 +699,33 @@ static int _isIANA_IP (uint32_t ip)
 	    		cerr << "Unknown Error" << endl;
 		    	break;
     		}
-    		goto cleanup;
+//    		goto cleanup;
     	}
 
 	    cout << "Hit Control-C to exit." << endl;
 
     	//usi->wait();
 
-    cleanup:
-    	cout << endl << "Goodbye." << endl;
+ //   cleanup:
+   // 	cout << endl << "Goodbye." << endl;
 
     }
 
     void UDPTracker::StopApplication(void)
     {
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
     }
 
     void UDPTracker::DoDispose(void)
     {
-        NS_LOG_FUNCTION(this);
+        NS_LOG_IP_FUNCTION(ip,this);
         Application::DoDispose();
     }
 
     // TODO: 注意修正UDP传输的端口号
-    void UDPTracker::sendto(UdpP2PHeader& header, int flags, Address* remote)
+    void UDPTracker::sendto(uint8_t* header, int size , int flags, ns3::Address* remote)
     {
+        NS_LOG_IP_FUNCTION(ip,this);
         TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
         Ptr<Socket> socket = Socket::CreateSocket(GetNode(), tid);
         socket->Bind();
@@ -649,10 +734,12 @@ static int _isIANA_IP (uint32_t ip)
         Ipv4Address addressv4 = transport.GetIpv4();
         uint16_t port = transport.GetPort();
 
-        Ptr<Packet> p = Create<Packet> (header.getSize());
-        p->AddHeader(header);
+        NS_LOG_INFO("target is "<<addressv4<<", " << port << ", size "<< size);
+        Ptr<Packet> p = Create<Packet> (header, size);
+       // p->AddHeader(header);
         socket->Connect (InetSocketAddress (addressv4, port));
-        socket->Send(p);
+       socket->Send(p);
+//        m_socket->SendTo(p, 0, *remote);
 		//sendto(usi->sock, (char*)&resp, sizeof(ConnectionResponse), 0, (SOCKADDR*)remote, sizeof(SOCKADDR_IN));
     }
 };

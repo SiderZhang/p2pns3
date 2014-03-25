@@ -174,7 +174,7 @@ namespace libtorrent
 			ns3::Ipv4Address address() const;
 			char const* dest() const;
 
-			ns3::Ipv4EndPoint ip() const { return ns3::Ipv4EndPoint(ns3::Ipv4Address(), port); }
+			virtual ns3::Ipv4EndPoint ip() const { return ns3::Ipv4EndPoint(ns3::Ipv4Address(), port); }
 
 			// this is the accumulated amount of
 			// uploaded and downloaded data to this
@@ -281,7 +281,6 @@ namespace libtorrent
 			bool supports_utp:1;
 			// we have been connected via uTP at least once
 			bool confirmed_supports_utp:1;
-			bool supports_holepunch:1;
 			// this is set to one for web seeds. Web seeds
 			// are not stored in the policy m_peers list,
 			// and are excempt from connect candidate bookkeeping
@@ -296,6 +295,8 @@ namespace libtorrent
 		struct TORRENT_EXTRA_EXPORT ipv4_peer : peer
 		{
 			ipv4_peer(ns3::Ipv4EndPoint const& ip, bool connectable, int src);
+
+			virtual ns3::Ipv4EndPoint ip() const { return ns3::Ipv4EndPoint(addr, port); }
 
 			const ns3::Ipv4Address addr;
 		};
@@ -416,8 +417,8 @@ namespace libtorrent
 	inline policy::ipv4_peer::ipv4_peer(
 		ns3::Ipv4EndPoint const& ep, bool c, int src
 	)
-		: peer(ep.GetPeerPort(), c, src)
-		, addr(ep.GetPeerAddress())
+		: peer(ep.GetLocalPort(), c, src)
+		, addr(ep.GetLocalAddress())
 	{
 	}
 

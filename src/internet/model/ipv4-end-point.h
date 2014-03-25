@@ -53,6 +53,7 @@ public:
   Ipv4Address GetLocalAddress (void) const;
   void SetLocalAddress (Ipv4Address address);
   uint16_t GetLocalPort (void) const;
+  void SetLocalPort (uint16_t);
   Ipv4Address GetPeerAddress (void) const;
   uint16_t GetPeerPort (void) const;
 

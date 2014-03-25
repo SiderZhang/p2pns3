@@ -57,6 +57,9 @@ POSSIBILITY OF SUCH DAMAGE.
 //#define TORRENT_PIECE_PICKER_INVARIANT_CHECK
 
 //#define TORRENT_PICKER_LOG
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE ("PIECE_PICKER");
 
 namespace libtorrent
 {
@@ -853,6 +856,7 @@ namespace libtorrent
 
 	void piece_picker::inc_refcount_all()
 	{
+        NS_LOG_FUNCTION(this);
 #ifdef TORRENT_EXPENSIVE_INVARIANT_CHECKS
 		TORRENT_PIECE_PICKER_INVARIANT_CHECK;
 #endif
