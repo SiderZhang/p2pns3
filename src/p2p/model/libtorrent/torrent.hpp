@@ -72,6 +72,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/libtorrent/bitfield.hpp"
 #include "ns3/libtorrent/aux_/session_impl.hpp"
 
+#include "ns3/Video.h"
+#include "ns3/callback.h"
+
 #include "ns3/ptr.h"
 #include "ns3/node.h"
 
@@ -125,6 +128,7 @@ namespace libtorrent
 			return m_torrent_file ? m_torrent_file->info_hash() : empty;
 		}
 
+        ns3::Callback<void, ns3::Time> onFinished;
 		// starts the announce timer
 		void start();
 
@@ -228,7 +232,7 @@ namespace libtorrent
 		void bytes_done(torrent_status& st, bool accurate) const;
 		size_type quantized_bytes_done() const;
 
-		void ip_filter_updated() { m_policy.ip_filter_updated(); }
+		//void ip_filter_updated() { m_policy.ip_filter_updated(); }
 
 		void handle_disk_error(disk_io_job const& j, peer_connection* c = 0);
 		void clear_error();
@@ -255,12 +259,9 @@ namespace libtorrent
 			return m_need_save_resume_data || time(0) - m_last_saved_resume > 15 * 60;
 		}
 
-		bool is_auto_managed() const { return m_auto_managed; }
-		void auto_managed(bool a);
+		//bool should_check_files() const;
 
-		bool should_check_files() const;
-
-		void delete_files();
+		//void delete_files();
 
 		// ============ start deprecation =============
 		void filter_piece(int index, bool filter);
@@ -268,9 +269,6 @@ namespace libtorrent
 		bool is_piece_filtered(int index) const;
 		void filtered_pieces(std::vector<bool>& bitmask) const;
 		void filter_files(std::vector<bool> const& files);
-#if !TORRENT_NO_FPU
-		void file_progress(std::vector<float>& fp) const;
-#endif
 		// ============ end deprecation =============
 
 		void piece_availability(std::vector<int>& avail) const;
@@ -281,23 +279,12 @@ namespace libtorrent
 		void prioritize_pieces(std::vector<int> const& pieces);
 		void piece_priorities(std::vector<int>*) const;
 
-		void set_file_priority(int index, int priority);
-		int file_priority(int index) const;
-
-		void prioritize_files(std::vector<int> const& files);
-		void file_priorities(std::vector<int>*) const;
-
 		void set_piece_deadline(int piece, int t, int flags);
 		void reset_piece_deadline(int piece);
-		void update_piece_priorities();
-
-		void status(torrent_status* st, boost::uint32_t flags);
 
 		// this torrent changed state, if the user is subscribing to
 		// it, add it to the m_state_updates list in session_impl
 		void state_updated();
-
-		void file_progress(std::vector<size_type>& fp, int flags = 0) const;
 
 		void use_interface(std::string net_interface);
 		ns3::InetSocketAddress get_interface() const;
@@ -439,8 +426,6 @@ namespace libtorrent
 // --------------------------------------------
 		// PIECE MANAGEMENT
 
-		void recalc_share_mode();
-
 		void update_sparse_piece_prio(int piece, int cursor, int reverse_cursor);
 
 		void get_suggested_pieces(std::vector<int>& s) const;
@@ -454,7 +439,6 @@ namespace libtorrent
 		// returns true if we have downloaded the given piece
 		bool have_piece(int index) const
 		{
-			if (!valid_metadata()) return false;
 			if (!has_picker()) return true;
 			return m_picker->have_piece(index);
 		}
@@ -586,14 +570,12 @@ namespace libtorrent
 			piece_timed_out, piece_cancelled, piece_unknown, piece_seed, piece_end_game, piece_closing
 			, waste_reason_max
 		};
-		void add_redundant_bytes(int b, wasted_reason_t reason);
 		void add_failed_bytes(int b);
 
 		// this is true if we have all the pieces
 		bool is_seed() const
 		{
-			return valid_metadata()
-				&& (!m_picker
+			return  (!m_picker
 				|| m_state == torrent_status::seeding
 				|| m_picker->num_have() == m_picker->num_pieces());
 		}
@@ -602,7 +584,7 @@ namespace libtorrent
 		bool is_finished() const
 		{
 			if (is_seed()) return true;
-			return valid_metadata() && m_torrent_file->num_pieces()
+			return m_torrent_file->num_pieces()
 				- m_picker->num_have() - m_picker->num_filtered() == 0;
 		}
 
@@ -646,9 +628,7 @@ namespace libtorrent
 		time_t last_seen_complete() const { return m_last_seen_complete; }
 
 		// LOGGING
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
 		virtual void debug_log(const char* fmt, ...) const;
-#endif
 
 		// DEBUG
 #ifdef TORRENT_DEBUG
@@ -688,15 +668,6 @@ namespace libtorrent
 		// the name may include a directory path
 		// returns false on failure
 		//bool rename_file(int index, std::string const& name);
-
-		// unless this returns true, new connections must wait
-		// with their initialization.
-		bool ready_for_connections() const
-		{ return m_connections_initialized; }
-		bool valid_metadata() const
-		{ return m_torrent_file->is_valid(); }
-		bool are_files_checked() const
-		{ return m_files_checked; }
 
 		// parses the info section from the given
 		// bencoded tree and moves the torrent
@@ -745,8 +716,8 @@ namespace libtorrent
 
 		void update_last_upload() { m_last_upload = 0; }
 
-		void set_apply_ip_filter(bool b);
-		bool apply_ip_filter() const { return m_apply_ip_filter; }
+		//void set_apply_ip_filter(bool b);
+		//bool apply_ip_filter() const { return m_apply_ip_filter; }
 
 		//void queue_torrent_check();
 		//void dequeue_torrent_check();
@@ -766,6 +737,7 @@ namespace libtorrent
 
 	private:
 
+        
         // 禁用VCR操作
 		//void on_files_deleted(int ret, disk_io_job const& j);
 		//void on_files_released(int ret, disk_io_job const& j);
@@ -851,6 +823,7 @@ namespace libtorrent
 #ifdef TORRENT_DEBUG
 	private:
 #endif
+        Video video;
 
 		// of all peers in m_connections, this is the number
 		// of peers that are outgoing and still waiting to
@@ -945,10 +918,6 @@ namespace libtorrent
 		// if the error ocurred on a file, this is the file
 		std::string m_error_file;
 
-		// used if there is any resume data
-		std::vector<char> m_resume_data;
-		lazy_entry m_resume_entry;
-
 		// if the torrent is started without metadata, it may
 		// still be given a name until the metadata is received
 		// once the metadata is received this field will no
@@ -1041,17 +1010,6 @@ namespace libtorrent
 		// is received
 		bool m_got_tracker_response:1;
 
-		// this is set to false as long as the connections
-		// of this torrent hasn't been initialized. If we
-		// have metadata from the start, connections are
-		// initialized immediately, if we didn't have metadata,
-		// they are initialized right after files_checked().
-		// valid_resume_data() will return false as long as
-		// the connections aren't initialized, to avoid
-		// them from altering the piece-picker before it
-		// has been initialized with files_checked().
-		bool m_connections_initialized:1;
-
 		// if this is true, we're currently super seeding this
 		// torrent.
 		bool m_super_seeding:1;
@@ -1094,11 +1052,6 @@ namespace libtorrent
 		// is set to true every time there is an incoming
 		// connection to this torrent
 		bool m_has_incoming:1;
-
-		// this is set to true when the files are checked
-		// before the files are checked, we don't try to
-		// connect to peers
-		bool m_files_checked:1;
 
 		// this is true if the torrent has been added to
 		// checking queue in the session
@@ -1145,13 +1098,6 @@ namespace libtorrent
 		// set to true when this torrent may not download anything
 		bool m_upload_mode:1;
 
-		// if this is true, libtorrent may pause and resume
-		// this torrent depending on queuing rules. Torrents
-		// started with auto_managed flag set may be added in
-		// a paused state in case there are no available
-		// slots.
-		bool m_auto_managed:1;
-
 		// this is set when the torrent is in share-mode
 		bool m_share_mode:1;
 
@@ -1195,10 +1141,6 @@ namespace libtorrent
 		// have to be a magnet link.
 		bool m_magnet_link:1;
 
-		// set to true if the session IP filter applies to this
-		// torrent or not. Defaults to true.
-		bool m_apply_ip_filter:1;
-		
 		// if set to true, add tracker URLs loaded from resume
 		// data into this torrent instead of replacing them
 		bool m_merge_resume_trackers:1;

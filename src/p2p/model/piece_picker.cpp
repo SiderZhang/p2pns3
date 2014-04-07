@@ -1350,50 +1350,18 @@ namespace libtorrent
 	// versa. Downloading pieces are marked as being fast, medium
 	// or slow once they're started.
 
-	// options are:
-	// * rarest_first
-	//     pick the rarest pieces first
-	// * reverse
-	//     reverse the piece picking. Pick the most common
-	//     pieces first or the last pieces (if picking sequential)
-	// * sequential
-	//     download pieces in-order
-	// * on_parole
-	//     the peer is on parole, only pick whole pieces which
-	//     has only been downloaded and requested from the same
-	//     peer
-	// * prioritize_partials
-	//     pick blocks from downloading pieces first
-	// * speed_affinity
-	//     have an affinity to pick pieces in the same speed
-	//     category.
-	// * ignore_whole_pieces
-	//     ignores the prefer_whole_pieces parameter (as if
-	//     it was 0)
-
 	// only one of rarest_first, sequential can be set
 
 	void piece_picker::pick_pieces(bitfield const& pieces
 		, std::vector<piece_block>& interesting_blocks, int num_blocks
 		, int prefer_whole_pieces, void* peer, piece_state_t speed
-		, int options, std::vector<int> const& suggested_pieces
+		, std::vector<int> const& suggested_pieces
 		, int num_peers) const
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(peer == 0 || static_cast<policy::peer*>(peer)->in_use);
 
-		// prevent the number of partial pieces to grow indefinitely
-		// make this scale by the number of peers we have. For large
-		// scale clients, we would have more peers, and allow a higher
-		// threshold for the number of partials
-		// TODO: 2 m_downloads size will be > 0 just by having pad-files
-		// in the torrent. That should be taken into account here.
-		if (m_downloads.size() > (uint32_t)num_peers * 3 / 2) options |= prioritize_partials;
-
-		if (options & ignore_whole_pieces) prefer_whole_pieces = 0;
-
 		// only one of rarest_first and sequential can be set.
-		TORRENT_ASSERT(((options & rarest_first) ? 1 : 0)
-			+ ((options & sequential) ? 1 : 0) <= 1);
 #ifdef TORRENT_EXPENSIVE_INVARIANT_CHECKS
 		TORRENT_PIECE_PICKER_INVARIANT_CHECK;
 #endif
@@ -1418,63 +1386,49 @@ namespace libtorrent
 		// ignored as long as possible. All blocks found in downloading
 		// pieces are regarded as backup blocks
 
-		if (options & prioritize_partials)
+//		if (options & prioritize_partials)
+//		{
+//			for (std::vector<downloading_piece>::const_iterator i = m_downloads.begin()
+//				, end(m_downloads.end()); i != end; ++i)
+//			{
+//				if (!is_piece_free(i->index, pieces)) continue;
+//				if (m_piece_map[i->index].full
+//					&& backup_blocks.size() >= (uint32_t)num_blocks
+//					&& backup_blocks2.size() >= (uint32_t)num_blocks)
+//					continue;
+//
+//				num_blocks = add_blocks_downloading(*i, pieces
+//					, interesting_blocks, backup_blocks, backup_blocks2
+//					, num_blocks, prefer_whole_pieces, peer, speed, options);
+//				if (num_blocks <= 0) return;
+//			}
+//
+//			num_blocks = append_blocks(interesting_blocks, backup_blocks
+//				, num_blocks);
+//			if (num_blocks <= 0) return;
+//
+//			num_blocks = append_blocks(interesting_blocks, backup_blocks2
+//				, num_blocks);
+//			if (num_blocks <= 0) return;
+//		}
+
+//		if (!suggested_pieces.empty())
+//		{
+//			for (std::vector<int>::const_iterator i = suggested_pieces.begin();
+//				i != suggested_pieces.end(); ++i)
+//			{
+//				if (!is_piece_free(*i, pieces)) continue;
+//				num_blocks = add_blocks(*i, pieces
+//					, interesting_blocks, backup_blocks
+//					, backup_blocks2, num_blocks
+//					, prefer_whole_pieces, peer, empty_vector
+//					, speed, options);
+//				if (num_blocks <= 0) return;
+//			}
+//		}
+
+		//if (options & sequential)
 		{
-			for (std::vector<downloading_piece>::const_iterator i = m_downloads.begin()
-				, end(m_downloads.end()); i != end; ++i)
-			{
-				if (!is_piece_free(i->index, pieces)) continue;
-				if (m_piece_map[i->index].full
-					&& backup_blocks.size() >= (uint32_t)num_blocks
-					&& backup_blocks2.size() >= (uint32_t)num_blocks)
-					continue;
-
-				num_blocks = add_blocks_downloading(*i, pieces
-					, interesting_blocks, backup_blocks, backup_blocks2
-					, num_blocks, prefer_whole_pieces, peer, speed, options);
-				if (num_blocks <= 0) return;
-			}
-
-			num_blocks = append_blocks(interesting_blocks, backup_blocks
-				, num_blocks);
-			if (num_blocks <= 0) return;
-
-			num_blocks = append_blocks(interesting_blocks, backup_blocks2
-				, num_blocks);
-			if (num_blocks <= 0) return;
-		}
-
-		if (!suggested_pieces.empty())
-		{
-			for (std::vector<int>::const_iterator i = suggested_pieces.begin();
-				i != suggested_pieces.end(); ++i)
-			{
-				if (!is_piece_free(*i, pieces)) continue;
-				num_blocks = add_blocks(*i, pieces
-					, interesting_blocks, backup_blocks
-					, backup_blocks2, num_blocks
-					, prefer_whole_pieces, peer, empty_vector
-					, speed, options);
-				if (num_blocks <= 0) return;
-			}
-		}
-
-		if (options & sequential)
-		{
-			if (options & reverse)
-			{
-				for (int i = m_reverse_cursor - 1; i >= m_cursor; --i)
-				{	
-					if (!is_piece_free(i, pieces)) continue;
-					num_blocks = add_blocks(i, pieces
-						, interesting_blocks, backup_blocks
-						, backup_blocks2, num_blocks
-						, prefer_whole_pieces, peer, suggested_pieces
-						, speed, options);
-					if (num_blocks <= 0) return;
-				}
-			}
-			else
 			{
 				for (int i = m_cursor; i < m_reverse_cursor; ++i)
 				{	
@@ -1483,113 +1437,10 @@ namespace libtorrent
 						, interesting_blocks, backup_blocks
 						, backup_blocks2, num_blocks
 						, prefer_whole_pieces, peer, suggested_pieces
-						, speed, options);
+						, speed);
 					if (num_blocks <= 0) return;
 				}
 			}
-		}
-		else if (options & rarest_first)
-		{
-			if (m_dirty) update_pieces();
-			TORRENT_ASSERT(!m_dirty);
-
-			if (options & reverse)
-			{
-				// it's a bit complicated in order to always prioritize
-				// partial pieces, and respect priorities. Every chunk
-				// of 4 priority levels are traversed in forward order, but otherwise
-				// they are traversed in reverse order
-				// round up to an even 4 priority boundry, to make it simpler
-				// to do the akward reverse traversing
-#define div_round_up(n, d) (((n) + (d) - 1) / (d))
-				m_priority_boundries.resize(div_round_up(m_priority_boundries.size()
-					, prio_factor) * prio_factor, m_priority_boundries.back());
-				for (int i = m_priority_boundries.size() - 1; i >= 0; --i)
-				{
-					int prio = (i / prio_factor) * prio_factor
-						+ prio_factor - 1 - (i % prio_factor);
-				
-					TORRENT_ASSERT(prio >= 0);
-					TORRENT_ASSERT(prio < int(m_priority_boundries.size()));
-					int start = prio == 0 ? 0 : m_priority_boundries[prio - 1];
-					for (int p = start; p < m_priority_boundries[prio]; ++p)
-					{
-						if (!is_piece_free(m_pieces[p], pieces)) continue;
-						num_blocks = add_blocks(m_pieces[p], pieces
-							, interesting_blocks, backup_blocks
-							, backup_blocks2, num_blocks
-							, prefer_whole_pieces, peer, suggested_pieces
-							, speed, options);
-						if (num_blocks <= 0) return;
-					}
-				}
-#undef div_round_up
-			}
-			else
-			{
-				for (std::vector<int>::const_iterator i = m_pieces.begin();
-					i != m_pieces.end(); ++i)
-				{
-					if (!is_piece_free(*i, pieces)) continue;
-					num_blocks = add_blocks(*i, pieces
-						, interesting_blocks, backup_blocks
-						, backup_blocks2, num_blocks
-						, prefer_whole_pieces, peer, suggested_pieces
-						, speed, options);
-					if (num_blocks <= 0) return;
-				}
-			}
-		}
-		else
-		{
-			// we're not using rarest first (only for the first
-			// bucket, since that's where the currently downloading
-			// pieces are)
-			int start_piece = random() % m_piece_map.size();
-
-			int piece = start_piece;
-			while (num_blocks > 0)
-			{
-				bool done = false;
-				// skip pieces we can't pick, and suggested pieces
-				// since we've already picked those
-				while (!can_pick(piece, pieces)
-					|| std::find(suggested_pieces.begin()
-					, suggested_pieces.end(), piece)
-					!= suggested_pieces.end())
-				{
-					++piece;
-					if (piece == int(m_piece_map.size())) piece = 0;
-					// could not find any more pieces
-					if (piece == start_piece) { done = true; break; }
-				}
-				if (done) break;
-
-				TORRENT_ASSERT(can_pick(piece, pieces));
-				TORRENT_ASSERT(m_piece_map[piece].downloading == false);
-
-				int start, end;
-				boost::tie(start, end) = expand_piece(piece, prefer_whole_pieces, pieces);
-				for (int k = start; k < end; ++k)
-				{
-					TORRENT_ASSERT(m_piece_map[k].downloading == false);
-					TORRENT_ASSERT(m_piece_map[k].priority(this) >= 0);
-					int num_blocks_in_piece = blocks_in_piece(k);
-					if (prefer_whole_pieces == 0 && num_blocks_in_piece > num_blocks)
-						num_blocks_in_piece = num_blocks;
-					for (int j = 0; j < num_blocks_in_piece; ++j)
-					{
-						TORRENT_ASSERT(is_piece_free(k, pieces));
-						interesting_blocks.push_back(piece_block(k, j));
-						--num_blocks;
-					}
-				}
-				piece = end;
-				if (piece == int(m_piece_map.size())) piece = 0;
-				// could not find any more pieces
-				if (piece == start_piece) break;
-			}
-		
 		}
 
 		if (num_blocks <= 0) return;
@@ -1606,7 +1457,7 @@ namespace libtorrent
 			std::vector<piece_block> temp;
 			add_blocks_downloading(*i, pieces
 				, temp, backup_blocks, backup_blocks2
-				, num_blocks, prefer_whole_pieces, peer, speed, options);
+				, num_blocks, prefer_whole_pieces, peer, speed);
 		}
 
 #ifdef TORRENT_DEBUG
@@ -1647,9 +1498,6 @@ namespace libtorrent
 
 		num_blocks = append_blocks(interesting_blocks, backup_blocks2, num_blocks);
 		if (num_blocks <= 0) return;
-
-		// don't double-pick anything if the peer is on parole
-		if (options & on_parole) return;
 
 		// pick one random block from the first busy piece we encountered
 		// none of these blocks have more than one request to them
@@ -1802,7 +1650,7 @@ namespace libtorrent
 		, std::vector<piece_block>& backup_blocks2
 		, int num_blocks, int prefer_whole_pieces
 		, void* peer, std::vector<int> const& ignore
-		, piece_state_t speed, int options) const
+		, piece_state_t speed) const
 	{
 		TORRENT_ASSERT(piece >= 0);
 		TORRENT_ASSERT(piece < (int)m_piece_map.size());
@@ -1819,10 +1667,6 @@ namespace libtorrent
 		{
 			if (m_piece_map[piece].full) return num_blocks;
 
-			// if we're prioritizing partials, we've already
-			// looked through the downloading pieces
-			if (options & prioritize_partials) return num_blocks;
-
 			std::vector<downloading_piece>::const_iterator i = find_dl_piece(piece);
 			TORRENT_ASSERT(i != m_downloads.end());
 
@@ -1830,7 +1674,7 @@ namespace libtorrent
 
 			return add_blocks_downloading(*i, pieces
 				, interesting_blocks, backup_blocks, backup_blocks2
-				, num_blocks, prefer_whole_pieces, peer, speed, options);
+				, num_blocks, prefer_whole_pieces, peer, speed);
 		}
 
 		int num_blocks_in_piece = blocks_in_piece(piece);
@@ -1842,7 +1686,9 @@ namespace libtorrent
 				num_blocks_in_piece = num_blocks;
 			TORRENT_ASSERT(is_piece_free(piece, pieces));
 			for (int j = 0; j < num_blocks_in_piece; ++j)
+            {
 				interesting_blocks.push_back(piece_block(piece, j));
+            }
 			num_blocks -= num_blocks_in_piece;
 		}
 		else
@@ -1874,7 +1720,7 @@ namespace libtorrent
 		, std::vector<piece_block>& backup_blocks
 		, std::vector<piece_block>& backup_blocks2
 		, int num_blocks, int prefer_whole_pieces
-		, void* peer, piece_state_t speed, int options) const
+		, void* peer, piece_state_t speed) const
 	{
 		if (!pieces[dp.index]) return num_blocks;
 		if (m_piece_map[dp.index].filtered()) return num_blocks;
@@ -1895,10 +1741,6 @@ namespace libtorrent
 		bool exclusive_active;
 		boost::tie(exclusive, exclusive_active)
 			= requested_from(dp, num_blocks_in_piece, peer);
-
-		// peers on parole are only allowed to pick blocks from
-		// pieces that only they have downloaded/requested from
-		if ((options & on_parole) && !exclusive) return num_blocks;
 
 		// we prefer whole blocks, but there are other peers
 		// downloading from this piece, add it as backups
@@ -1925,30 +1767,6 @@ namespace libtorrent
 			TORRENT_ASSERT(info.piece_index == dp.index);
 			if (info.state != block_info::state_none) continue;
 
-			// if the piece is fast and the peer is slow, or vice versa,
-			// add the block as a backup.
-			// override this behavior if all the other blocks
-			// have been requested from the same peer or
-			// if the state of the piece is none (the
-			// piece will in that case change state).
-			if (dp.state != none && dp.state != speed
-				&& !exclusive_active && (options & speed_affinity))
-			{
-				if (abs(dp.state - speed) == 1)
-				{
-					// don't pick too many back-up blocks
-					if (int(backup_blocks.size()) >= num_blocks) return num_blocks;
-					backup_blocks.push_back(piece_block(dp.index, j));
-				}
-				else
-				{
-					// don't pick too many back-up blocks
-					if (int(backup_blocks2.size()) >= num_blocks) return num_blocks;
-					backup_blocks2.push_back(piece_block(dp.index, j));
-				}
-				continue;
-			}
-			
 			// this block is interesting (we don't have it
 			// yet).
 			interesting_blocks.push_back(piece_block(dp.index, j));
@@ -1964,7 +1782,6 @@ namespace libtorrent
 		TORRENT_ASSERT(num_blocks >= 0 || prefer_whole_pieces > 0);
 
 		if (num_blocks <= 0) return 0;
-		if (options & on_parole) return num_blocks;
 
 		if (int(backup_blocks.size()) >= num_blocks) return num_blocks;
 
@@ -1998,6 +1815,7 @@ namespace libtorrent
 
 	bool piece_picker::is_piece_finished(int index) const
 	{
+        NS_LOG_FUNCTION(this);
 		TORRENT_ASSERT(index < (int)m_piece_map.size());
 		TORRENT_ASSERT(index >= 0);
 
@@ -2010,7 +1828,8 @@ namespace libtorrent
 		TORRENT_ASSERT(i != m_downloads.end());
 		TORRENT_ASSERT((int)i->finished <= m_blocks_per_piece);
 		int max_blocks = blocks_in_piece(index);
-		if (int(i->finished) + int(i->writing) < max_blocks) return false;
+		if (int(i->finished) + int(i->writing) < max_blocks)
+            return false;
 		TORRENT_ASSERT(int(i->finished) + int(i->writing) == max_blocks);
 
 #ifdef TORRENT_DEBUG

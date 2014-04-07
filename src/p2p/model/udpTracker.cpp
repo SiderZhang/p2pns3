@@ -204,7 +204,7 @@ void UDPTracker::wait()
         NS_LOG_IP_FUNCTION(ip,this);
         TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
         // TODO: 等待添加端口号
-        NS_LOG_INFO(GetNode()->GetObject<Ipv4>()->GetAddress(1,0).GetLocal());
+        NS_LOG_INFO("listening: " << GetNode()->GetObject<Ipv4>()->GetAddress(1,0).GetLocal() << ", " << port);
         m_socket = Socket::CreateSocket(GetNode(), tid);
         ns3::InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), port);
         m_socket->Bind(local);
@@ -434,7 +434,7 @@ void UDPTracker::wait()
         int char2 = (ip - 256*256*256 * char1) / (256 * 256) ;
         int char3 = (ip - 256*256*256*char1 - 256*256*char2) / 256;
         int char4 = ip - 256*256*256*char1 - 256*256*char2 - 256*char3;
-        NS_LOG_INFO("peer ip and port is "<< char1 << ", " << char2 << ", " << char3 << "," << char4 << ", "<< req->port << "weioweuoiwueoiwueoiuweiouwoieuowieuiow");
+        NS_LOG_INFO("peer ip and port is "<< char1 << ", " << char2 << ", " << char3 << "," << char4 << ", "<< req->port);
 		usi->conn->updatePeer(req->peer_id, req->info_hash, ip, req->port,
 				req->downloaded, req->left, req->uploaded, event);
 

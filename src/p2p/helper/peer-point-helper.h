@@ -42,7 +42,7 @@ public:
    *
    * \param port The port the server will wait on for incoming packets
    */
-  PeerPointHelper (Ipv4Address address, uint16_t port);
+  PeerPointHelper (uint16_t port);
 
   /**
    * Create a UdpEchoServerApplication on the specified Node.
@@ -52,7 +52,7 @@ public:
    *
    * \returns An ApplicationContainer holding the Application created,
    */
-  ApplicationContainer Install (Ptr<Node> node, Ipv4Address& addr, bool init_seed = false) const;
+  ApplicationContainer Install (Ptr<Node> node, Ipv4Address& addr, bool init_seed = false);
 
   /**
    * Create a UdpEchoServerApplication on specified node
@@ -63,7 +63,7 @@ public:
    *
    * \returns An ApplicationContainer holding the Application created.
    */
-  ApplicationContainer Install (std::string nodeName, Ipv4Address& address, bool init_seed = false) const;
+  ApplicationContainer Install (std::string nodeName, Ipv4Address& address, bool init_seed = false);
 
   /**
    * \param c The nodes on which to create the Applications.  The nodes
@@ -75,14 +75,17 @@ public:
    * \returns The applications created, one Application per Node in the 
    *          NodeContainer.
    */
-  ApplicationContainer Install (NodeContainer c, Ipv4Address& adrress, bool init_seed = false) const;
+  ApplicationContainer Install (NodeContainer c, Ipv4Address& adrress, bool init_seed = false) ;
 
   void SetAttribute (std::string name, const AttributeValue &value);
+
+  // 最近创建的PeerPoint类指针
+  ns3::Ptr<ns3::PeerPoint> lastPtr;
 private:
   /**
    * \internal
    */
-  Ptr<Application> InstallPriv (Ptr<Node> node, Ipv4Address&, bool init_seed = false) const;
+  Ptr<Application> InstallPriv (Ptr<Node> node, Ipv4Address&, bool init_seed = false);
 
   ObjectFactory m_factory;
 };

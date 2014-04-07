@@ -109,7 +109,7 @@ namespace libtorrent
 	{
 	public:
 
-		policy(torrent* t);
+		policy(torrent* t, ns3::Ipv4Address ip);
 
 		struct peer;
 
@@ -135,7 +135,7 @@ namespace libtorrent
 		// the peer has got at least one interesting piece
 		void peer_is_interesting(peer_connection& c);
 
-		void ip_filter_updated();
+		//void ip_filter_updated();
 
 		void set_seed(policy::peer* p, bool s);
 
@@ -357,6 +357,7 @@ namespace libtorrent
 		void erase_peer(iterator i);
 
 	private:
+        ns3::Ipv4Address ip;
 
 		void update_peer(policy::peer* p, int src, int flags
 		, ns3::Ipv4EndPoint const& remote, char const* destination);

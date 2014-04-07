@@ -322,7 +322,7 @@ namespace libtorrent
 	void udp_tracker_connection::send_udp_connect()
 	{
         NS_LOG_IP_FUNCTION(ip,this);
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING
+
 		boost::shared_ptr<request_callback> cb = requester();
 		if (cb)
 		{
@@ -332,7 +332,6 @@ namespace libtorrent
 			snprintf(msg, 200, "==> UDP_TRACKER_CONNECT [%s]", hex_ih);
 			cb->debug_log(msg);
 		}
-#endif
 
 		char buf[16];
 		char* ptr = buf;

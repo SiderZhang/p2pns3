@@ -6,6 +6,7 @@
 #include "ns3/application.h"
 #include "ns3/ipv4-address.h"
 #include "libtorrent/session.hpp"
+#include "libtorrent/torrent_handle.hpp"
 
 namespace ns3
 {
@@ -25,12 +26,29 @@ namespace ns3
         {
             this->initSeed = true;
         }
+
+        void setDownloadRate(int down)
+        {
+            downloadRate = down;
+        }
+
+        void setUploadRate(int up)
+        {
+            uploadRate = up;
+        }
+
+        void addUdpTracker(Ipv4Address ip);
+
+        Callback<void, libtorrent::torrent_handle> onLoadTorrent;
+        std::string torrentPath;
+
     protected:
         virtual void DoDispose (void);
 
         void loadTorrent(libtorrent::session* sess);
 
     private:
+        std::vector<std::string> dTrackers;
         virtual void StartApplication (void);
         virtual void StopApplication (void);
 
@@ -45,6 +63,9 @@ namespace ns3
         uint32_t size;
 
         bool initSeed;
+
+        int downloadRate;
+        int uploadRate;
     };
 }
 

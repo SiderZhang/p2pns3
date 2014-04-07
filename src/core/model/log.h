@@ -228,6 +228,21 @@ void LogComponentDisableAll (enum LogLevel level);
     }                                                           \
   while (false)
 
+#define NS_LOG_IP(level, ip, msg)                               \
+  do                                                            \
+    {                                                           \
+      if (g_log.IsEnabled (level))                              \
+        {                                                       \
+          NS_LOG_APPEND_TIME_PREFIX;                            \
+          NS_LOG_APPEND_NODE_PREFIX;                            \
+          NS_LOG_APPEND_CONTEXT;                                \
+          NS_LOG_APPEND_FUNC_PREFIX;                            \
+          NS_LOG_APPEND_LEVEL_PREFIX (level);                   \
+          std::clog << ip << msg << std::endl;                  \
+        }                                                       \
+    }                                                           \
+  while (false)
+
 /**
  * \ingroup logging
  * \param msg the message to log
@@ -246,6 +261,9 @@ void LogComponentDisableAll (enum LogLevel level);
 #define NS_LOG_WARN(msg) \
   NS_LOG (ns3::LOG_WARN, msg)
 
+#define NS_LOG_IP_WARN(ip, msg) \
+  NS_LOG_IP (ns3::LOG_WARN, ip, msg)
+
 /**
  * \ingroup logging
  * \param msg the message to log
@@ -263,6 +281,9 @@ void LogComponentDisableAll (enum LogLevel level);
  */
 #define NS_LOG_INFO(msg) \
   NS_LOG (ns3::LOG_INFO, msg)
+
+#define NS_LOG_IP_INFO(ip, msg) \
+  NS_LOG_IP(ns3::LOG_INFO, ip, msg)
 
 /**
  * \ingroup logging

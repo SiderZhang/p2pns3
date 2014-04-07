@@ -63,6 +63,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/libtorrent/peer_request.hpp"
 #include "ns3/libtorrent/piece_block_progress.hpp"
 #include "ns3/libtorrent/config.hpp"
+#include "ns3/libtorrent/disk_buffer_holder.hpp"
 
 namespace libtorrent
 {
@@ -84,6 +85,7 @@ namespace libtorrent
 		// other end has the correct id
 		bt_peer_connection(
 			aux::session_impl& ses
+            , ns3::Ipv4Address& ip
 			, boost::shared_ptr<torrent> t
             , ns3::Ptr<ns3::Socket> s
             , ns3::Ipv4EndPoint const& remote
@@ -94,6 +96,7 @@ namespace libtorrent
 		// know which torrent the connection belongs to
 		bt_peer_connection(
 			aux::session_impl& ses
+            , ns3::Ipv4Address& ip
             , ns3::Ptr<ns3::Socket> s
             , ns3::Ipv4EndPoint const& remote
 			, policy::peer* peerinfo);
@@ -117,7 +120,7 @@ namespace libtorrent
 			msg_piece,
 			msg_cancel,
 			// FAST extension
-			msg_suggest_piece = 0xd,
+			msg_suggest_piece = 0xc,
 			msg_have_all,
 			msg_have_none,
 			msg_reject_request,
@@ -198,7 +201,7 @@ namespace libtorrent
 		void write_cancel(peer_request const& r);
 		void write_bitfield();
 		void write_have(int index);
-		//void write_piece(peer_request const& r, disk_buffer_holder& buffer);
+		void write_piece(peer_request const& r, disk_buffer_holder& buffer);
 		void write_handshake();
 		void write_metadata(std::pair<int, int> req);
 		void write_metadata_request(std::pair<int, int> req);

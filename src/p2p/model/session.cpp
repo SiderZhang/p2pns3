@@ -129,7 +129,7 @@ namespace libtorrent
 		// whenever a peer has downloaded one block, write
 		// it to disk, and don't read anything from the
 		// socket until the disk write is complete
-		set.max_queued_disk_bytes = 1;
+		set.max_queued_disk_bytes = 0;
 
 		// don't keep track of all upnp devices, keep
 		// the device list small
@@ -690,9 +690,9 @@ namespace libtorrent
 		, initial_picker_threshold(4)
 		, allowed_fast_set_size(10)
 		, suggest_mode(no_piece_suggestions)
-		, max_queued_disk_bytes(1024 * 1024)
+		, max_queued_disk_bytes(0)
 		, max_queued_disk_bytes_low_watermark(0)
-		, handshake_timeout(10)
+		, handshake_timeout(1000000000)
 		, free_torrent_hashes(true)
 		, upnp_ignore_nonrouters(false)
 		, send_buffer_low_watermark(512)

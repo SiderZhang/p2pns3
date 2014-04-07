@@ -130,23 +130,23 @@ namespace libtorrent
 		enum piece_state_t
 		{ none, slow, medium, fast };
 
-		enum options_t
-		{
-			// pick rarest first 
-			rarest_first = 1,
-			// pick the most common first, or the last pieces if sequential
-			reverse = 2,
-			// only pick pieces exclusively requested from this peer
-			on_parole = 4,
-			// always pick partial pieces before any other piece
-			prioritize_partials = 8,
-			// pick pieces in sequential order
-			sequential = 16,
-			// have affinity to pieces with the same speed category
-			speed_affinity = 32,
-			// ignore the prefer_whole_pieces parameter
-			ignore_whole_pieces = 64
-		};
+//		enum options_t
+//		{
+//			// pick rarest first 
+//			rarest_first = 1,
+//			// pick the most common first, or the last pieces if sequential
+//			reverse = 2,
+//			// only pick pieces exclusively requested from this peer
+//			on_parole = 4,
+//			// always pick partial pieces before any other piece
+//			prioritize_partials = 8,
+//			// pick pieces in sequential order
+//			sequential = 16,
+//			// have affinity to pieces with the same speed category
+//			speed_affinity = 32,
+//			// ignore the prefer_whole_pieces parameter
+//			ignore_whole_pieces = 64
+//		};
 
 		struct downloading_piece
 		{
@@ -247,7 +247,7 @@ namespace libtorrent
 		void pick_pieces(bitfield const& pieces
 			, std::vector<piece_block>& interesting_blocks, int num_blocks
 			, int prefer_whole_pieces, void* peer, piece_state_t speed
-			, int options, std::vector<int> const& suggested_pieces
+			, std::vector<int> const& suggested_pieces
 			, int num_peers) const;
 
 		// picks blocks from each of the pieces in the piece_list
@@ -262,7 +262,7 @@ namespace libtorrent
 			, std::vector<piece_block>& backup_blocks2
 			, int num_blocks, int prefer_whole_pieces
 			, void* peer, std::vector<int> const& ignore
-			, piece_state_t speed, int options) const;
+			, piece_state_t speed) const;
 
 		// picks blocks only from downloading pieces
 		int add_blocks_downloading(downloading_piece const& dp
@@ -272,7 +272,7 @@ namespace libtorrent
 			, std::vector<piece_block>& backup_blocks2
 			, int num_blocks, int prefer_whole_pieces
 			, void* peer, piece_state_t speed
-			, int options) const;
+			) const;
 
 		// clears the peer pointer in all downloading pieces with this
 		// peer pointer

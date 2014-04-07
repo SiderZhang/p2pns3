@@ -30,23 +30,23 @@ using namespace std;
 namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("PeerPointHelper");
 
-PeerPointHelper::PeerPointHelper (Ipv4Address address, uint16_t port)
+PeerPointHelper::PeerPointHelper (uint16_t port)
 {
     NS_LOG_FUNCTION (this);
   m_factory.SetTypeId (PeerPoint::GetTypeId ());
-  SetAttribute ("RemoteAddress", AddressValue (address));
+  //SetAttribute ("RemoteAddress", AddressValue (address));
   SetAttribute ("RemotePort", UintegerValue (port));
 }
 
 ApplicationContainer
-PeerPointHelper::Install (Ptr<Node> node, Ipv4Address& address, bool init_seed) const
+PeerPointHelper::Install (Ptr<Node> node, Ipv4Address& address, bool init_seed) 
 {
     NS_LOG_FUNCTION (this);
   return ApplicationContainer (InstallPriv (node, address, init_seed));
 }
 
 ApplicationContainer
-PeerPointHelper::Install (std::string nodeName, Ipv4Address& address, bool init_seed) const
+PeerPointHelper::Install (std::string nodeName, Ipv4Address& address, bool init_seed) 
 {
     NS_LOG_FUNCTION (this);
   Ptr<Node> node = Names::Find<Node> (nodeName);
@@ -54,7 +54,7 @@ PeerPointHelper::Install (std::string nodeName, Ipv4Address& address, bool init_
 }
 
 ApplicationContainer
-PeerPointHelper::Install (NodeContainer c, Ipv4Address& address, bool init_seed) const
+PeerPointHelper::Install (NodeContainer c, Ipv4Address& address, bool init_seed) 
 {
     NS_LOG_FUNCTION (this);
 
@@ -68,10 +68,11 @@ PeerPointHelper::Install (NodeContainer c, Ipv4Address& address, bool init_seed)
 }
 
 Ptr<Application>
-PeerPointHelper::InstallPriv (Ptr<Node> node, Ipv4Address& address, bool init_seed ) const
+PeerPointHelper::InstallPriv (Ptr<Node> node, Ipv4Address& address, bool init_seed )
 {
     NS_LOG_FUNCTION (this);
   Ptr<PeerPoint> app = m_factory.Create<PeerPoint> ();
+  lastPtr = app;
   app->setAddress(address);
   if (init_seed)
   {

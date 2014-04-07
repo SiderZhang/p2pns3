@@ -32,6 +32,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/bandwidth_manager.hpp"
 #include "libtorrent/time.hpp"
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE ("Bandwidth_Manager");
 
 namespace libtorrent
 {
@@ -135,8 +138,17 @@ namespace libtorrent
 
 	void bandwidth_manager::update_quotas(time_duration const& dt)
 	{
-		if (m_abort) return;
-		if (m_queue.empty()) return;
+        NS_LOG_FUNCTION(this);
+
+		if (m_abort)
+        {
+            NS_LOG_WARN("connection abort");
+            return;
+        }
+		if (m_queue.empty())
+        {
+            return;        
+        }
 
 		INVARIANT_CHECK;
 

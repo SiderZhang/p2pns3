@@ -66,6 +66,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/invariant_check.hpp"
 #include "libtorrent/session_settings.hpp"
 
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE ("TorrentInfo");
+
 namespace libtorrent
 {
 	bool valid_path_character(char c)
@@ -839,6 +843,15 @@ namespace libtorrent
 		a = b; \
 		b = tmp;
 
+    void torrent_info::peer_log()
+    {
+//        int blocks_per_piece = (this->piece_length() + block_size() - 1) / block_size();
+//        int blocks_in_last_piece = ((this->total_size() % this->piece_length())
+//				+ block_size() - 1) / block_size();
+//
+//        NS_LOG_INFO("torrent info blocks per piece: " << blocks_per_piece << ", blocks in last piece " << blocks_in_last_piece);
+    }
+
 	void torrent_info::swap(torrent_info& ti)
 	{
 		INVARIANT_CHECK;
@@ -1281,6 +1294,11 @@ namespace libtorrent
 		std::sort(m_urls.begin(), m_urls.end(), boost::bind(&announce_entry::tier, _1)
 			< boost::bind(&announce_entry::tier, _2));
 	}
+
+    void torrent_info::clear_trackers()
+    {
+        m_urls.clear();
+    }
 
 #ifndef TORRENT_NO_DEPRECATE
 	namespace

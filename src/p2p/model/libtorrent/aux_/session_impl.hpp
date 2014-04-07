@@ -335,13 +335,6 @@ namespace libtorrent
 
 			int next_port();
 
-			void add_redundant_bytes(size_type b, int reason)
-			{
-				TORRENT_ASSERT(b > 0);
-				m_total_redundant_bytes += b;
-				m_redundant_bytes[reason] += b;
-			}
-
 			void add_failed_bytes(size_type b)
 			{
 				TORRENT_ASSERT(b > 0);
@@ -713,7 +706,7 @@ namespace libtorrent
 			// this is the round-robin cursor for peers that
 			// get to download again after the disk has been
 			// blocked
-			connection_map::iterator m_next_disk_peer;
+			//connection_map::iterator m_next_disk_peer;
 
             ns3::Ptr<ns3::Node> m_node;
 #ifdef TORRENT_DEBUG
@@ -892,9 +885,6 @@ namespace libtorrent
 			// total redundant and failed bytes
 			size_type m_total_failed_bytes;
 			size_type m_total_redundant_bytes;
-
-			// redundant bytes per category
-			size_type m_redundant_bytes[7];
 
 			// this is the set of (subscribed) torrents that have changed
 			// their states since the last time the user requested updates.

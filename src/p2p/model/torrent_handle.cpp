@@ -308,33 +308,29 @@ namespace libtorrent
 //		TORRENT_ASYNC_CALL1(set_max_connections, max_connections);
 //	}
 //
-//	void torrent_handle::set_upload_limit(int limit) const
-//	{
-//		INVARIANT_CHECK;
-//		TORRENT_ASSERT(limit >= -1);
-//		TORRENT_ASYNC_CALL1(set_upload_limit, limit);
-//	}
-//
-//	int torrent_handle::upload_limit() const
-//	{
-//		INVARIANT_CHECK;
-//		TORRENT_SYNC_CALL_RET(int, 0, upload_limit);
-//		return r;
-//	}
-//
-//	void torrent_handle::set_download_limit(int limit) const
-//	{
-//		INVARIANT_CHECK;
-//		TORRENT_ASSERT(limit >= -1);
-//		TORRENT_ASYNC_CALL1(set_download_limit, limit);
-//	}
-//
-//	int torrent_handle::download_limit() const
-//	{
-//		INVARIANT_CHECK;
-//		TORRENT_SYNC_CALL_RET(int, 0, download_limit);
-//		return r;
-//	}
+	void torrent_handle::set_upload_limit(int limit)
+	{
+        boost::shared_ptr<torrent> ptr = m_torrent.lock();
+        ptr->set_upload_limit(limit);
+	}
+
+	int torrent_handle::upload_limit() const
+	{
+        boost::shared_ptr<torrent> ptr = m_torrent.lock();
+        return ptr->upload_limit();
+	}
+
+	void torrent_handle::set_download_limit(int limit) const
+	{
+        boost::shared_ptr<torrent> ptr = m_torrent.lock();
+		ptr->set_download_limit(limit);
+	}
+
+	int torrent_handle::download_limit() const
+	{
+        boost::shared_ptr<torrent> ptr = m_torrent.lock();
+        return ptr->download_limit();
+	}
 //
 //	void torrent_handle::move_storage(
 //		std::string const& save_path) const
@@ -963,10 +959,10 @@ namespace libtorrent
 //		TORRENT_ASYNC_CALL1(reset_piece_deadline, index);
 //	}
 //
-//	boost::shared_ptr<torrent> torrent_handle::native_handle() const
-//	{
-//		return m_torrent.lock();
-//	}
+	boost::shared_ptr<torrent> torrent_handle::native_handle() const
+	{
+		return m_torrent.lock();
+	}
 //
 //	std::size_t hash_value(torrent_status const& ts)
 //	{

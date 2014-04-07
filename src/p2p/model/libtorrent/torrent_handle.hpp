@@ -359,7 +359,7 @@ namespace libtorrent
 		// to finish all pieces currently in the pipeline, and then
 		// abort the torrent.
 
-		void set_upload_limit(int limit) const;
+		void set_upload_limit(int limit);
 		int upload_limit() const;
 		void set_download_limit(int limit) const;
 		int download_limit() const;
@@ -412,7 +412,6 @@ namespace libtorrent
 		{ return m_torrent.lock() < h.m_torrent.lock(); }
 
 		boost::shared_ptr<torrent> native_handle() const;
-
 	private:
 
 		torrent_handle(boost::weak_ptr<torrent> const& t)

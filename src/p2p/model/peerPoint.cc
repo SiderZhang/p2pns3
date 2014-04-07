@@ -6,9 +6,11 @@
 
 #include "ns3/uinteger.h"
 #include <string>
+#include <sstream>
 
 #include "ns3/log.h"
 
+using namespace std;
 using namespace ns3;
 using namespace libtorrent;
 using namespace libtorrent::aux;
@@ -87,7 +89,6 @@ void PeerPoint::setAddress(ns3::Ipv4Address addr)
 void PeerPoint::loadTorrent(session* sess)
 {
     NS_LOG_FUNCTION (this);
-    torrent_handle handle;
     add_torrent_params param;
     std::string path;
     param.save_path = path;
@@ -95,13 +96,29 @@ void PeerPoint::loadTorrent(session* sess)
 
     try
     {
-        torrent_info* info = new torrent_info("./testTor.torrent");
+        torrent_info* info;
+        if (torrentPath.empty())
+        {
+            info = new torrent_info("./testTor.torrent");
+        }
+        else
+        {
+            info = new torrent_info(torrentPath.c_str());
+        }
+
+        for (uint i = 0;i < dTrackers.size();++i)
+        {
+            info->clear_trackers();
+            info->add_tracker(dTrackers[i]);
+        }
+
+        info->peer_log();
+
         boost::intrusive_ptr<torrent_info> pTor(info);
         param.ti = pTor;
     }
     catch(libtorrent_exception e)
     {
-        
         NS_LOG_ERROR("failed to load torrent file!");
     }
 
@@ -113,7 +130,12 @@ void PeerPoint::loadTorrent(session* sess)
     {
         param.init_Seed =false;
     }
-    sess->add_torrent(param);
+
+    torrent_handle handle = sess->add_torrent(param);
+    if (!onLoadTorrent.IsNull())
+    {
+        onLoadTorrent(handle);
+    }
 }
 
 void PeerPoint::StopApplication()
@@ -121,4 +143,13 @@ void PeerPoint::StopApplication()
   NS_LOG_FUNCTION (this);
   ses->setAborted(true);
 }
+
+void PeerPoint::addUdpTracker(Ipv4Address ip)
+{
+    stringstream str;
+    str<<"udp://"<<ip<<":8000/announce";
+    NS_LOG_INFO(str.str());
+    dTrackers.push_back(str.str());
+}
+
 }

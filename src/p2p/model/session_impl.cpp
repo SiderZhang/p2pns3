@@ -555,7 +555,6 @@ namespace aux {
 
         ip = addr;
         m_node = node;
-		memset(m_redundant_bytes, 0, sizeof(m_redundant_bytes));
         // TODO: 注意转换为NS3的版本
 		//m_udp_socket.set_rate_limit(m_settings.dht_upload_rate_limit);
 
@@ -585,7 +584,7 @@ namespace aux {
 		error_code ec;
 
 		m_next_connect_torrent = m_torrents.begin();
-		m_next_disk_peer = m_connections.begin();
+		//m_next_disk_peer = m_connections.begin();
 
 		if (!listen_interface) listen_interface = "0.0.0.0";
 		m_listen_interface = ns3::Ipv4EndPoint(ns3::Ipv4Address(listen_interface), listen_port_range.first);
@@ -1844,7 +1843,7 @@ retry:
 		//setup_socket_buffers(*s);
 
 		boost::intrusive_ptr<peer_connection> c(
-			new bt_peer_connection(*this, s, endp, 0));
+			new bt_peer_connection(*this, ip, s, endp, 0));
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 		c->m_in_constructor = false;
 #endif
@@ -1854,7 +1853,7 @@ retry:
 			m_connections.insert(c);
 			c->start();
 			// update the next disk peer round-robin cursor
-			if (m_next_disk_peer == m_connections.end()) m_next_disk_peer = m_connections.begin();
+			//if (m_next_disk_peer == m_connections.end()) m_next_disk_peer = m_connections.begin();
 		}
 	}
 
@@ -1912,9 +1911,9 @@ retry:
 		boost::intrusive_ptr<peer_connection> sp((peer_connection*)p);
 		connection_map::iterator i = m_connections.find(sp);
 		// make sure the next disk peer round-robin cursor stays valid
-		if (m_next_disk_peer == i) ++m_next_disk_peer;
+//		if (m_next_disk_peer == i) ++m_next_disk_peer;
 		if (i != m_connections.end()) m_connections.erase(i);
-		if (m_next_disk_peer == m_connections.end()) m_next_disk_peer = m_connections.begin();
+//		if (m_next_disk_peer == m_connections.end()) m_next_disk_peer = m_connections.begin();
 	}
 
 	void session_impl::set_peer_id(peer_id const& id)
@@ -2009,6 +2008,7 @@ retry:
 
 	void session_impl::on_tick()
 	{
+        NS_LOG_IP_FUNCTION(ip, this);
 #ifdef TORRENT_STATS
 		++m_num_messages[on_tick_counter];
 #endif
@@ -2935,9 +2935,6 @@ retry:
 					- m_network_thread_cpu_usage.user_time))
 				/ double(tick_interval_ms * 10));
 
-			for (int i = 0; i < torrent::waste_reason_max; ++i)
-				STAT_LOG(f, (m_redundant_bytes[i] * 100.) / double(m_total_redundant_bytes == 0 ? 1 : m_total_redundant_bytes));
-
 			STAT_LOG(d, m_no_memory_peers);
 			STAT_LOG(d, m_too_many_peers);
 			STAT_LOG(d, m_transport_timeout_peers);
@@ -3103,16 +3100,6 @@ retry:
 			{
 				continue;
 			}
-			if (t->is_auto_managed() && !t->has_error())
-			{
-				TORRENT_ASSERT(t->m_resume_data_loaded || !t->valid_metadata());
-				// this torrent is auto managed, add it to
-				// the list (depending on if it's a seed or not)
-				if (t->is_finished())
-					seeds.push_back(t);
-				else
-					downloaders.push_back(t);
-			}
 		}
 
 		bool handled_by_extension = false;
@@ -3173,8 +3160,7 @@ retry:
 				&& p->is_peer_interested()
 				&& t->free_upload_slots()
 				&& p->is_choked()
-				&& !p->ignore_unchoke_slots()
-				&& t->valid_metadata())
+				&& !p->ignore_unchoke_slots())
 			{
 				opt_unchoke.push_back(pi);
 			}
@@ -3540,7 +3526,11 @@ retry:
 			TORRENT_ASSERT(p);
 		}
 #endif
-		if (i != m_torrents.end()) return i->second;
+		if (i != m_torrents.end())
+        {
+        NS_LOG_INFO("hash in map " << m_torrents.begin()->first << ", target hash is "<< info_hash);
+            return i->second;
+        }
 		return boost::shared_ptr<torrent>();
 	}
 
@@ -3573,7 +3563,6 @@ retry:
 		{
 			if (i->second->is_aborted()) continue;
 			torrent_status st;
-			i->second->status(&st, flags);
 			if (!pred(st)) continue;
 			ret->push_back(st);
 		}
@@ -3587,7 +3576,6 @@ retry:
 		{
 			boost::shared_ptr<torrent> t = i->handle.m_torrent.lock();
 			if (!t) continue;
-			t->status(&*i, flags);
 		}
 	}
 	
@@ -3606,12 +3594,9 @@ retry:
 			boost::shared_ptr<torrent> t = i->lock();
 			if (!t) continue;
 			alert->status.push_back(torrent_status());
-			t->status(&alert->status.back(), 0xffffffff);
 			t->clear_in_state_update();
 		}
 		m_state_updates.clear();
-
-		//m_alerts.post_alert_ptr(alert.release());
 	}
 
 	std::vector<torrent_handle> session_impl::get_torrents() const
@@ -3660,7 +3645,7 @@ retry:
 	//		params.url.clear();
 	//	}
 
-		if (params.ti && params.ti->is_valid() && params.ti->num_files() == 0)
+		if (params.ti && params.ti->num_files() == 0)
 		{
 			ec = errors::no_files_in_torrent;
             NS_LOG_INFO("failed to find the file");
@@ -3679,6 +3664,7 @@ retry:
 		// figure out the info hash of the torrent
 		sha1_hash const* ih = 0;
 		sha1_hash tmp;
+        NS_LOG_INFO("torrent hash is " << params.ti->info_hash());
 		if (params.ti) ih = &params.ti->info_hash();
 		else if (!params.url.empty())
 		{

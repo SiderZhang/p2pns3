@@ -75,6 +75,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/bitfield.hpp"
 #include "libtorrent/bandwidth_socket.hpp"
 #include "libtorrent/error_code.hpp"
+#include "libtorrent/disk_buffer_holder.hpp"
 #include "libtorrent/sliding_average.hpp"
 
 #include "ns3/ptr.h"
@@ -165,6 +166,7 @@ namespace libtorrent
 		// other end has the correct id
 		peer_connection(
 			aux::session_impl& ses
+            , ns3::Ipv4Address& ip
 			, boost::shared_ptr<torrent> t
 			, ns3::Ptr<ns3::Socket> s
             , ns3::Ipv4EndPoint const& remote
@@ -175,6 +177,7 @@ namespace libtorrent
 		// know which torrent the connection belongs to
 		peer_connection(
 			aux::session_impl& ses
+            , ns3::Ipv4Address& ip
             , ns3::Ptr<ns3::Socket> s
             , ns3::Ipv4EndPoint const& remote
 			, policy::peer* peerinfo);
@@ -230,7 +233,7 @@ namespace libtorrent
 		bool on_parole() const
 		{ return peer_info_struct() && peer_info_struct()->on_parole; }
 
-		int picker_options() const;
+		//int picker_options() const;
 
 		void prefer_whole_pieces(int num)
 		{ m_prefer_whole_pieces = num; }
@@ -424,10 +427,7 @@ namespace libtorrent
 		// interested in the other), disconnect it
 		void disconnect_if_redundant();
 
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_ERROR_LOGGING
 		void peer_log(char const* fmt, ...) const;
-		boost::shared_ptr<logger> m_logger;
-#endif
 
 		// the message handlers are called
 		// each time a recv() returns some new
@@ -447,7 +447,7 @@ namespace libtorrent
 		void incoming_bitfield(bitfield const& bits);
 		void incoming_request(peer_request const& r);
 //		void incoming_piece(peer_request const& p, disk_buffer_holder& data);
-		void incoming_piece(peer_request const& p, char const* data);
+		void incoming_piece(peer_request const& p);
 		void incoming_piece_fragment(int bytes);
 		void start_receive_piece(peer_request const& r);
 		void incoming_cancel(peer_request const& r);
@@ -533,8 +533,8 @@ namespace libtorrent
 			, void (*fun)(char*, int, void*) = 0, void* userdata = 0);
 		virtual void setup_send();
 
-		void cork_socket() { TORRENT_ASSERT(!m_corked); m_corked = true; }
-		void uncork_socket();
+	//	void cork_socket() { TORRENT_ASSERT(!m_corked); m_corked = true; }
+	//	void uncork_socket();
 
 #ifdef TORRENT_DISK_STATS
 		void log_buffer_usage(char* buffer, int size, char const* label);
@@ -596,7 +596,7 @@ namespace libtorrent
 		// start downloading payload again
 		//void on_disk();
 
-		int num_reading_bytes() const { return m_reading_bytes; }
+//		int num_reading_bytes() const { return m_reading_bytes; }
 
 		enum sync_t { read_async, read_sync };
 		void setup_receive();
@@ -604,9 +604,14 @@ namespace libtorrent
         // 张惊：这个是用来代替setup_receive的函数
         void setup_packet_receive(ns3::Ptr<ns3::Socket> socket);
 
+        ns3::Ipv4Address& getAddr()
+        {
+            return ip;
+        }
 	protected:
+        ns3::Ipv4Address ip;
 
-		size_t try_read(sync_t s, error_code& ec);
+		size_t try_read();
 
 		virtual void get_specific_peer_info(peer_info& p) const = 0;
 
@@ -618,7 +623,7 @@ namespace libtorrent
 		virtual void write_cancel(peer_request const& r) = 0;
 		virtual void write_have(int index) = 0;
 		virtual void write_keepalive() = 0;
-		//virtual void write_piece(peer_request const& r, disk_buffer_holder& buffer) = 0;
+		virtual void write_piece(peer_request const& r, disk_buffer_holder& buffer) = 0;
 		virtual void write_suggest(int piece) = 0;
 		
 		virtual void write_reject_request(peer_request const& r) = 0;
@@ -626,6 +631,7 @@ namespace libtorrent
 
 		virtual void on_connected() = 0;
 		virtual void on_tick() {}
+        //virtual void on_handshake_over();
 	
 		virtual void on_receive(error_code const& error
 			, std::size_t bytes_transferred) = 0;
@@ -804,7 +810,6 @@ namespace libtorrent
 
 		chained_buffer m_send_buffer;
 
-        ns3::Ptr<ns3::Socket> m_socket;
 		// this is the peer we're actually talking to
 		// it may not necessarily be the peer we're
 		// connected to, in case we use a proxy
@@ -918,7 +923,7 @@ namespace libtorrent
 		// the number of bytes we are currently reading
 		// from disk, that will be added to the send
 		// buffer as soon as they complete
-		int m_reading_bytes;
+		//int m_reading_bytes;
 		
 		// the number of invalid piece-requests
 		// we have got from this peer. If the request
@@ -1116,7 +1121,7 @@ namespace libtorrent
 		// we won't send anything to the actual socket, just
 		// buffer messages up in the application layer send
 		// buffer, and send it once we're uncorked.
-		bool m_corked:1;
+		//bool m_corked:1;
 
 		// set to true if this peer has metadata, and false
 		// otherwise.
@@ -1215,14 +1220,16 @@ namespace libtorrent
 		int m_in_use;
 		int m_received_in_piece;
 #endif
+    protected:
+        ns3::Ptr<ns3::Socket> m_socket;
 	};
 
-	struct cork
-	{
-		cork(peer_connection& p): m_pc(p) { m_pc.cork_socket(); }
-		~cork() { m_pc.uncork_socket(); }
-		peer_connection& m_pc;
-	};
+//	struct cork
+//	{
+//		cork(peer_connection& p): m_pc(p) { m_pc.cork_socket(); }
+//		~cork() { m_pc.uncork_socket(); }
+//		peer_connection& m_pc;
+//	};
 
 }
 

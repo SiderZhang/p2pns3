@@ -294,6 +294,8 @@ namespace libtorrent
 		void remap_files(file_storage const& f);
 
 		void add_tracker(std::string const& url, int tier = 0);
+        void clear_trackers();
+
 		std::vector<announce_entry> const& trackers() const { return m_urls; }
 
 #ifndef TORRENT_NO_DEPRECATE
@@ -348,17 +350,7 @@ namespace libtorrent
 // ------- end deprecation -------
 #endif
 
-#ifdef TORRENT_USE_OPENSSL
-		std::string const& ssl_cert() const { return m_ssl_root_cert; }
-#else
-		std::string ssl_cert() const
-		{
-			if (m_info_dict.type() != lazy_entry::dict_t) return "";
-			return m_info_dict.dict_find_string_value("ssl-cert");
-		}
-#endif
-
-		bool is_valid() const { return m_files.is_valid(); }
+        void peer_log();
 
 		bool priv() const { return m_private; }
 

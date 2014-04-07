@@ -49,7 +49,7 @@ def configure(conf):
 	return 
 
 def build(bld):
-    module = bld.create_ns3_module('p2p', ['core', 'internet', 'config-store', 'tools', 'applications' ])
+    module = bld.create_ns3_module('p2p', ['core', 'internet', 'config-store', 'tools', 'applications', 'point-to-point-layout' ])
 
     moduleName = 'p2p'
     curPath = os.path.abspath('.')
@@ -77,9 +77,8 @@ def build(bld):
     if bld.env.ENABLE_EXAMPLES:
         bld.recurse('examples')
 
-    applications_test = bld.create_ns3_module_test_library('applications')
+    applications_test = bld.create_ns3_module_test_library('p2p')
     applications_test.source = [
-                    'test/libtorrent-test.cc',
                     ]
     applications_test.includes='. model/'
     # bld.ns3_python_bindings()

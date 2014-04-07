@@ -30,8 +30,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifdef TORRENT_DEBUG
-
 #ifdef __APPLE__
 #include <AvailabilityMacros.h>
 #endif
@@ -42,7 +40,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "ns3/libtorrent/assert.hpp"
 
 // uClibc++ doesn't have cxxabi.h
-#if defined __GNUC__ && !defined __UCLIBCXX_MAJOR__
 
 #include <cxxabi.h>
 
@@ -84,17 +81,12 @@ std::string demangle(char const* name)
 	return ret;
 }
 
-#else
-std::string demangle(char const* name) { return name; }
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include "ns3/version.hpp"
 
 // execinfo.h is available in the MacOS X 10.5 SDK.
-#if (defined __linux__ || (defined __APPLE__ && MAC_OS_X_VERSION_MIN_REQUIRED >= 1050))
 #include <execinfo.h>
 
 void print_backtrace(char const* label)
@@ -111,11 +103,6 @@ void print_backtrace(char const* label)
 
 	free(symbols);
 }
-#else
-
-void print_backtrace(char const* label) {}
-
-#endif
 
 void assert_fail(char const* expr, int line, char const* file, char const* function)
 {
@@ -137,10 +124,3 @@ void assert_fail(char const* expr, int line, char const* file, char const* funct
  	raise(SIGINT);
  	abort();
 }
-
-#else
-
-void assert_fail(char const* expr, int line, char const* file, char const* function) {}
-
-#endif
-
